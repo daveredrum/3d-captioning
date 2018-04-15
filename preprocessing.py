@@ -9,7 +9,7 @@ def preprocess(csv_file):
     csv_file.description = csv_file.description.str.lower()
     # padding before all punctuations
     # it takes some time
-    captions_list = csv_file.description.str.tolist()
+    captions_list = csv_file.description.values.tolist()
     for i in range(len(captions_list)):
         try:
             caption = captions_list[i]
