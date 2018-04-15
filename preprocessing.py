@@ -9,12 +9,18 @@ def preprocess(csv_file):
     csv_file.description = csv_file.description.str.lower()
     # padding before all punctuations
     # it takes some time
-    for i in range(len(csv_file.description)):
+    captions_list = csv_file.description.str.tolist()
+    for i in range(len(captions_list)):
         try:
-            text = csv_file.description.iloc[i]
-            text = re.sub(r'([.,!?()])', r' \1 ', text)
-            text = re.sub(r'\s{2,}', ' ', text)
-            csv_file.description.iloc[i] = text
-            csv_file.description.iloc[i] += ' <END>'
+            caption = captions_list[i]
+            caption = re.sub(r'([.,!?()])', r' \1 ', caption)
+            caption = re.sub(r'\s{2,}', ' ', caption)
+            caption += ' <END>'
+            captions_list[i] = caption
         except Exception:
             pass
+    # replace with the new column
+    new_captions = pandas.DataFrame({'description': captions_list})
+    csv_file.description = new_captions.description
+
+    return csv_file
