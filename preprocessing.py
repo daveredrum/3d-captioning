@@ -12,8 +12,8 @@ def preprocess(csv_file):
     for i in range(len(csv_file.description)):
         try:
             text = csv_file.description.iloc[i]
-            text = re.sub('([.,!?()])', r' \1 ', text)
-            text = re.sub('\s{2,}', ' ', text)
+            text = re.sub(r'([.,!?()])', r' \1 ', text)
+            text = re.sub(r'\s{2,}', ' ', text)
             csv_file.description.iloc[i] = text
         except Exception:
             pass
