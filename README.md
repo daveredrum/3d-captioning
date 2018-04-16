@@ -8,7 +8,7 @@ created interface for the csv file which allows to:
 - transform descriptions from sentences to lists of indices
 - check the sanity of the transformation, i.e. to check if the transformation is reversable
 
-__TODO__: 
+__TODOs__: 
 - refine the data type of transformed descriptions, temporarily considering numpy array
 - build text generator
 
@@ -18,14 +18,14 @@ added preprocessing to:
 - pad before all punctuations
 - add end symbol __<END>__ to the end of each captions (start symbol is unnecessary)
 
-__TODO__: 
+__TODOs__: 
 - build dictionary for captions
 - build text generator
 
 ### Apr.10
 built a simple conv net to classify chairs and tables
 
-__TODO__: 
+__TODOs__: 
 - add preprocessing
 - build dictionary for captions
 - build text generator
