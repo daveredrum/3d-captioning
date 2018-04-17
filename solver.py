@@ -3,12 +3,12 @@ import numpy as np
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 
-class Solver():
+class EncoderSolver():
     def __init__(self, optimizer, criterion, cuda_flag=True):
         self.optimizer = optimizer
         self.criterion = criterion
         self.cuda_flag = cuda_flag
-        self.log = []
+        self.log = {}
 
     def train(self, model, dataloader, epoch):
         for epoch_id in range(epoch):
@@ -57,4 +57,34 @@ class Solver():
                 np.mean(log['valid_acc'])
             ))
             self.log[epoch] = log
+
+class DecoderSolver():
+    def __init__(self, optimizer, criterion, cuda_flag=True):
+        self.optimizer = optimizer
+        self.criterion = criterion
+        self.cuda_flag = cuda_flag
+        self.log = {}
+    
+    def _create_chunks(self, caption_lists, size):
+        for i in range(0, len(caption_lists), size):
+            yield caption_lists[i: i+size]
+
+    def train(self, model, training_pairs, epoch):
+        # training_pairs is a list of (visual_context, caption)
+        # visual_context and caption are both numpy arrays
+        for epoch_id in range(epoch):
+            for visual_context, caption in training_pairs:
+                visual_inputs = torch.from_numpy(visual_context)
+                caption_inputs = torch.from_numpy(caption).view(1, -1)
+                caption_size = caption_inputs.size(1)
+                if self.cuda_flag:
+                    visual_inputs = Variable(torch.from_numpy(visual_inputs)).cuda()
+                    caption_inputs = Variable(torch.from_numpy(caption_inputs)).cuda()
+                else:
+                    visual_inputs = Variable(torch.from_numpy(visual_inputs))
+                    caption_inputs = Variable(torch.from_numpy(caption_inputs))
+                for text_id in range(caption_size - 2):
+                    if text_id == 1:
+                        hiddens = (visual_inputs, visual_inputs)
+                    outputs, hiddens = 
                 
