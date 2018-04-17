@@ -1,6 +1,13 @@
 # 3d-captioning
 ## dev_log
 
+### Apr.17
+extracted visual context vectors and started to build decoder
+
+__TODOs__:
+- refine decoder
+- complete solver for decoder
+
 ### Apr.16
 created interface for the csv file which allows to:
 - preprocess the descriptions in csv
