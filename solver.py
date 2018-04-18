@@ -98,7 +98,7 @@ class DecoderSolver():
                     loss += self.criterion(outputs.view(1, -1), caption_targets)
                 loss.backward()
                 self.optimizer.step()
-                log.append(loss.data[0])
+                log.append(loss.data[0] / caption_size)
             print("[epoch %d] training loss: %f" % (epoch_id + 1, np.mean(log)))
 
                 
