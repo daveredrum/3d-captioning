@@ -52,13 +52,13 @@ class Decoder(nn.Module):
         # initialize h and c as zeros
         if self.cuda_flag:
             hiddens = (
-                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1)).cuda(), 
-                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1)).cuda()
+                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1))).cuda(), 
+                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1))).cuda()
                 )
         else:
             hiddens = (
-                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1)), 
-                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1))
+                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1))), 
+                Variable(torch.zeros(1, visual_inputs.size(0), visual_inputs.size(1)))
                 )
         # concatenate the visual input with embedded vectors
         embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
