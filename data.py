@@ -98,7 +98,7 @@ class Caption(object):
             caption = re.sub(r'([.,!?()])', r' \1 ', caption)
             caption = re.sub(r'\s{2,}', ' ', caption)
             # add start symbol
-            caption = '<START> '
+            caption = '<START> ' + caption
             # add end symbol
             caption += ' <END>'
             captions_list[i] = caption
