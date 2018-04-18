@@ -97,7 +97,7 @@ class DecoderSolver():
                         caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
                         cap_lengths = Variable(cap_lengths)
                     outputs = model(visual_inputs, caption_inputs, cap_lengths)
-                    loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
+                    loss = self.criterion(outputs, caption_targets)
                     if phase == "train":
                         loss.backward()
                         self.optimizer.step()
