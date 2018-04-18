@@ -78,6 +78,7 @@ class DecoderSolver():
                 # prepare the visual context vector before feeding into the model
                 caption_size = len(caption)
                 loss = 0
+                self.optimizer.zero_grad()
                 if self.cuda_flag:
                     visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0]).cuda()
                     # initialize the hidden states h and c
