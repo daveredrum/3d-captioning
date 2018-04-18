@@ -79,9 +79,9 @@ class DecoderSolver():
                 caption_size = len(caption)
                 loss = 0
                 if cuda_flag:
-                    visual_inputs = Variable(torch.from_numpy(visual_context)).cuda()
+                    visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0]).cuda()
                 else:
-                    visual_inputs = Variable(torch.from_numpy(visual_context))
+                    visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0])
                 for text_id in range(caption_size - 2):
                     if cuda_flag:
                         caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1).cuda()
