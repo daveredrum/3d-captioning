@@ -80,8 +80,12 @@ class DecoderSolver():
                 loss = 0
                 if self.cuda_flag:
                     visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0]).cuda()
+                    # initialize the hidden states h and c
+                    hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))).cuda())
                 else:
                     visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0])
+                    # initialize the hidden states h and c
+                    hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))))
                 for text_id in range(caption_size - 2):
                     if self.cuda_flag:
                         caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1).cuda()
@@ -89,9 +93,6 @@ class DecoderSolver():
                     else:
                         caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1)
                         caption_targets = Variable(torch.tensor(caption[text_id + 1]))
-                    # initialize the hidden states h and c
-                    if text_id == 1:
-                        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))).cuda())
                     # feed the model and compute the loss
                     outputs, hiddens = model(caption_inputs, hiddens)
                     loss += self.criterion(outputs.view(1, -1), caption_targets)
