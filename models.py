@@ -34,7 +34,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, cuda_flag=True):
         super(Decoder, self).__init__()
         # the size of inputs and outputs should be equal to the size of the dictionary
         self.input_size = input_size
@@ -45,14 +45,26 @@ class Decoder(nn.Module):
             nn.Linear(hidden_size, input_size),
             nn.Sigmoid()
         )
+        self.cuda_flag = cuda_flag
 
     def forward(self, visual_inputs, caption_inputs, length_list):
         embedded = self.embedding(caption_inputs)
-        # initialize h as the visual context, and c as zeros
-        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))))
+        # initialize h and c as zeros
+        if self.cuda_flag:
+            hiddens = (
+                Variable(torch.zeros(*(list(visual_inputs.size())))).cuda(), 
+                Variable(torch.zeros(*(list(visual_inputs.size())))).cuda()
+                )
+        else:
+            hiddens = (
+                Variable(torch.zeros(*(list(visual_inputs.size())))), 
+                Variable(torch.zeros(*(list(visual_inputs.size()))))
+                )
+        # concatenate the visual input with embedded vectors
+        embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
         # pack captions of different length
-        packed = pack_padded_sequence(embedded, length_list)
-        outputs, hiddens = self.lstm_layer(embedded, hiddens)
+        packed = pack_padded_sequence(embedded, length_list, batch_first=True)
+        outputs, _ = self.lstm_layer(embedded, hiddens)
         outputs = self.output_layer(outputs)
 
-        return outputs, hiddens
+        return outputs
