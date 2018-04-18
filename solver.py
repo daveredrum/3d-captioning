@@ -73,18 +73,31 @@ class DecoderSolver():
         # training_pairs is a list of (visual_context, caption)
         # visual_context and caption are both numpy arrays
         for epoch_id in range(epoch):
+            log = []
             for visual_context, caption in training_pairs:
-                visual_inputs = torch.from_numpy(visual_context)
-                caption_inputs = torch.from_numpy(caption).view(1, -1)
-                caption_size = caption_inputs.size(1)
-                if self.cuda_flag:
-                    visual_inputs = Variable(torch.from_numpy(visual_inputs)).cuda()
-                    caption_inputs = Variable(torch.from_numpy(caption_inputs)).cuda()
+                # prepare the visual context vector before feeding into the model
+                caption_size = len(caption)
+                loss = 0
+                if cuda_flag:
+                    visual_inputs = Variable(torch.from_numpy(visual_context)).cuda()
                 else:
-                    visual_inputs = Variable(torch.from_numpy(visual_inputs))
-                    caption_inputs = Variable(torch.from_numpy(caption_inputs))
+                    visual_inputs = Variable(torch.from_numpy(visual_context))
                 for text_id in range(caption_size - 2):
+                    if cuda_flag:
+                        caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1).cuda()
+                        caption_targets = Variable(torch.tensor(caption[text_id + 1])).cuda()
+                    else:
+                        caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1)
+                        caption_targets = Variable(torch.tensor(caption[text_id + 1]))
+                    # initialize the hidden states h and c
                     if text_id == 1:
-                        hiddens = (visual_inputs, visual_inputs)
-                    outputs, hiddens = 
+                        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))).cuda())
+                    # feed the model and compute the loss
+                    outputs, hiddens = model(caption_inputs, hiddens)
+                    loss += self.criterion(outputs.view(1, -1), caption_targets)
+                loss.backward()
+                self.optimizer.step()
+                log.append(loss.data[0])
+            print("[epoch %d] training loss: %f" % (epoch_id + 1, np.mean(log)))
+
                 
