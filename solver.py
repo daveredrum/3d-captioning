@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
+from torch.nn.utils.rnn import pack_padded_sequence
 
 class EncoderSolver():
     def __init__(self, optimizer, criterion, cuda_flag=True):
@@ -87,11 +88,13 @@ class DecoderSolver():
                         visual_inputs = Variable(visuals).cuda()
                         caption_inputs = Variable(caption_inputs).cuda()
                         caption_targets = Variable(caption_targets).cuda()
+                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
                         cap_lengths = Variable(cap_lengths).cuda()
                     else:
                         visual_inputs = Variable(visuals)
                         caption_inputs = Variable(caption_inputs)
                         caption_targets = Variable(caption_targets)
+                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
                         cap_lengths = Variable(cap_lengths)
                     outputs = model(visual_inputs, caption_inputs, cap_lengths)
                     loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
