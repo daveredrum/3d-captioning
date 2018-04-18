@@ -10,7 +10,7 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
-# pytorch dataset
+# image dataset
 
 class ShapeDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
@@ -38,6 +38,35 @@ class ShapeDataset(Dataset):
         
         return image, label
 
+# caption dataset
+
+class CaptionDataset(Dataset):
+    def __init__(self, visual_array, caption_list):
+        # visual inputs and caption inputs must have the same length
+        assert visual_array.shape[0] == len(caption_list)
+        self.visual_array = visual_array
+        self.caption_list = caption_list
+        self.data_pairs = self._build_data_pairs(visual_array, caption_list)
+
+    def _build_data_pairs(self, visual_array, caption_list):
+        # initialize data pairs (visual, caption, cap_length)
+        data_pairs = [(self.visual_array[i], self.caption_list[i], len(self.caption_list[i])) for i in range(self.__len__())]
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: len(item[1]), reverse=True)
+        # pad caption with 0 if it's length is not maximum
+        for index in range(1, len(data_pairs)):
+            for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
+                data_pairs[index][1].append(0)
+
+            return data_pairs
+
+    def __len__(self):
+        return len(self.caption_list)
+
+    def __getitem__(self, idx):
+        # return (visual, caption, cap_length)
+        return self.data_pairs[idx][0], self.data_pairs[idx][1], self.data_pairs[idx][2]
+    
 
 # process csv file
 
