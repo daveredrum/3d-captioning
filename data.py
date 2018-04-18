@@ -58,13 +58,14 @@ class CaptionDataset(Dataset):
             for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
                 data_pairs[index][1].append(0)
 
-            return data_pairs
+        return data_pairs
 
     def __len__(self):
         return len(self.caption_list)
 
     def __getitem__(self, idx):
-        # return (visual, caption, cap_length)
+        # return (visual, caption_inputs, caption_targets, cap_length)
+        data_pairs = self.data_pairs[idx]
         return self.data_pairs[idx][0], self.data_pairs[idx][1], self.data_pairs[idx][2]
     
 
