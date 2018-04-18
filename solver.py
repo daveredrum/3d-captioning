@@ -81,8 +81,8 @@ class DecoderSolver():
             for phase in ["train", "valid"]:
                 for visuals, captions, cap_lengths in dataloader[phase]:
                     self.optimizer.zero_grad()
-                    caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :lengths[0]-1]
-                    caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :lengths[0]]
+                    caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
+                    caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
                     if self.cuda_flag:
                         visual_inputs = Variable(visuals).cuda()
                         caption_inputs = Variable(caption_inputs).cuda()
