@@ -90,8 +90,9 @@ class Caption(object):
             except Exception:
                 pass
         word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
-        self.dict_word2idx = {word_list[i][0]: i for i in range(len(word_list))}
-        self.dict_idx2word = {i: word_list[i][0] for i in range(len(word_list))}
+        # indexing starts at 1
+        self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
+        self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
         
 
     def tranform(self):

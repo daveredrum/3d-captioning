@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.nn.utils.rnn import pack_padded_sequence
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -45,8 +46,12 @@ class Decoder(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, inputs, hiddens):
-        embedded = self.embedding(inputs).view(1, 1, -1)
+    def forward(self, visual_inputs, caption_inputs, length_list):
+        embedded = self.embedding(caption_inputs)
+        # initialize h as the visual context, and c as zeros
+        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))))
+        # pack captions of different length
+        packed = pack_padded_sequence(embedded, length_list)
         outputs, hiddens = self.lstm_layer(embedded, hiddens)
         outputs = self.output_layer(outputs)
 
