@@ -49,8 +49,8 @@ class CaptionDataset(Dataset):
         self.data_pairs = self._build_data_pairs(visual_array, caption_list)
 
     def _build_data_pairs(self, visual_array, caption_list):
-        # initialize data pairs (visual, caption, cap_length)
-        data_pairs = [(self.visual_array[i], self.caption_list[i], len(self.caption_list[i])) for i in range(self.__len__())]
+        # initialize data pairs (visual, caption_inputs, caption_targets, cap_length)
+        data_pairs = [(self.visual_array[i], self.caption_list[i][:-1], self.caption_list[i][1:], len(self.caption_list[i])) for i in range(self.__len__())]
         # sort data pairs according to cap_length in descending order
         data_pairs = sorted(data_pairs, key=lambda item: len(item[1]), reverse=True)
         # pad caption with 0 if it's length is not maximum
@@ -65,8 +65,7 @@ class CaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         # return (visual, caption_inputs, caption_targets, cap_length)
-        data_pairs = self.data_pairs[idx]
-        return self.data_pairs[idx][0], self.data_pairs[idx][1], self.data_pairs[idx][2]
+        return self.data_pairs[idx]
     
 
 # process csv file
