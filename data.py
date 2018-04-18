@@ -50,7 +50,12 @@ class CaptionDataset(Dataset):
 
     def _build_data_pairs(self, visual_array, caption_list):
         # initialize data pairs (visual, caption_inputs, caption_targets, cap_length)
-        data_pairs = [(self.visual_array[i], self.caption_list[i][:-1], self.caption_list[i][1:], len(self.caption_list[i])) for i in range(self.__len__())]
+        data_pairs = [(
+            self.visual_array[i], 
+            self.caption_list[i][:-1], 
+            self.caption_list[i], 
+            len(self.caption_list[i])
+            ) for i in range(self.__len__())]
         # sort data pairs according to cap_length in descending order
         data_pairs = sorted(data_pairs, key=lambda item: len(item[1]), reverse=True)
         # pad caption with 0 if it's length is not maximum
@@ -92,6 +97,8 @@ class Caption(object):
             caption = captions_list[i]
             caption = re.sub(r'([.,!?()])', r' \1 ', caption)
             caption = re.sub(r'\s{2,}', ' ', caption)
+            # add start symbol
+            caption = '<START> '
             # add end symbol
             caption += ' <END>'
             captions_list[i] = caption
