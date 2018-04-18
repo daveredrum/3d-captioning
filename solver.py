@@ -70,7 +70,7 @@ class DecoderSolver():
         for i in range(0, len(caption_lists), size):
             yield caption_lists[i: i+size]
 
-    def train(self, model, training_pairs, epoch, verbose):
+    def train(self, model, dataloader, epoch, verbose):
         # training_pairs is a list of (visual_context, caption)
         # visual_context and caption are both numpy arrays
         for epoch_id in range(epoch):
@@ -79,35 +79,28 @@ class DecoderSolver():
                 'valid_loss': []   
             }
             for phase in ["train", "valid"]:
-                for visual_context, caption in training_pairs[phase]:
-                    # prepare the visual context vector before feeding into the model
-                    caption_size = len(caption)
-                    loss = 0
+                for visuals, captions, cap_lengths in dataloader[phase]:
                     self.optimizer.zero_grad()
+                    caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :lengths[0]-1]
+                    caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :lengths[0]]
                     if self.cuda_flag:
-                        visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0]).cuda()
-                        # initialize the hidden states h and c
-                        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))).cuda())
+                        visual_inputs = Variable(visuals).cuda()
+                        caption_inputs = Variable(caption_inputs).cuda()
+                        caption_targets = Variable(caption_targets).cuda()
+                        cap_lengths = Variable(cap_lengths).cuda()
                     else:
-                        visual_inputs = Variable(torch.from_numpy(visual_context)).view(1, 1, visual_context.shape[0])
-                        # initialize the hidden states h and c
-                        hiddens = (visual_inputs, Variable(torch.zeros(*(list(visual_inputs.size())))))
-                    for text_id in range(caption_size - 2):
-                        if self.cuda_flag:
-                            caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1).cuda()
-                            caption_targets = Variable(torch.tensor(caption[text_id + 1])).view(1).cuda()
-                        else:
-                            caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1)
-                            caption_targets = Variable(torch.tensor(caption[text_id + 1])).view(1)
-                        # feed the model and accumulate the loss
-                        outputs, hiddens = model(caption_inputs, hiddens)
-                        loss += self.criterion(outputs.view(1, -1), caption_targets)
+                        visual_inputs = Variable(visuals)
+                        caption_inputs = Variable(caption_inputs)
+                        caption_targets = Variable(caption_targets)
+                        cap_lengths = Variable(cap_lengths)
+                    outputs = model(visual_inputs, caption_inputs, cap_lengths)
+                    loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
                     if phase == "train":
                         loss.backward()
                         self.optimizer.step()
-                        log['train_loss'].append(loss.data[0] / caption_size)
+                        log['train_loss'].append(loss.data[0])
                     else:
-                        log['valid_loss'].append(loss.data[0] / caption_size)
+                        log['valid_loss'].append(loss.data[0])
             # show report
             if epoch_id % verbose == (verbose - 1):
                 print("[epoch %d/%d] train_loss: %f, valid_loss: %f" % (
