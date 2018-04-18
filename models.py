@@ -49,27 +49,11 @@ class Decoder(nn.Module):
 
     def forward(self, visual_inputs, caption_inputs, length_list):
         embedded = self.embedding(caption_inputs)
-        # initialize h and c as zeros
-        hiddens = self.initHidden(visual_inputs.size(0))
         # concatenate the visual input with embedded vectors
         embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
         # pack captions of different length
         packed = pack_padded_sequence(embedded, length_list, batch_first=True)
-        outputs, _ = self.lstm_layer(packed, hiddens)
+        outputs, _ = self.lstm_layer(packed)
         outputs = self.output_layer(outputs[0])
 
         return outputs
-    
-    def initHidden(self, batch_size):
-        if self.cuda_flag:
-            hiddens = (
-                Variable(torch.zeros(1, batch_size, self.hidden_size)).cuda(), 
-                Variable(torch.zeros(1, batch_size, self.hidden_size)).cuda()
-                )
-        else:
-            hiddens = (
-                Variable(torch.zeros(1, batch_size, self.hidden_size)), 
-                Variable(torch.zeros(1, batch_size, self.hidden_size))
-                )
-        
-        return hiddens
