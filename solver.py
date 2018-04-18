@@ -89,10 +89,10 @@ class DecoderSolver():
                 for text_id in range(caption_size - 2):
                     if self.cuda_flag:
                         caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1).cuda()
-                        caption_targets = Variable(torch.tensor(caption[text_id + 1])).cuda()
+                        caption_targets = Variable(torch.tensor(caption[text_id + 1])).view(1).cuda()
                     else:
                         caption_inputs = Variable(torch.tensor(caption[text_id])).view(1, 1)
-                        caption_targets = Variable(torch.tensor(caption[text_id + 1]))
+                        caption_targets = Variable(torch.tensor(caption[text_id + 1])).view(1)
                     # feed the model and compute the loss
                     outputs, hiddens = model(caption_inputs, hiddens)
                     loss += self.criterion(outputs.view(1, -1), caption_targets)
