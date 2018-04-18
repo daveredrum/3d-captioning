@@ -49,10 +49,9 @@ class CaptionDataset(Dataset):
         self.data_pairs = self._build_data_pairs(visual_array, caption_list)
 
     def _build_data_pairs(self, visual_array, caption_list):
-        # initialize data pairs (visual, caption_inputs, caption_targets, cap_length)
+        # initialize data pairs (visual, caption, cap_length)
         data_pairs = [(
             self.visual_array[i], 
-            self.caption_list[i][:-1], 
             self.caption_list[i], 
             len(self.caption_list[i])
             ) for i in range(self.__len__())]
