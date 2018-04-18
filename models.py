@@ -55,8 +55,8 @@ class Decoder(nn.Module):
         embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
         # pack captions of different length
         packed = pack_padded_sequence(embedded, length_list, batch_first=True)
-        outputs, _ = self.lstm_layer(embedded, hiddens)
-        outputs = self.output_layer(outputs)
+        outputs, _ = self.lstm_layer(packed, hiddens)
+        outputs = self.output_layer(outputs[0])
 
         return outputs
     
