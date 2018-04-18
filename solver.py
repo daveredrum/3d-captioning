@@ -110,8 +110,9 @@ class DecoderSolver():
                         log['valid_loss'].append(loss.data[0] / caption_size)
             # show report
             if epoch_id % verbose == (verbose - 1):
-                print("[epoch %d] train_loss: %f, valid_loss: %f" % (
-                    epoch_id + 1, 
+                print("[epoch %d/%] train_loss: %f, valid_loss: %f" % (
+                    epoch_id + 1,
+                    epoch, 
                     np.mean(log['train_loss']), 
                     np.mean(log['valid_loss'])
                     ))
