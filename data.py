@@ -43,10 +43,10 @@ class CaptionDataset(Dataset):
         # visual inputs and caption inputs must have the same length
         assert visual_array.shape[0] == len(caption_list)
         self.visual_array = visual_array
-        self.caption_list = caption_list
-        self.data_pairs = self._build_data_pairs(visual_array, caption_list)
+        self.caption_list = copy.deepcopy(caption_list)
+        self.data_pairs = self._build_data_pairs()
 
-    def _build_data_pairs(self, visual_array, caption_list):
+    def _build_data_pairs(self):
         # initialize data pairs: (visual, caption, cap_length)
         data_pairs = [(
             self.visual_array[i], 
@@ -72,13 +72,13 @@ class CaptionDataset(Dataset):
 # pipeline dataset for the encoder-decoder pipeline
 class PipelineDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
-        self.image_paths = csv_file.modelId.values.tolist()
+        self.image_paths = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
             os.path.join(root_dir, model_name, model_name + '.png') 
             for model_name in self.image_paths
         ]
-        self.caption_lists = csv_file.description.values.tolist()
-        self.csv_file = csv_file
+        self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
+        self.csv_file = copy.deepcopy(csv_file)
         self.transform = transform
         self.data_pairs = self._build_data_pairs()
 
