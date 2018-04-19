@@ -10,8 +10,7 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
-# image dataset
-
+# image dataset for encoder
 class ShapeDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
         self.root_dir = root_dir
@@ -38,8 +37,7 @@ class ShapeDataset(Dataset):
         
         return image, label
 
-# caption dataset
-
+# caption dataset for decoder
 class CaptionDataset(Dataset):
     def __init__(self, visual_array, caption_list):
         # visual inputs and caption inputs must have the same length
@@ -49,7 +47,7 @@ class CaptionDataset(Dataset):
         self.data_pairs = self._build_data_pairs(visual_array, caption_list)
 
     def _build_data_pairs(self, visual_array, caption_list):
-        # initialize data pairs (visual, caption, cap_length)
+        # initialize data pairs: (visual, caption, cap_length)
         data_pairs = [(
             self.visual_array[i], 
             self.caption_list[i], 
@@ -71,9 +69,49 @@ class CaptionDataset(Dataset):
         # return (visual, caption_inputs, caption_targets, cap_length)
         return self.data_pairs[idx]
     
+# pipeline dataset for the encoder-decoder pipeline
+class PipelineDataset(Dataset):
+    def __init__(self, root_dir, csv_file, transform=None):
+        self.image_paths = csv_file.modelId.values.tolist()
+        self.image_paths = [
+            os.path.join(root_dir, model_name, model_name + '.png') 
+            for model_name in self.image_paths
+        ]
+        self.caption_lists = csv_file.description.values.tolist()
+        self.data_pairs = self._build_data_pairs()
+        self.csv_file = csv_file
+        self.transform = transform
+
+    def _build_data_pairs(self):
+        # initialize data pairs: (image_path, caption, cap_length)
+        data_pairs = [(
+            self.image_paths[i],
+            self.caption_lists[i],
+            len(self.caption_lists[i])
+        ) for i in range(self.__len__())]
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
+        # pad caption with 0 if it's length is not maximum
+        for index in range(1, len(data_pairs)):
+            for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
+                data_pairs[index][1].append(0)
+        
+        return data_pairs
+
+    def __len__(self):
+        return self.csv_file.id.count()
+
+    def __getitem__(self, idx):
+        # return (image_inputs, padded_caption, cap_length)
+        image = Image.open(self.data_pairs[idx][0])
+        image = np.array(image)[:, :, :3]
+        image = Image.fromarray(image)
+        if self.transform:
+            image = self.transform(image)
+
+        return image, self.data_pairs[idx][1], self.data_pairs[idx][2]
 
 # process csv file
-
 class Caption(object):
     def __init__(self, csv_file):
         self.original_csv = csv_file

@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence
 
+# only for encoder offline training 
 class EncoderSolver():
     def __init__(self, optimizer, criterion, cuda_flag=True):
         self.optimizer = optimizer
@@ -60,6 +61,8 @@ class EncoderSolver():
             # save log
             self.log[epoch_id] = log
 
+# only for decoder offline training
+# extracted visual contexts required
 class DecoderSolver():
     def __init__(self, optimizer, criterion, cuda_flag=True):
         self.optimizer = optimizer

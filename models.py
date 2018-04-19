@@ -32,6 +32,13 @@ class Encoder(nn.Module):
         
         return outputs
 
+    # chop the last output layer
+    def extract(self, inputs):
+        outputs = self.conv_layer(inputs).view(inputs.size(0), -1)
+        outputs = self.fc_layer(outputs)
+        
+        return outputs
+
 
 class Decoder(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, cuda_flag=True):
