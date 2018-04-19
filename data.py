@@ -78,9 +78,9 @@ class PipelineDataset(Dataset):
             for model_name in self.image_paths
         ]
         self.caption_lists = csv_file.description.values.tolist()
-        self.data_pairs = self._build_data_pairs()
         self.csv_file = csv_file
         self.transform = transform
+        self.data_pairs = self._build_data_pairs()
 
     def _build_data_pairs(self):
         # initialize data pairs: (image_path, caption, cap_length)
