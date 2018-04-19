@@ -34,13 +34,14 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size, cuda_flag=True):
+    def __init__(self, input_size, hidden_size, num_layers=1, cuda_flag=True):
         super(Decoder, self).__init__()
         # the size of inputs and outputs should be equal to the size of the dictionary
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
         self.embedding = nn.Embedding(input_size, hidden_size)
-        self.lstm_layer = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+        self.lstm_layer = nn.LSTM(hidden_size, hidden_size, num_layers=num_layers, batch_first=True)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
             nn.Sigmoid()
