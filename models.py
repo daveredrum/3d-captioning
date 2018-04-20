@@ -9,16 +9,24 @@ class Encoder(nn.Module):
         self.conv_layer = nn.Sequential(
             nn.Conv2d(3, 32, 3),
             nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2, 2),
             nn.Conv2d(32, 64, 3),
             nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.MaxPool2d(2, 2),
             nn.Conv2d(64, 128, 3),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.MaxPool2d(2, 2)
         )
         self.fc_layer = nn.Sequential(
-            nn.Linear(128 * 58 * 58, 512),
+            nn.Linear(128 * 6 * 6, 512),
             nn.ReLU(),
+            nn.BatchNorm1d(512),
             nn.Linear(512, 512),
             nn.ReLU(),
+            nn.BatchNorm1d(512),
         )
         self.output_layer = nn.Sequential(
             nn.Linear(512, 2),
@@ -61,7 +69,45 @@ class Decoder(nn.Module):
         embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
         # pack captions of different length
         packed = pack_padded_sequence(embedded, length_list, batch_first=True)
-        outputs, _ = self.lstm_layer(packed)
-        outputs = self.output_layer(outputs[0])
+        # hiddens = (outputs, states)
+        hiddens, _ = self.lstm_layer(packed)
+        outputs = self.output_layer(hiddens[0])
 
-        return outputs
+        return outputs, hiddens[1]
+
+# pipeline for pretrained encoder-decoder pipeline
+class Pipeline():
+    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
+        if cuda_flag:
+            self.encoder = torch.load(encoder_path).cuda()
+            self.decoder = torch.load(decoder_path).cuda()
+        else:
+            self.encoder = torch.load(encoder_path)
+            self.decoder = torch.load(decoder_path)
+
+    def generate_text(self, image_inputs, dictionary, max_length):
+        inputs = self.encoder.extract(image_inputs).unsqueeze(1)
+        states = None
+        # sample text indices via greedy search
+        sampled = []
+        for i in range(max_length):
+            outputs, states = self.decoder.lstm_layer(inputs, states)
+            outputs = self.decoder.output_layer(outputs.squeeze(1))
+            predicted = outputs.max(1)[1]
+            sampled.append(predicted.view(-1, 1))
+            inputs = self.decoder.embedding(predicted).unsqueeze(1)
+        sampled = torch.cat(sampled, 1)
+        # decoder indices to words
+        captions = []
+        for sequence in sampled.cpu().numpy():
+            caption = []
+            for index in sequence:
+                word = dictionary[index]
+                caption.append(word)
+                if word == '<END>':
+                    break
+            captions.append(" ".join(caption))
+
+        return captions
+
+    
