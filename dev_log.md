@@ -1,10 +1,24 @@
 # Development Log
 
+## Apr.20
+> __milestone:__ built encoder-decoder pipeline, online training and fine-tuning is now possible
+
+__progress:__
+- built encoder-decoder pipeline
+- built solver for encoder-decoder
+- modified the dataset for a better training performance
+- visualized the training results in `data/`
+- the model can now generate captions for images
+
+__TODOs:__
+- fine-tune encoder-decoder
+- plan for the next stage
+
 ## Apr.18
 
 > still on offline stage, i.e. the decoder takes saved visual context vectors as visual inputs
 
-progress:
+__progress__:
 - finished solver for decoder, of which the performance still need improving
 - rewrote dataset for captions
 - refined the decoder model using `pack_padded_sequence()`
