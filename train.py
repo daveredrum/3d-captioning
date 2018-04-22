@@ -58,9 +58,11 @@ def main():
     decoder = Decoder(input_size, hidden_size, num_layer).cuda()
 
     # prepare the training parameters
-    optimizer = optim.Adam(list(decoder.parameters()) + list(encoder.fc_layer.parameters()), lr=0.001)
+    # optimizer = optim.Adam(list(decoder.parameters()) + list(encoder.fc_layer.parameters()), lr=0.001)
+    params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
+    optimizer = optim.Adam(params, lr=0.001)
     criterion = nn.CrossEntropyLoss()
-    epoch = 1000
+    epoch = 2000
     verbose = 10
 
     # training
@@ -72,17 +74,18 @@ def main():
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
     valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]
 
+    plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_losses, label="train_loss")
     plt.plot(range(epochs), valid_losses, label="valid_loss")
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    plt.xticks(range(0, epochs + 1, verbose))
+    plt.xticks(range(0, epochs + 1, 200))
     plt.legend()
-    
+   
     # save
-    fig.savefig("data/decoder_curve.png")
+    plt.savefig("data/decoder_curve.png")
 
 if __name__ == "__main__":
     print("start training....")

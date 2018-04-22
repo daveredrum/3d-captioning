@@ -70,7 +70,7 @@ class Decoder(nn.Module):
         # pack captions of different length
         packed = pack_padded_sequence(embedded, length_list, batch_first=True)
         # hiddens = (outputs, states)
-        hiddens, _ = self.lstm_layer(packed)
+        hiddens, _ = self.lstm_layer(packed, None)
         outputs = self.output_layer(hiddens[0])
 
         return outputs, hiddens[1]
@@ -92,7 +92,7 @@ class Pipeline():
         sampled = []
         for i in range(max_length):
             outputs, states = self.decoder.lstm_layer(inputs, states)
-            outputs = self.decoder.output_layer(outputs.squeeze(1))
+            outputs = self.decoder.output_layer(outputs[0])
             predicted = outputs.max(1)[1]
             sampled.append(predicted.view(-1, 1))
             inputs = self.decoder.embedding(predicted).unsqueeze(1)
