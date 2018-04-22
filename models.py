@@ -59,7 +59,8 @@ class Decoder(nn.Module):
         self.lstm_layer = nn.LSTM(hidden_size, hidden_size, num_layers=num_layers, batch_first=True)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
-            nn.Softmax() # omitted if using cross entropy loss
+            # omitted softmax layer if using cross entropy loss
+            nn.LogSoftmax()
         )
         self.cuda_flag = cuda_flag
 
