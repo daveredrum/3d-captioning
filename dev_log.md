@@ -1,6 +1,17 @@
 # Development Log
 
+## Apr.22
+__progress:__
+- altered the encoder
+- trained the pipeline end-to-end
+- fixed bugs of the output layer of decoder and the loss function
+
+__TODOs:__
+- fine-tune encoder-decoder with more data
+- try out more powerful encoder
+
 ## Apr.20
+
 > __milestone:__ built encoder-decoder pipeline, online training and fine-tuning is now possible
 
 __progress:__
