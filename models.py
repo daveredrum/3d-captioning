@@ -60,7 +60,7 @@ class Decoder(nn.Module):
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
             # omitted softmax layer if using cross entropy loss
-            nn.LogSoftmax()
+            nn.LogSoftmax() # if using NLLLoss (softmax layer + NLLLoss = CrossEntropyLoss)
         )
         self.cuda_flag = cuda_flag
 
