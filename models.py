@@ -23,10 +23,10 @@ class Encoder(nn.Module):
         self.fc_layer = nn.Sequential(
             nn.Linear(128 * 6 * 6, 512),
             nn.ReLU(),
-            nn.BatchNorm1d(512),
+            # nn.BatchNorm1d(512),
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.BatchNorm1d(512),
+            # nn.BatchNorm1d(512),
         )
         self.output_layer = nn.Sequential(
             nn.Linear(512, 2),
