@@ -53,8 +53,8 @@ class CaptionDataset(Dataset):
             self.caption_list[i], 
             len(self.caption_list[i])
             ) for i in range(self.__len__())]
-        # sort data pairs according to cap_length in descending order
-        data_pairs = sorted(data_pairs, key=lambda item: len(item[1]), reverse=True)
+        # # # sort data pairs according to cap_length in descending order
+        # data_pairs = sorted(data_pairs, key=lambda item: len(item[1]), reverse=True)
         # pad caption with 0 if it's length is not maximum
         for index in range(1, len(data_pairs)):
             for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
@@ -89,8 +89,8 @@ class PipelineDataset(Dataset):
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
-        # sort data pairs according to cap_length in descending order
-        data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
+        # # sort data pairs according to cap_length in descending order
+        # data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
         # pad caption with 0 if it's length is not maximum
         for index in range(1, len(data_pairs)):
             for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
@@ -185,6 +185,8 @@ class Caption(object):
         # replace with the new column
         transformed_captions = pandas.DataFrame({'description': captions_list})
         self.tranformed_csv.description = transformed_captions.description
+        # sort the csv file by the lengths of descriptions
+        self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.description.str.len()).argsort()].reset_index(drop=True)
 
     def sanity_check(self):
         # check if the transformation is reversable
