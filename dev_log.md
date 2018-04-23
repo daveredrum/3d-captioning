@@ -1,5 +1,15 @@
 # Development Log
 
+## Apr.23
+__progress:__
+- overfit the model
+- fixed bugs with transformed csv data. Now all captions in the csv file are sorted by the Caption class
+- refined the training script
+
+__TODOs:__
+- fine-tune encoder-decoder with more data
+- try 3d shapes rendering in text2shape project
+
 ## Apr.22
 __progress:__
 - altered the encoder
