@@ -5,13 +5,14 @@ import re
 import warnings
 import operator
 import copy
+import nrrd
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
 # image dataset for encoder
-class ShapeDataset(Dataset):
+class ImageDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
         self.root_dir = root_dir
         self.csv_file = csv_file
@@ -36,6 +37,32 @@ class ShapeDataset(Dataset):
             image = self.transform(image)
         
         return image, label
+
+# shape dataset for 3d encoder
+class ShapeDataset(Dataset):
+    def __init__(self, root_dir, csv_file):
+        self.root_dir = root_dir
+        self.csv_file = csv_file
+    
+    def __len__(self):
+        return self.csv_file.id.count()
+
+    def __getitem__(self, index):
+        # model
+        model_name = self.csv_file.modelId[index]
+        model_label = self.csv_file.category[index]
+        model_path = os.path.join(self.root_dir, model_name, model_name + '.nrrd')
+        # label mapping
+        label_map = {'Table': 0, 'Chair': 1}
+        # load and normalize data
+        shape, _ = nrrd.read(model_path)
+        shape = shape[:3, :, :, :]
+        shape = (shape - shape.min()) / (shape.max() - shape.min())
+        shape = torch.FloatTensor(shape)
+        label = label_map[model_label]
+        
+        return shape, label
+    
 
 # caption dataset for decoder
 class CaptionDataset(Dataset):
@@ -69,8 +96,8 @@ class CaptionDataset(Dataset):
         # return (visual, caption_inputs, caption_targets, cap_length)
         return self.data_pairs[idx]
     
-# pipeline dataset for the encoder-decoder pipeline
-class PipelineDataset(Dataset):
+# pipeline dataset for the encoder-decoder of image-caption
+class ImageCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
         self.image_paths = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
@@ -110,6 +137,46 @@ class PipelineDataset(Dataset):
             image = self.transform(image)
 
         return image, self.data_pairs[idx][1], self.data_pairs[idx][2]
+
+# pipeline dataset for the encoder-decoder of shape-caption
+class ShapeCaptionDataset(Dataset):
+    def __init__(self, root_dir, csv_file):
+        self.shape_paths = copy.deepcopy(csv_file.modelId.values.tolist())
+        self.shape_paths = [
+            os.path.join(root_dir, model_name, model_name + '.nrrd') 
+            for model_name in self.shape_paths
+        ]
+        self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
+        self.csv_file = copy.deepcopy(csv_file)
+        self.data_pairs = self._build_data_pairs()
+
+    def _build_data_pairs(self):
+        # initialize data pairs: (image_path, caption, cap_length)
+        data_pairs = [(
+            self.shape_paths[i],
+            self.caption_lists[i],
+            len(self.caption_lists[i])
+        ) for i in range(self.__len__())]
+        # # sort data pairs according to cap_length in descending order
+        # data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
+        # pad caption with 0 if it's length is not maximum
+        for index in range(1, len(data_pairs)):
+            for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
+                data_pairs[index][1].append(0)
+        
+        return data_pairs
+
+    def __len__(self):
+        return self.csv_file.id.count()
+
+    def __getitem__(self, idx):
+        # return (image_inputs, padded_caption, cap_length)
+        shape, _ = nrrd.read(self.data_pairs[idx][0])
+        shape = np.array(shape)[:3, :, :, :]
+        shape = (shape - shape.min()) / (shape.max() - shape.min())
+        shape = torch.FloatTensor(shape)
+
+        return shape, self.data_pairs[idx][1], self.data_pairs[idx][2]
 
 # process csv file
 class Caption(object):

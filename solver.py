@@ -146,9 +146,10 @@ class DecoderSolver():
             torch.save(model, "data/decoder.pth")
 
 class EncoderDecoderSolver():
-    def __init__(self, optimizer, criterion, cuda_flag=True):
+    def __init__(self, optimizer, criterion, model_type, cuda_flag=True):
         self.optimizer = optimizer
         self.criterion = criterion
+        self.model_type = model_type
         self.cuda_flag = cuda_flag
         self.log = {}
     
@@ -164,22 +165,22 @@ class EncoderDecoderSolver():
                     encoder.eval()
                 else:
                     encoder.train()
-                for images, captions, cap_lengths in dataloader[phase]:
+                for visuals, captions, cap_lengths in dataloader[phase]:
                     caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                     caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
                     if self.cuda_flag:
-                        image_inputs = Variable(images).cuda()
+                        visual_inputs = Variable(visuals).cuda()
                         caption_inputs = Variable(caption_inputs).cuda()
                         caption_targets = Variable(caption_targets).cuda()
                         caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
                         cap_lengths = Variable(cap_lengths).cuda()
                     else:
-                        image_inputs = Variable(images)
+                        visual_inputs = Variable(visuals)
                         caption_inputs = Variable(caption_inputs)
                         caption_targets = Variable(caption_targets)
                         caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
                         cap_lengths = Variable(cap_lengths)
-                    visual_contexts = encoder.extract(image_inputs)
+                    visual_contexts = encoder.extract(visual_inputs)
                     outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
                     loss = self.criterion(outputs, caption_targets)
                     if phase == "train":
@@ -208,7 +209,7 @@ class EncoderDecoderSolver():
             log['valid_loss'] = np.mean(log['valid_loss'])
             self.log[epoch_id] = log
             # save model
-            torch.save(encoder, "data/encoder_finetuned.pth")
-            torch.save(decoder, "data/decoder_finetuned.pth")
+            torch.save(encoder, "data/encoder_checkpoint_%s.pth" % self.model_type)
+            torch.save(decoder, "data/decoder_checkpoint_%s.pth" % self.model_type)
 
                 

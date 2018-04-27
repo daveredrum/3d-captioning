@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 
-class Encoder(nn.Module):
+class Encoder2D(nn.Module):
     def __init__(self):
-        super(Encoder, self).__init__()
+        super(Encoder2D, self).__init__()
         self.conv_layer = nn.Sequential(
             nn.Conv2d(3, 32, 3),
             nn.ReLU(),
@@ -47,6 +47,49 @@ class Encoder(nn.Module):
         
         return outputs
 
+class Encoder3D(nn.Module):
+    def __init__(self):
+        super(Encoder3D, self).__init__()
+        self.conv_layer = nn.Sequential(
+            nn.Conv3d(3, 16, 3),
+            nn.ReLU(),
+            nn.BatchNorm3d(16),
+            nn.MaxPool3d(2, 2),
+            nn.Conv3d(16, 32, 3),
+            nn.ReLU(),
+            nn.BatchNorm3d(32),
+            nn.MaxPool3d(2, 2),
+            nn.Conv3d(32, 64, 3),
+            nn.ReLU(),
+            nn.BatchNorm3d(64),
+            nn.MaxPool3d(2, 2)
+        )
+        self.fc_layer = nn.Sequential(
+            nn.Linear(64 * 14 * 14 * 14, 512),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(512, 2),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, inputs):
+        outputs = self.conv_layer(inputs).view(inputs.size(0), -1)
+        outputs = self.fc_layer(outputs)
+        outputs = self.output_layer(outputs)
+        
+        return outputs
+
+    # chop the last output layer
+    def extract(self, inputs):
+        outputs = self.conv_layer(inputs).view(inputs.size(0), -1)
+        outputs = self.fc_layer(outputs)
+        
+        return outputs
 
 class Decoder(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, cuda_flag=True):
@@ -76,8 +119,8 @@ class Decoder(nn.Module):
 
         return outputs, hiddens[1]
 
-# pipeline for pretrained encoder-decoder pipeline
-class Pipeline():
+# pipeline for pretrained 2d encoder-decoder pipeline
+class EncoderDecoder2D():
     def __init__(self, encoder_path, decoder_path, cuda_flag=True):
         if cuda_flag:
             self.encoder = torch.load(encoder_path).cuda()
@@ -111,4 +154,37 @@ class Pipeline():
 
         return captions
 
-    
+# pipeline for pretrained 3d encoder-decoder pipeline
+class EncoderDecoder3D():
+    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
+        if cuda_flag:
+            self.encoder = torch.load(encoder_path).cuda()
+            self.decoder = torch.load(decoder_path).cuda()
+        else:
+            self.encoder = torch.load(encoder_path)
+            self.decoder = torch.load(decoder_path)
+
+    def generate_text(self, shape_inputs, dictionary, max_length):
+        inputs = self.encoder.extract(shape_inputs).unsqueeze(1)
+        states = None
+        # sample text indices via greedy search
+        sampled = []
+        for i in range(max_length):
+            outputs, states = self.decoder.lstm_layer(inputs, states)
+            outputs = self.decoder.output_layer(outputs[0])
+            predicted = outputs.max(1)[1]
+            sampled.append(predicted.view(-1, 1))
+            inputs = self.decoder.embedding(predicted).unsqueeze(1)
+        sampled = torch.cat(sampled, 1)
+        # decoder indices to words
+        captions = []
+        for sequence in sampled.cpu().numpy():
+            caption = []
+            for index in sequence:
+                word = dictionary[index]
+                caption.append(word)
+                if word == '<END>':
+                    break
+            captions.append(" ".join(caption))
+
+        return captions

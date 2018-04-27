@@ -19,7 +19,7 @@ def main(args):
     # settings
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    root = "/mnt/raid/davech2y/3d_captioning/ShapeNetCore_vol/nrrd_256_filter_div_128_solid/"
+    root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_128_solid/"
     captions = pandas.read_csv("captions.tablechair.csv")
     total_size = args.total_size
     split_ratio = args.split_ratio
@@ -27,6 +27,7 @@ def main(args):
     verbose = args.verbose
     lr = args.learning_rate
     batch_size = args.batch_size
+    model_type = args.model_type
     # preprocessing
     captions = Caption(captions.iloc[:total_size])
     captions.preprocess()
@@ -44,22 +45,45 @@ def main(args):
     #                                                                 #
     ###################################################################
 
-    # prepare the dataloader
-    transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
-    train_ds = PipelineDataset(root, train_captions, transform)
-    train_dl = DataLoader(train_ds, batch_size=batch_size)
-    valid_ds = PipelineDataset(root, valid_captions, transform)
-    valid_dl = DataLoader(valid_ds, batch_size=batch_size)
-    dataloader = {
-        'train': train_dl,
-        'valid': valid_dl
-    }
+    # for 2d encoder
+    if model_type == "2d":
+        # prepare the dataloader
+        transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
+        train_ds = ImageCaptionDataset(root, train_captions, transform)
+        train_dl = DataLoader(train_ds, batch_size=batch_size)
+        valid_ds = ImageCaptionDataset(root, valid_captions, transform)
+        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+        dataloader = {
+            'train': train_dl,
+            'valid': valid_dl
+        }
 
-    # # load the pretrained encoder
-    # encoder = torch.load("data/encoder.pth").cuda()
+        # # load the pretrained encoder
+        # encoder = torch.load("data/encoder.pth").cuda()
 
-    # initialize the encoder
-    encoder = Encoder().cuda()
+        # initialize the encoder
+        encoder = Encoder2D().cuda()
+
+    # for 3d encoder   
+    elif model_type == "3d":
+        train_ds = ShapeCaptionDataset(root, train_captions)
+        train_dl = DataLoader(train_ds, batch_size=batch_size)
+        valid_ds = ShapeCaptionDataset(root, train_captions)
+        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+        dataloader = {
+            'train': train_dl,
+            'valid': valid_dl
+        }
+
+        # # load the pretrained encoder
+        # encoder = torch.load("data/encoder.pth").cuda()
+
+        # initialize the encoder
+        encoder = Encoder3D().cuda()
+
+    else:
+        print("invalid model type, exiting.....")
+        return
 
     # define the decoder
     input_size = captions.dict_word2idx.__len__() + 1
@@ -76,7 +100,7 @@ def main(args):
     verbose = verbose
 
     # training
-    encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion)
+    encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type)
     encoder_decoder_solver.train(encoder, decoder, dataloader, epoch, verbose)
 
     # plot the result
@@ -95,9 +119,9 @@ def main(args):
     plt.legend()
    
     # save
-    plt.savefig("data/training_curve_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (total_size, epoch, lr, batch_size, input_size))
-    torch.save(encoder, "data/encoder_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (total_size, epoch, lr, batch_size, input_size))
-    torch.save(decoder, "data/decoder_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (total_size, epoch, lr, batch_size, input_size))
+    plt.savefig("data/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, total_size, epoch, lr, batch_size, input_size))
+    torch.save(encoder, "data/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, total_size, epoch, lr, batch_size, input_size))
+    torch.save(decoder, "data/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, total_size, epoch, lr, batch_size, input_size))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -108,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
+    parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
     args = parser.parse_args()
     print(args)
     print()
