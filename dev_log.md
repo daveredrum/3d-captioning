@@ -1,6 +1,9 @@
 # Development Log
 
 ## Apr.27
+
+> __milestone:__ 3D captioning for shapes are now possible
+
 __progress:__
 - successfully deployed the SSTK on the server and ran text2shape project on it
 - built 3D encoder and overfit the 3D encoder-decoder
