@@ -1,5 +1,15 @@
 # Development Log
 
+## Apr.27
+__progress:__
+- successfully deployed the SSTK on the server and ran text2shape project on it
+- built 3D encoder and overfit the 3D encoder-decoder
+- enabled specifying model types in training script
+
+__TODOs:__
+- fix the bug with text generator to support multi-batches
+
+
 ## Apr.23
 __progress:__
 - overfit the model
