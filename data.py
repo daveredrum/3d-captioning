@@ -99,10 +99,10 @@ class CaptionDataset(Dataset):
 # pipeline dataset for the encoder-decoder of image-caption
 class ImageCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
-        self.image_paths = copy.deepcopy(csv_file.modelId.values.tolist())
+        self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
             os.path.join(root_dir, model_name, model_name + '.png') 
-            for model_name in self.image_paths
+            for model_name in self.model_ids
         ]
         self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
@@ -110,8 +110,9 @@ class ImageCaptionDataset(Dataset):
         self.data_pairs = self._build_data_pairs()
 
     def _build_data_pairs(self):
-        # initialize data pairs: (image_path, caption, cap_length)
+        # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
+            self.model_ids[i],
             self.image_paths[i],
             self.caption_lists[i],
             len(self.caption_lists[i])
@@ -120,8 +121,8 @@ class ImageCaptionDataset(Dataset):
         # data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
         # pad caption with 0 if it's length is not maximum
         for index in range(1, len(data_pairs)):
-            for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
-                data_pairs[index][1].append(0)
+            for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+                data_pairs[index][2].append(0)
         
         return data_pairs
 
@@ -129,14 +130,14 @@ class ImageCaptionDataset(Dataset):
         return self.csv_file.id.count()
 
     def __getitem__(self, idx):
-        # return (image_inputs, padded_caption, cap_length)
-        image = Image.open(self.data_pairs[idx][0])
+        # return (model_id, image_inputs, padded_caption, cap_length)
+        image = Image.open(self.data_pairs[idx][1])
         image = np.array(image)[:, :, :3]
         image = Image.fromarray(image)
         if self.transform:
             image = self.transform(image)
 
-        return image, self.data_pairs[idx][1], self.data_pairs[idx][2]
+        return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
 # pipeline dataset for the encoder-decoder of shape-caption
 class ShapeCaptionDataset(Dataset):
@@ -181,11 +182,18 @@ class ShapeCaptionDataset(Dataset):
 # process csv file
 class Caption(object):
     def __init__(self, csv_file):
+        # original captions csv file
         self.original_csv = csv_file
+        # preprocessed captions
         self.preprocessed_csv = None
+        # captions translated to token indices
         self.tranformed_csv = None
+        # dictionaries
         self.dict_word2idx = None
         self.dict_idx2word = None
+        # ground truth captions grouped by modelId
+        # e.g. 'e702f89ce87a0b6579368d1198f406e7': [['<START> a gray coloured round four legged steel table <END>']]
+        self.corpus = None
 
     def preprocess(self):
         # suppress all warnings
@@ -213,6 +221,8 @@ class Caption(object):
         self.preprocessed_csv.description = new_captions.description
         # build dict
         self._make_dict()
+        # build blue reference corpus
+        self._make_corpus()
 
     def _make_dict(self):
         # output the dictionary of captions
@@ -234,6 +244,17 @@ class Caption(object):
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
         self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
         
+
+    def _make_corpus(self):
+        # output the dictionary of modelId and corresponding captions
+        corpus = {}
+        for _, item in self.preprocessed_csv.iterrows():
+            if item.modelId in corpus.keys():
+                corpus[item.modelId].append(item.description.split(" "))
+            else:
+                corpus[item.modelId] = [item.description.split(" ")]
+        
+        self.corpus = corpus
 
     def tranform(self):
         # transform all words to their indices in the dictionary

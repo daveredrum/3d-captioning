@@ -4,7 +4,8 @@ import math
 import numpy as np
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
-from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
+from nltk.translate.bleu_score import sentence_bleu
 
 
 # only for encoder offline training 
@@ -153,11 +154,43 @@ class EncoderDecoderSolver():
         self.cuda_flag = cuda_flag
         self.log = {}
     
-    def train(self, encoder, decoder, dataloader, epoch, verbose):
+    def _unpack_outputs(self, sequence, pack_info):
+        # unpack the sequence
+        
+        return pad_packed_sequence(PackedSequence(sequence.max(1)[1], pack_info))[0].transpose(1, 0)
+
+    def _unpad_outputs(self, unpacked_sequence, cap_lengths):
+        # unpad the sequence and return sequence lists
+        
+        return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+
+    def _calculate_blue(self, corpus, dictionary, model_ids, sequences):
+        blue = []
+        for model_id, sequence in zip(model_ids, sequences):
+            sentence = []
+            for idx in sequence:
+                try:
+                    sentence.append(dictionary[idx])
+                except Exception:
+                    pass
+            blue.append(
+                sentence_bleu(
+                    corpus[model_id],
+                    sentence
+                )
+            )
+        
+        return np.mean(blue)
+
+    def train(self, encoder, decoder, dataloader, corpus, dictionary, epoch, verbose):
         for epoch_id in range(epoch):
             log = {
                 'train_loss': [],
-                'valid_loss': []   
+                'train_blue': [],
+                'valid_loss': [],
+                'valid_blue': [],
+                'forward': [],
+                'backward': []
             }
             start = time.time()
             for phase in ["train", "valid"]:
@@ -165,42 +198,64 @@ class EncoderDecoderSolver():
                     encoder.eval()
                 else:
                     encoder.train()
-                for visuals, captions, cap_lengths in dataloader[phase]:
+                for model_ids, visuals, captions, cap_lengths in dataloader[phase]:
+                    # visuals must be tensor
                     caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                     caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
+                    # target_ref = [item[0][:item[1]] for item in zip(caption_targets.tolist(), cap_lengths.tolist())]
+                    
                     if self.cuda_flag:
                         visual_inputs = Variable(visuals).cuda()
                         caption_inputs = Variable(caption_inputs).cuda()
                         caption_targets = Variable(caption_targets).cuda()
-                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
+                        caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
                         cap_lengths = Variable(cap_lengths).cuda()
                     else:
                         visual_inputs = Variable(visuals)
                         caption_inputs = Variable(caption_inputs)
                         caption_targets = Variable(caption_targets)
-                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
+                        caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
                         cap_lengths = Variable(cap_lengths)
+                    
+                    forward_since = time.time()
                     visual_contexts = encoder.extract(visual_inputs)
                     outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                    log['forward'].append(time.time() - forward_since)
                     loss = self.criterion(outputs, caption_targets)
+                    
+                    # unpack outputs
+                    outputs_unpack = self._unpack_outputs(outputs, pack_info)
+                    # unpadd outputs
+                    outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
+                    # calculate BLEU score
+                    blue = self._calculate_blue(corpus, dictionary, model_ids, outputs_unpad)
+
                     if phase == "train":
                         encoder.zero_grad()
                         decoder.zero_grad()
+                        backward_since = time.time()
                         loss.backward()
+                        log['backward'].append(time.time() - backward_since)
                         self.optimizer.step()
                         log['train_loss'].append(loss.data[0])
+                        log['train_blue'].append(np.mean(blue))
                     else:
                         log['valid_loss'].append(loss.data[0])
+                        log['valid_blue'].append(np.mean(blue))
             # show report
             if epoch_id % verbose == (verbose - 1):
                 exetime_s = time.time() - start
                 eta_s = exetime_s * (epoch - (epoch_id + 1))
                 eta_m = math.floor(eta_s / 60)
-                print("[epoch %d/%d] train_loss: %f, valid_loss: %f, ETA: %dm %ds" % (
+                print("-----------------epoch %d/%d-----------------\n[Info] train_loss: %f, train_blue: %f\n[Info] valid_loss: %f, valid_blue: %f\n[Info] forward: %fs, backward: %fs\n[Info] ETA: %dm %ds\n" % (
                     epoch_id + 1,
                     epoch, 
                     np.mean(log['train_loss']), 
+                    np.mean(log['train_blue']),
                     np.mean(log['valid_loss']),
+                    np.mean(log['valid_blue']),
+                    np.mean(log['forward']), 
+                    np.mean(log['backward']),
                     eta_m,
                     eta_s - eta_m * 60
                     ))
