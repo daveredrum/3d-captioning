@@ -70,7 +70,7 @@ def main(args):
     elif model_type == "3d":
         train_ds = ShapeCaptionDataset(root, train_captions)
         train_dl = DataLoader(train_ds, batch_size=batch_size)
-        valid_ds = ShapeCaptionDataset(root, train_captions)
+        valid_ds = ShapeCaptionDataset(root, valid_captions)
         valid_dl = DataLoader(valid_ds, batch_size=batch_size)
         dataloader = {
             'train': train_dl,
