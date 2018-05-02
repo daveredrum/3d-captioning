@@ -1,5 +1,17 @@
 # Development Log
 
+## May.2
+
+__progress:__
+- rewrote the data interface
+- fixed bug with the `sample()` method of decoder
+- refined the calculation of BLEU score
+- refined the training report
+
+__TODOs:__
+- fine-tune the model
+- fix the bug with `train.py`
+
 ## Apr.30
 
 __progress:__
