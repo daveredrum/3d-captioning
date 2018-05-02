@@ -6,6 +6,7 @@ import warnings
 import operator
 import copy
 import nrrd
+import math
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
@@ -117,8 +118,8 @@ class ImageCaptionDataset(Dataset):
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
-        # # sort data pairs according to cap_length in descending order
-        # data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
         # pad caption with 0 if it's length is not maximum
         for index in range(1, len(data_pairs)):
             for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
@@ -132,74 +133,148 @@ class ImageCaptionDataset(Dataset):
     def __getitem__(self, idx):
         # return (model_id, image_inputs, padded_caption, cap_length)
         image = Image.open(self.data_pairs[idx][1])
-        image = np.array(image)[:, :, :3]
-        image = Image.fromarray(image)
+        # image = np.array(image)[:, :, :3]
+        # image = Image.fromarray(image)
         if self.transform:
             image = self.transform(image)
 
-        return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
+        return self.data_pairs[idx][0], image[:3, :, :], self.data_pairs[idx][2], self.data_pairs[idx][3]
 
 # pipeline dataset for the encoder-decoder of shape-caption
 class ShapeCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file):
-        self.shape_paths = copy.deepcopy(csv_file.modelId.values.tolist())
+        self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.shape_paths = [
             os.path.join(root_dir, model_name, model_name + '.nrrd') 
-            for model_name in self.shape_paths
+            for model_name in self.model_ids
         ]
         self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
         self.data_pairs = self._build_data_pairs()
+        self._preprocess()
 
+     # initialize data pairs: (model_id, shape_path, caption, cap_length)
     def _build_data_pairs(self):
-        # initialize data pairs: (image_path, caption, cap_length)
         data_pairs = [(
+            self.model_ids[i],
             self.shape_paths[i],
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
-        # # sort data pairs according to cap_length in descending order
-        # data_pairs = sorted(data_pairs, key=lambda item: item[2], reverse=True)
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
         # pad caption with 0 if it's length is not maximum
         for index in range(1, len(data_pairs)):
-            for i in range(len(data_pairs[0][1]) - len(data_pairs[index][1])):
-                data_pairs[index][1].append(0)
+            for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+                data_pairs[index][2].append(0)
         
         return data_pairs
+
+    # preprocess the data and store them as numpy arrays in the same path
+    def _preprocess(self):
+        for data_pair in self.data_pairs:
+            if not os.path.exists(data_pair[1] + '.npy'):
+                shape, _ = nrrd.read(data_pair[1])
+                shape = np.array(shape)[:3, :, :, :]
+                shape = (shape - shape.min()) / (shape.max() - shape.min())
+                np.save(data_pair[1] + '.npy', shape)
 
     def __len__(self):
         return self.csv_file.id.count()
 
+    # return (model_id, shape_inputs, padded_caption, cap_length)
     def __getitem__(self, idx):
-        # return (image_inputs, padded_caption, cap_length)
-        shape, _ = nrrd.read(self.data_pairs[idx][0])
-        shape = np.array(shape)[:3, :, :, :]
-        shape = (shape - shape.min()) / (shape.max() - shape.min())
+        # used preprocessed data
+        shape = np.load(self.data_pairs[idx][1] + '.npy')
         shape = torch.FloatTensor(shape)
 
-        return shape, self.data_pairs[idx][1], self.data_pairs[idx][2]
+        return self.data_pairs[idx][0], shape, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
 # process csv file
 class Caption(object):
-    def __init__(self, csv_file):
-        # original captions csv file
-        self.original_csv = csv_file
+    def __init__(self, csv_file, size_split):
+        # size settings
+        self.total_size = np.sum(size_split)
+        self.train_size = size_split[0]
+        self.valid_size = size_split[1]
+        self.test_size = size_split[2]
+        # select data by the given total size
+        self.original_csv = csv_file.iloc[:self.total_size]
         # preprocessed captions
         self.preprocessed_csv = None
         # captions translated to token indices
-        self.tranformed_csv = None
+        self.transformed_csv = None
         # dictionaries
         self.dict_word2idx = None
         self.dict_idx2word = None
+        self.dict_size = None
         # ground truth captions grouped by modelId
+        # for calculating BLEU score
         # e.g. 'e702f89ce87a0b6579368d1198f406e7': [['<START> a gray coloured round four legged steel table <END>']]
-        self.corpus = None
+        self.corpus = {
+            'train': {},
+            'valid': {},
+            'test': {}
+        }
+        # split the preprocessed data
+        self.preprocessed_data = {
+            'train': None,
+            'valid': None,
+            'test': None
+        }
+        # split the transformed data
+        self.transformed_data = {
+            'train': None,
+            'valid': None,
+            'test': None
+        }
+        
+        # preprcess and transform
+        self._preprocess()
+        self._tranform()
+        # build blue reference corpus
+        self._make_corpus()
 
-    def preprocess(self):
+    # output the dictionary of captions
+    # indices of words are the rank of frequencies
+    def _make_dict(self):
+        captions_list = self.preprocessed_csv.description.values.tolist()
+        word_list = {}
+        for text in captions_list:
+            try:
+                for word in re.split("[ ]", text):
+                    if word:
+                        if word in word_list.keys():
+                            word_list[word] += 1
+                        else:
+                            word_list[word] = 1
+            except Exception:
+                pass
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
+        # indexing starts at 1
+        self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
+        self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
+        # dictionary size
+        assert self.dict_idx2word.__len__() == self.dict_word2idx.__len__()
+        self.dict_size = self.dict_idx2word.__len__()
+        
+    # build the references for calculating BLEU score
+    # return the dictionary of modelId and corresponding captions
+    # input must be the preprocessed csv！
+    def _make_corpus(self):
+        for phase in ['train', 'valid', 'test']:
+            for _, item in self.preprocessed_data[phase].iterrows():
+                if item.modelId in self.corpus[phase].keys():
+                    self.corpus[phase][item.modelId].append([item for item in item.description.split(" ") if item])
+                else:
+                    self.corpus[phase][item.modelId] = [[item for item in item.description.split(" ") if item]]
+
+
+    def _preprocess(self):
         # suppress all warnings
         warnings.simplefilter('ignore')
         # drop items without captions
-        self.preprocessed_csv = self.original_csv.loc[self.original_csv.description.notnull()].reset_index(drop=True)
+        self.preprocessed_csv = copy.deepcopy(self.original_csv.loc[self.original_csv.description.notnull()].reset_index(drop=True))
         # convert to lowercase
         self.preprocessed_csv.description = self.preprocessed_csv.description.str.lower()
         # preprocess
@@ -219,67 +294,43 @@ class Caption(object):
         # replace with the new column
         new_captions = pandas.DataFrame({'description': captions_list})
         self.preprocessed_csv.description = new_captions.description
+        # sort the csv file by the lengths of descriptions
+        self.preprocessed_csv = self.preprocessed_csv.iloc[(-self.preprocessed_csv.description.str.len()).argsort()].reset_index(drop=True)
+
+        # split the data
+        self.preprocessed_data['train'] = self.preprocessed_csv.iloc[:self.train_size]
+        self.preprocessed_data['valid'] = self.preprocessed_csv.iloc[self.train_size:self.train_size + self.valid_size]
+        self.preprocessed_data['test'] = self.preprocessed_csv.iloc[self.train_size + self.valid_size:]
+
         # build dict
         self._make_dict()
-        # build blue reference corpus
-        self._make_corpus()
 
-    def _make_dict(self):
-        # output the dictionary of captions
-        # indices of words are the rank of frequencies
-        captions_list = self.preprocessed_csv.description.values.tolist()
-        word_list = {}
-        for text in captions_list:
-            try:
-                for word in re.split("[ ]", text):
-                    if word:
-                        if word in word_list.keys():
-                            word_list[word] += 1
-                        else:
-                            word_list[word] = 1
-            except Exception:
-                pass
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
-        # indexing starts at 1
-        self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
-        self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
-        
-
-    def _make_corpus(self):
-        # output the dictionary of modelId and corresponding captions
-        corpus = {}
-        for _, item in self.preprocessed_csv.iterrows():
-            if item.modelId in corpus.keys():
-                corpus[item.modelId].append(item.description.split(" "))
-            else:
-                corpus[item.modelId] = [item.description.split(" ")]
-        
-        self.corpus = corpus
-
-    def tranform(self):
-        # transform all words to their indices in the dictionary
-        self.tranformed_csv = copy.deepcopy(self.preprocessed_csv)
-        captions_list = self.tranformed_csv.description.values.tolist()
+    # transform all words to their indices in the dictionary
+    def _tranform(self):
+        self.transformed_csv = copy.deepcopy(self.preprocessed_csv)
+        captions_list = self.transformed_csv.description.values.tolist()
         for i in range(len(captions_list)):
             temp_list = []
-            try:
-                for text in captions_list[i].split(" "):
-                    # filter out empty element
-                    if text:
-                        temp_list.append(self.dict_word2idx[text])
+            for text in captions_list[i].split(" "):
+                # filter out empty element
+                if text:
+                    temp_list.append(self.dict_word2idx[text])
                 captions_list[i] = temp_list
-            except Exception:
-                pass
         # replace with the new column
         transformed_captions = pandas.DataFrame({'description': captions_list})
-        self.tranformed_csv.description = transformed_captions.description
-        # sort the csv file by the lengths of descriptions
-        self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.description.str.len()).argsort()].reset_index(drop=True)
+        self.transformed_csv.description = transformed_captions.description
+        # # sort the csv file by the lengths of descriptions
+        # self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.description.str.len()).argsort()].reset_index(drop=True)
 
+        # split the data
+        self.transformed_data['train'] = self.transformed_csv.iloc[:self.train_size]
+        self.transformed_data['valid'] = self.transformed_csv.iloc[self.train_size:self.train_size + self.valid_size]
+        self.transformed_data['test'] = self.transformed_csv.iloc[self.train_size + self.valid_size:]
+
+    # check if the transformation is reversable
     def sanity_check(self):
-        # check if the transformation is reversable
         captions_list = self.preprocessed_csv.description.values.tolist()
-        reverse_list = self.tranformed_csv.description.values.tolist()
+        reverse_list = self.transformed_csv.description.values.tolist()
         for i in range(len(reverse_list)):
             temp_string = ""
             for index in reverse_list[i]:

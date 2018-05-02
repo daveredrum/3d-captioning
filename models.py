@@ -119,8 +119,26 @@ class Decoder(nn.Module):
 
         return outputs, hiddens[1]
 
-# pipeline for pretrained 2d encoder-decoder pipeline
-class EncoderDecoder2D():
+    def sample(self, visual_inputs, length_list):
+        batch_size = visual_inputs.size(0)
+        states = None
+        # sample text indices via greedy search
+        sampled = []
+        for batch in range(batch_size):
+            inputs = visual_inputs[batch].view(1, 1, -1)
+            for i in range(length_list[batch]):
+                outputs, states = self.lstm_layer(inputs, states)
+                outputs = self.output_layer(outputs)
+                predicted = outputs.max(2)[1]
+                sampled.append(outputs.view(1, -1))
+                inputs = self.embedding(predicted)
+        sampled = torch.cat(sampled, 0)
+
+        return sampled
+
+# pipeline for pretrained encoder-decoder pipeline
+# same pipeline for both 2d and 3d
+class EncoderDecoder():
     def __init__(self, encoder_path, decoder_path, cuda_flag=True):
         if cuda_flag:
             self.encoder = torch.load(encoder_path).cuda()
@@ -131,41 +149,6 @@ class EncoderDecoder2D():
 
     def generate_text(self, image_inputs, dictionary, max_length):
         inputs = self.encoder.extract(image_inputs).unsqueeze(1)
-        states = None
-        # sample text indices via greedy search
-        sampled = []
-        for i in range(max_length):
-            outputs, states = self.decoder.lstm_layer(inputs, states)
-            outputs = self.decoder.output_layer(outputs[0])
-            predicted = outputs.max(1)[1]
-            sampled.append(predicted.view(-1, 1))
-            inputs = self.decoder.embedding(predicted).unsqueeze(1)
-        sampled = torch.cat(sampled, 1)
-        # decoder indices to words
-        captions = []
-        for sequence in sampled.cpu().numpy():
-            caption = []
-            for index in sequence:
-                word = dictionary[index]
-                caption.append(word)
-                if word == '<END>':
-                    break
-            captions.append(" ".join(caption))
-
-        return captions
-
-# pipeline for pretrained 3d encoder-decoder pipeline
-class EncoderDecoder3D():
-    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
-        if cuda_flag:
-            self.encoder = torch.load(encoder_path).cuda()
-            self.decoder = torch.load(decoder_path).cuda()
-        else:
-            self.encoder = torch.load(encoder_path)
-            self.decoder = torch.load(decoder_path)
-
-    def generate_text(self, shape_inputs, dictionary, max_length):
-        inputs = self.encoder.extract(shape_inputs).unsqueeze(1)
         states = None
         # sample text indices via greedy search
         sampled = []

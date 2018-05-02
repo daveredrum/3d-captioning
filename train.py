@@ -21,21 +21,23 @@ def main(args):
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
     root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_128_solid/"
     captions = pandas.read_csv("captions.tablechair.csv")
-    total_size = args.total_size
-    split_ratio = args.split_ratio
+    train_size = args.train_size
+    valid_size = args.valid_size
+    test_size = args.valid_size
     epoch = args.epoch
     verbose = args.verbose
     lr = args.learning_rate
     batch_size = args.batch_size
     model_type = args.model_type
     # preprocessing
-    captions = Caption(captions.iloc[:total_size])
-    captions.preprocess()
-    captions.tranform()
+    print("preparing data....")
+    print()
+    captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
     # split data
-    train_size = math.floor(total_size * (1 - split_ratio))
-    train_captions = captions.tranformed_csv.iloc[:train_size]
-    valid_captions = captions.tranformed_csv.iloc[train_size:total_size].reset_index(drop=True)
+    train_captions = captions.transformed_data['train']
+    valid_captions = captions.transformed_data['valid']
+    dictionary = captions.dict_idx2word
+    corpus = captions.corpus
 
     ###################################################################
     #                                                                 #
@@ -86,6 +88,8 @@ def main(args):
         return
 
     # define the decoder
+    print("initializing models....")
+    print()
     input_size = captions.dict_word2idx.__len__() + 1
     hidden_size = 512
     num_layer = 2
@@ -100,8 +104,10 @@ def main(args):
     verbose = verbose
 
     # training
+    print("start training....")
+    print()
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type)
-    encoder_decoder_solver.train(encoder, decoder, dataloader, epoch, verbose)
+    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose)
 
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
@@ -119,14 +125,15 @@ def main(args):
     plt.legend()
    
     # save
-    plt.savefig("data/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, total_size, epoch, lr, batch_size, input_size))
-    torch.save(encoder, "data/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, total_size, epoch, lr, batch_size, input_size))
-    torch.save(decoder, "data/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, total_size, epoch, lr, batch_size, input_size))
+    plt.savefig("data/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
+    torch.save(encoder, "data/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
+    torch.save(decoder, "data/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--total_size", type=int, default=100, help="total size for input captions")
-    parser.add_argument("--split_ratio", type=float, default=0.1, help="valid set ratio")
+    parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
+    parser.add_argument("--valid_size", type=int, default=100, help="valid size for input captions")
+    parser.add_argument("--test_size", type=int, default=100, help="test size for input captions")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
@@ -135,7 +142,5 @@ if __name__ == "__main__":
     parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
     args = parser.parse_args()
     print(args)
-    print()
-    print("start training....")
     print()
     main(args)

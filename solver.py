@@ -154,16 +154,16 @@ class EncoderDecoderSolver():
         self.cuda_flag = cuda_flag
         self.log = {}
     
+    # unpack the sequence
     def _unpack_outputs(self, sequence, pack_info):
-        # unpack the sequence
         
-        return pad_packed_sequence(PackedSequence(sequence.max(1)[1], pack_info))[0].transpose(1, 0)
+        return pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
 
+    # unpad the sequence by removing the zeros
     def _unpad_outputs(self, unpacked_sequence, cap_lengths):
-        # unpad the sequence and return sequence lists
-        
         return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
 
+    # calculate the bleu score with respect to the corpus
     def _calculate_blue(self, corpus, dictionary, model_ids, sequences):
         blue = []
         for model_id, sequence in zip(model_ids, sequences):
@@ -173,6 +173,7 @@ class EncoderDecoderSolver():
                     sentence.append(dictionary[idx])
                 except Exception:
                     pass
+            
             blue.append(
                 sentence_bleu(
                     corpus[model_id],
@@ -190,7 +191,9 @@ class EncoderDecoderSolver():
                 'valid_loss': [],
                 'valid_blue': [],
                 'forward': [],
-                'backward': []
+                'backward': [],
+                'valid_time': [],
+                'epoch_time': []
             }
             start = time.time()
             for phase in ["train", "valid"]:
@@ -217,52 +220,82 @@ class EncoderDecoderSolver():
                         caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
                         cap_lengths = Variable(cap_lengths)
                     
-                    forward_since = time.time()
-                    visual_contexts = encoder.extract(visual_inputs)
-                    outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
-                    log['forward'].append(time.time() - forward_since)
-                    loss = self.criterion(outputs, caption_targets)
-                    
-                    # unpack outputs
-                    outputs_unpack = self._unpack_outputs(outputs, pack_info)
-                    # unpadd outputs
-                    outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
-                    # calculate BLEU score
-                    blue = self._calculate_blue(corpus, dictionary, model_ids, outputs_unpad)
-
                     if phase == "train":
+                        # forward pass
+                        forward_since = time.time()
+                        visual_contexts = encoder.extract(visual_inputs)
+                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                        loss = self.criterion(outputs, caption_targets)
+                        log['forward'].append(time.time() - forward_since)
+                        
+                        # unpack outputs
+                        outputs_unpack = self._unpack_outputs(outputs.max(1)[1], pack_info)
+                        # unpadd outputs
+                        outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
+
+                        # backward pass
+                        # save log
                         encoder.zero_grad()
                         decoder.zero_grad()
                         backward_since = time.time()
                         loss.backward()
-                        log['backward'].append(time.time() - backward_since)
                         self.optimizer.step()
+                        log['backward'].append(time.time() - backward_since)
+
+                        # calculate BLEU score
+                        blue = self._calculate_blue(corpus["train"], dictionary, model_ids, outputs_unpad)
                         log['train_loss'].append(loss.data[0])
                         log['train_blue'].append(np.mean(blue))
                     else:
+                        # validate
+                        valid_since = time.time()
+                        visual_contexts = encoder.extract(visual_inputs)
+                        outputs = decoder.sample(visual_contexts, cap_lengths)
+                        loss = self.criterion(outputs, caption_targets)
+                        log['valid_time'].append(time.time() - valid_since)
+                        
+                        # unpack outputs
+                        outputs_unpack = self._unpack_outputs(outputs.max(1)[1], pack_info)
+                        # unpadd outputs
+                        outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
+
+                        # calculate BLEU score
+                        # save log
+                        blue = self._calculate_blue(corpus["valid"], dictionary, model_ids, outputs_unpad)
                         log['valid_loss'].append(loss.data[0])
                         log['valid_blue'].append(np.mean(blue))
+            
+            log['epoch_time'].append(np.mean(time.time() - start))
             # show report
             if epoch_id % verbose == (verbose - 1):
-                exetime_s = time.time() - start
+                exetime_s = np.sum(log['epoch_time'])
                 eta_s = exetime_s * (epoch - (epoch_id + 1))
                 eta_m = math.floor(eta_s / 60)
-                print("-----------------epoch %d/%d-----------------\n[Info] train_loss: %f, train_blue: %f\n[Info] valid_loss: %f, valid_blue: %f\n[Info] forward: %fs, backward: %fs\n[Info] ETA: %dm %ds\n" % (
-                    epoch_id + 1,
-                    epoch, 
+                print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
+                print("[train] train_loss: %f, train_blue: %f" % (
                     np.mean(log['train_loss']), 
-                    np.mean(log['train_blue']),
+                    np.mean(log['train_blue']))
+                )
+                print("[valid] valid_loss: %f, valid_blue: %f" % (
                     np.mean(log['valid_loss']),
-                    np.mean(log['valid_blue']),
-                    np.mean(log['forward']), 
-                    np.mean(log['backward']),
+                    np.mean(log['valid_blue']))
+                )
+                print("[Info]  forward_per_epoch: %fs\n[Info]  backward_per_epoch: %fs\n[Info]  valid_per_epoch: %fs" % (
+                    np.sum(log['forward']), 
+                    np.sum(log['backward']),
+                    np.sum(log['valid_time']))
+                )
+                print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds \n" % ( 
+                    np.mean(log['epoch_time']),
                     eta_m,
-                    eta_s - eta_m * 60
-                    ))
+                    eta_s - eta_m * 60)
+                )
+            
             # save log
             log['train_loss'] = np.mean(log['train_loss'])
             log['valid_loss'] = np.mean(log['valid_loss'])
             self.log[epoch_id] = log
+            
             # save model
             torch.save(encoder, "data/encoder_checkpoint_%s.pth" % self.model_type)
             torch.save(decoder, "data/decoder_checkpoint_%s.pth" % self.model_type)
