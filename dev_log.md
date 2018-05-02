@@ -1,5 +1,16 @@
 # Development Log
 
+## Apr.30
+
+__progress:__
+- added BLEU score as one of the evaluation metrics
+- added the time tracking for forward and backward pass
+- refined the epoch report
+
+__TODOs:__
+- fix the bug with BLEU score regarding different split of datasets. (calculations with train/valid/test should be performed on respective corpus instead of on the corpus of the whole dataset)
+- fix the bug with text generator to support multi-batches
+
 ## Apr.27
 
 > __milestone:__ 3D captioning for shapes are now possible
