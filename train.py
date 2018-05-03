@@ -68,9 +68,21 @@ def main(args):
 
     # for 3d encoder   
     elif model_type == "3d":
-        train_ds = ShapeCaptionDataset(root, train_captions)
+        # train_ds = ShapeCaptionDataset(root, train_captions)
+        train_ds = ShapeCaptionDataset(
+            root, 
+            data.transformed_data['train'], 
+            mode="hdf5", 
+            database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
+        )
         train_dl = DataLoader(train_ds, batch_size=batch_size)
-        valid_ds = ShapeCaptionDataset(root, valid_captions)
+        # valid_ds = ShapeCaptionDataset(root, valid_captions)
+        valid_ds = ShapeCaptionDataset(
+            root, 
+            data.transformed_data['valid'], 
+            mode="hdf5", 
+            database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
+        )
         valid_dl = DataLoader(valid_ds, batch_size=batch_size)
         dataloader = {
             'train': train_dl,
