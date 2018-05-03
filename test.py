@@ -69,7 +69,7 @@ def main(args):
         for j in range(len(text)):
             new.append(text[j])
             count += 1
-            if count == 12:
+            if count == 10:
                 new.append("\n")
                 count = 0
         descriptions[i] = " ".join(new)
@@ -77,12 +77,12 @@ def main(args):
     # plot testing results
     plt.switch_backend("agg")
     fig = plt.gcf()
-    fig.set_size_inches(8, 10 * len(descriptions))
+    fig.set_size_inches(8, 4 * len(descriptions))
     fig.set_facecolor('white')
     for i in range(len(descriptions)):
         plt.subplot(len(descriptions), 1, i+1)
         plt.imshow(transforms.ToPILImage()(images[i].cpu().view(3, 64, 64)))
-        plt.text(80, 32, descriptions[i], fontsize=14)
+        plt.text(80, 32, descriptions[i], fontsize=12)
     plt.savefig("figs/testing_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
 
 if __name__ == "__main__":
