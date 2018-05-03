@@ -54,9 +54,12 @@ def main(args):
     descriptions = []
     images = []
     for i, (_, visual_inputs, _, _) in enumerate(test_dl):
-        image_inputs = Variable(visual_inputs[0]).cuda()
-        descriptions += encoder_decoder.generate_text(image_inputs, dictionary, 50)
-        images.append(image_inputs)
+        if model_type == "2d":
+            inputs = Variable(visual_inputs[0]).cuda() # image
+        elif model_type == "3d":
+            inputs = Variable(visual_inputs[1]).cuda() # shape
+        descriptions += encoder_decoder.generate_text(inputs, dictionary, 50)
+        images.append(visual_inputs[0])
         
     # edit the descriptions
     for i in range(len(descriptions)):
