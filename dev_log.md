@@ -4,7 +4,7 @@
 
 __progress:__
 - fixed bug with the `train.py`
-- visualized the results in jupyter notebook
+- visualized the results in jupyter notebook, see more details in google docs
 
 __TODOs:__
 - generalize the model
