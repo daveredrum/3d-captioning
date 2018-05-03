@@ -35,9 +35,11 @@ def main(args):
     # split data
     test_captions = captions.transformed_data['test']
     dictionary = captions.dict_idx2word
+    transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
     test_ds = ShapeCaptionDataset(
         root, 
-        test_captions, 
+        test_captions,
+        transform, 
         mode="hdf5", 
         database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
     )
