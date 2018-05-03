@@ -162,7 +162,7 @@ class ShapeCaptionDataset(Dataset):
 
      # initialize data pairs: (model_id, shape_path, caption, cap_length)
     def _build_data_pairs(self):
-        if mode == 'default':
+        if self.mode == 'default':
             data_pairs = [(
                 self.model_ids[i],
                 self.shape_paths[i],
@@ -176,7 +176,7 @@ class ShapeCaptionDataset(Dataset):
                 for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
                     data_pairs[index][2].append(0)
         
-        elif mode == 'hdf5':
+        elif self.mode == 'hdf5':
             data_pairs = [(
                 self.model_ids[i],
                 i,
@@ -206,12 +206,12 @@ class ShapeCaptionDataset(Dataset):
 
     # return (model_id, shape_inputs, padded_caption, cap_length)
     def __getitem__(self, idx):
-        if mode == 'default':
+        if moself.modede == 'default':
             # used preprocessed data
             shape = np.load(self.data_pairs[idx][1] + '.npy')
             shape = torch.FloatTensor(shape)
         
-        elif mode == 'hdf5':
+        elif self.mode == 'hdf5':
             shape = np.array(self.database["shapes"][self.data_pairs[idx][1]])
             size = np.cbrt(shape / 3)
             shape = np.reshape((3, size, size, size))
