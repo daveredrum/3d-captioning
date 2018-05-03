@@ -13,6 +13,7 @@ from constants import *
 from data import *
 from models import *
 from solver import *
+import matplotlib
 import matplotlib.pyplot as plt
 
 def main(args):
