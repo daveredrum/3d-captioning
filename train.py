@@ -71,7 +71,7 @@ def main(args):
         # train_ds = ShapeCaptionDataset(root, train_captions)
         train_ds = ShapeCaptionDataset(
             root, 
-            data.transformed_data['train'], 
+            train_captions, 
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -79,7 +79,7 @@ def main(args):
         # valid_ds = ShapeCaptionDataset(root, valid_captions)
         valid_ds = ShapeCaptionDataset(
             root, 
-            data.transformed_data['valid'], 
+            valid_captions, 
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
