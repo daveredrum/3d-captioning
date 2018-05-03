@@ -146,8 +146,9 @@ class ImageCaptionDataset(Dataset):
 # default: load the shape data directly
 # hdf5: load the preprocessed data in hdf5 file, path to the database is required in this mode
 class ShapeCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file, mode='default', database=None):
+    def __init__(self, root_dir, csv_file, transform=None, mode='default', database=None):
         self.mode = mode
+        self.transform = transform
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
             os.path.join(root_dir, model_name, model_name + '.png') 
@@ -211,8 +212,12 @@ class ShapeCaptionDataset(Dataset):
     def __len__(self):
         return self.csv_file.id.count()
 
-    # return (model_id, shape_inputs, padded_caption, cap_length)
+    # return (model_id, (image_inputs, shape_inputs), padded_caption, cap_length)
     def __getitem__(self, idx):
+        image = Image.open(self.data_pairs[idx][1])
+        if self.transform:
+            image = self.transform(image)[:3, :, :]
+
         if self.mode == 'default':
             # used preprocessed data
             shape = np.load(self.data_pairs[idx][2] + '.npy')
@@ -224,7 +229,9 @@ class ShapeCaptionDataset(Dataset):
             shape = np.reshape(shape, (3, size, size, size))
             shape = torch.FloatTensor(shape)
 
-        return self.data_pairs[idx][0], self.data_pairs[idx][1], shape, self.data_pairs[idx][3], self.data_pairs[idx][4]
+        visual = (image, shape)
+
+        return self.data_pairs[idx][0], visual, self.data_pairs[idx][3], self.data_pairs[idx][4]
 
 # process csv file
 class Caption(object):

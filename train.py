@@ -69,10 +69,11 @@ def main(args):
 
     # for 3d encoder   
     elif model_type == "3d":
-        # train_ds = ShapeCaptionDataset(root, train_captions)
+        transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
         train_ds = ShapeCaptionDataset(
             root, 
             train_captions, 
+            transform,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -81,6 +82,7 @@ def main(args):
         valid_ds = ShapeCaptionDataset(
             root, 
             valid_captions, 
+            transform,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -88,6 +90,7 @@ def main(args):
         test_ds = ShapeCaptionDataset(
             root, 
             test_captions, 
+            transform,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -128,7 +131,7 @@ def main(args):
     print("start training....")
     print()
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type)
-    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose)
+    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type)
 
     # save
     print("save models...")
