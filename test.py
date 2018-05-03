@@ -76,7 +76,6 @@ def main(args):
         descriptions[i] = " ".join(new)
     
     # plot testing results
-    matplotlib.rcParams.update({'figure.subplot.left': 0.1})
     plt.switch_backend("agg")
 
     fig = plt.gcf()
@@ -85,7 +84,7 @@ def main(args):
     for i in range(len(descriptions)):
         plt.subplot(len(descriptions), 1, i+1)
         plt.imshow(transforms.ToPILImage()(images[i].cpu().view(3, 64, 64)))
-        plt.text(80, 32, descriptions[i], fontsize=12)
+        plt.text(80, 32, descriptions[i], fontsize=12, transform=fig.transFigure)
     # fig.tight_layout()
     plt.savefig("figs/testing_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
 
