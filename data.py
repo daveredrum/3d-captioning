@@ -7,6 +7,7 @@ import operator
 import copy
 import nrrd
 import math
+import h5py
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
@@ -158,7 +159,7 @@ class ShapeCaptionDataset(Dataset):
         if self.mode == 'default':
             self._preprocess()
         else:
-            self.database = database
+            self.database = h5py.File(database, "r")
 
      # initialize data pairs: (model_id, shape_path, caption, cap_length)
     def _build_data_pairs(self):
