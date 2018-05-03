@@ -147,25 +147,21 @@ def main(args):
     plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
+    plt.subplot(1, 2, 1)
     plt.plot(range(epochs), train_losses, label="train_loss")
     plt.plot(range(epochs), valid_losses, label="valid_loss")
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
-
-    # plot blue curve
-    print("plot blue curves...")
-    fig = plt.gcf()
-    fig.set_size_inches(16,8)
+    plt.subplot(1, 2, 2)
     plt.plot(range(epochs), train_blues, label="train_blue")
     plt.plot(range(epochs), valid_blues, label="valid_blue")
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/blue_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
+    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
