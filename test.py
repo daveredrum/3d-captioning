@@ -77,7 +77,7 @@ def main(args):
     # plot testing results
     plt.switch_backend("agg")
     fig = plt.gcf()
-    fig.set_size_inches(8, 4 * len(descriptions))
+    fig.set_size_inches(16, 4 * len(descriptions))
     fig.set_facecolor('white')
     for i in range(len(descriptions)):
         plt.subplot(len(descriptions), 1, i+1)
