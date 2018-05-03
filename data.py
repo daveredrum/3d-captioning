@@ -142,7 +142,11 @@ class ImageCaptionDataset(Dataset):
 
 # pipeline dataset for the encoder-decoder of shape-caption
 class ShapeCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file):
+    def __init__(self, root_dir, csv_file, mode='default', database=None):
+        # only two modes are available
+        # default: load the shape data directly
+        # hdf5: load the preprocessed data in hdf5 file
+        self.mode = mode
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.shape_paths = [
             os.path.join(root_dir, model_name, model_name + '.nrrd') 
@@ -151,22 +155,40 @@ class ShapeCaptionDataset(Dataset):
         self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
         self.data_pairs = self._build_data_pairs()
-        self._preprocess()
+        if self.mode == 'default':
+            self._preprocess()
+        else:
+            self.database = database
 
      # initialize data pairs: (model_id, shape_path, caption, cap_length)
     def _build_data_pairs(self):
-        data_pairs = [(
-            self.model_ids[i],
-            self.shape_paths[i],
-            self.caption_lists[i],
-            len(self.caption_lists[i])
-        ) for i in range(self.__len__())]
-        # sort data pairs according to cap_length in descending order
-        data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
-        # pad caption with 0 if it's length is not maximum
-        for index in range(1, len(data_pairs)):
-            for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
-                data_pairs[index][2].append(0)
+        if mode == 'default':
+            data_pairs = [(
+                self.model_ids[i],
+                self.shape_paths[i],
+                self.caption_lists[i],
+                len(self.caption_lists[i])
+            ) for i in range(self.__len__())]
+            # sort data pairs according to cap_length in descending order
+            data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+            # pad caption with 0 if it's length is not maximum
+            for index in range(1, len(data_pairs)):
+                for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+                    data_pairs[index][2].append(0)
+        
+        elif mode == 'hdf5':
+            data_pairs = [(
+                self.model_ids[i],
+                i,
+                self.caption_lists[i],
+                len(self.caption_lists[i])
+            ) for i in range(self.__len__())]
+            # sort data pairs according to cap_length in descending order
+            data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+            # pad caption with 0 if it's length is not maximum
+            for index in range(1, len(data_pairs)):
+                for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+                    data_pairs[index][2].append(0)
         
         return data_pairs
 
@@ -184,9 +206,16 @@ class ShapeCaptionDataset(Dataset):
 
     # return (model_id, shape_inputs, padded_caption, cap_length)
     def __getitem__(self, idx):
-        # used preprocessed data
-        shape = np.load(self.data_pairs[idx][1] + '.npy')
-        shape = torch.FloatTensor(shape)
+        if mode == 'default':
+            # used preprocessed data
+            shape = np.load(self.data_pairs[idx][1] + '.npy')
+            shape = torch.FloatTensor(shape)
+        
+        elif mode == 'hdf5':
+            shape = np.array(self.database["shapes"][self.data_pairs[idx][1]])
+            size = np.cbrt(shape / 3)
+            shape = np.reshape((3, size, size, size))
+            shape = torch.FloatTensor(shape)
 
         return self.data_pairs[idx][0], shape, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
