@@ -76,7 +76,7 @@ def main(args):
         descriptions[i] = " ".join(new)
     
     # plot testing results
-    matplotlib.rcParams.update({'figure.autolayout': True})
+    matplotlib.rcParams.update({'figure.subplot.left': 0.1})
     plt.switch_backend("agg")
 
     fig = plt.gcf()
