@@ -1,5 +1,15 @@
 # Development Log
 
+## May.3
+
+__progress:__
+- fixed bug with the `train.py`
+- visualized the results in jupyter notebook
+
+__TODOs:__
+- generalize the model
+- optimize the data loading step
+
 ## May.2
 
 __progress:__
