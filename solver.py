@@ -81,7 +81,7 @@ class EncoderSolver():
             log['valid_acc'] = np.mean(log['valid_acc'])
             self.log[epoch_id] = log
             # save model
-            torch.save(model, "data/encoder.pth")
+            torch.save(model, "models/encoder.pth")
 
 # only for decoder offline training
 # extracted visual contexts required
@@ -144,7 +144,7 @@ class DecoderSolver():
             log['valid_loss'] = np.mean(log['valid_loss'])
             self.log[epoch_id] = log
             # save model
-            torch.save(model, "data/decoder.pth")
+            torch.save(model, "models/decoder.pth")
 
 class EncoderDecoderSolver():
     def __init__(self, optimizer, criterion, model_type, cuda_flag=True):
@@ -297,7 +297,7 @@ class EncoderDecoderSolver():
             self.log[epoch_id] = log
             
             # save model
-            torch.save(encoder, "data/encoder_checkpoint_%s.pth" % self.model_type)
-            torch.save(decoder, "data/decoder_checkpoint_%s.pth" % self.model_type)
+            torch.save(encoder, "models/encoder_checkpoint_%s.pth" % self.model_type)
+            torch.save(decoder, "models/decoder_checkpoint_%s.pth" % self.model_type)
 
                 
