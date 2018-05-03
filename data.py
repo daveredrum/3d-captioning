@@ -206,7 +206,7 @@ class ShapeCaptionDataset(Dataset):
 
     # return (model_id, shape_inputs, padded_caption, cap_length)
     def __getitem__(self, idx):
-        if moself.modede == 'default':
+        if self.mode == 'default':
             # used preprocessed data
             shape = np.load(self.data_pairs[idx][1] + '.npy')
             shape = torch.FloatTensor(shape)
