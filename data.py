@@ -214,7 +214,7 @@ class ShapeCaptionDataset(Dataset):
         
         elif self.mode == 'hdf5':
             shape = np.array(self.database["shapes"][self.data_pairs[idx][1]])
-            size = np.cbrt(shape / 3)
+            size = int(np.cbrt(shape.shape[0] / 3))
             shape = np.reshape(shape, (3, size, size, size))
             shape = torch.FloatTensor(shape)
 
