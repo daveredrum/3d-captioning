@@ -51,7 +51,7 @@ def main(args):
 
     descriptions = []
     images = []
-    for i, (_, image_inputs, _, _) in enumerate(test_dl):
+    for i, (_, image_inputs, _, _, _) in enumerate(test_dl):
         image_inputs = Variable(image_inputs).cuda()
         descriptions += encoder_decoder.generate_text(image_inputs, dictionary, 50)
         images.append(image_inputs)

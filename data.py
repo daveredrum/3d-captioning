@@ -149,6 +149,10 @@ class ShapeCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file, mode='default', database=None):
         self.mode = mode
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
+        self.image_paths = [
+            os.path.join(root_dir, model_name, model_name + '.png') 
+            for model_name in self.model_ids
+        ]
         self.shape_paths = [
             os.path.join(root_dir, model_name, model_name + '.nrrd') 
             for model_name in self.model_ids
@@ -161,46 +165,48 @@ class ShapeCaptionDataset(Dataset):
         else:
             self.database = h5py.File(database, "r")
 
-     # initialize data pairs: (model_id, shape_path, caption, cap_length)
+     # initialize data pairs: (model_id, image_path, shape_path, caption, cap_length)
     def _build_data_pairs(self):
         if self.mode == 'default':
             data_pairs = [(
                 self.model_ids[i],
+                self.image_paths[i],
                 self.shape_paths[i],
                 self.caption_lists[i],
                 len(self.caption_lists[i])
             ) for i in range(self.__len__())]
             # sort data pairs according to cap_length in descending order
-            data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+            data_pairs = sorted(data_pairs, key=lambda item: item[4], reverse=True)
             # pad caption with 0 if it's length is not maximum
             for index in range(1, len(data_pairs)):
-                for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
-                    data_pairs[index][2].append(0)
+                for i in range(len(data_pairs[0][3]) - len(data_pairs[index][3])):
+                    data_pairs[index][3].append(0)
         
         elif self.mode == 'hdf5':
             data_pairs = [(
                 self.model_ids[i],
+                self.image_paths[i],
                 i,
                 self.caption_lists[i],
                 len(self.caption_lists[i])
             ) for i in range(self.__len__())]
             # sort data pairs according to cap_length in descending order
-            data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+            data_pairs = sorted(data_pairs, key=lambda item: item[4], reverse=True)
             # pad caption with 0 if it's length is not maximum
             for index in range(1, len(data_pairs)):
-                for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
-                    data_pairs[index][2].append(0)
+                for i in range(len(data_pairs[0][3]) - len(data_pairs[index][3])):
+                    data_pairs[index][3].append(0)
         
         return data_pairs
 
     # preprocess the data and store them as numpy arrays in the same path
     def _preprocess(self):
         for data_pair in self.data_pairs:
-            if not os.path.exists(data_pair[1] + '.npy'):
-                shape, _ = nrrd.read(data_pair[1])
+            if not os.path.exists(data_pair[2] + '.npy'):
+                shape, _ = nrrd.read(data_pair[2])
                 shape = np.array(shape)[:3, :, :, :]
                 shape = (shape - shape.min()) / (shape.max() - shape.min())
-                np.save(data_pair[1] + '.npy', shape)
+                np.save(data_pair[2] + '.npy', shape)
 
     def __len__(self):
         return self.csv_file.id.count()
@@ -209,16 +215,16 @@ class ShapeCaptionDataset(Dataset):
     def __getitem__(self, idx):
         if self.mode == 'default':
             # used preprocessed data
-            shape = np.load(self.data_pairs[idx][1] + '.npy')
+            shape = np.load(self.data_pairs[idx][2] + '.npy')
             shape = torch.FloatTensor(shape)
         
         elif self.mode == 'hdf5':
-            shape = np.array(self.database["shapes"][self.data_pairs[idx][1]])
+            shape = np.array(self.database["shapes"][self.data_pairs[idx][2]])
             size = int(np.cbrt(shape.shape[0] / 3))
             shape = np.reshape(shape, (3, size, size, size))
             shape = torch.FloatTensor(shape)
 
-        return self.data_pairs[idx][0], shape, self.data_pairs[idx][2], self.data_pairs[idx][3]
+        return self.data_pairs[idx][0], self.data_pairs[idx][1], shape, self.data_pairs[idx][3], self.data_pairs[idx][4]
 
 # process csv file
 class Caption(object):

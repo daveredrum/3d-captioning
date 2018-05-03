@@ -183,7 +183,7 @@ class EncoderDecoderSolver():
         
         return np.mean(blue)
 
-    def train(self, encoder, decoder, dataloader, corpus, dictionary, epoch, verbose):
+    def train(self, encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type):
         for epoch_id in range(epoch):
             log = {
                 'train_loss': [],
@@ -203,6 +203,11 @@ class EncoderDecoderSolver():
                     encoder.train()
                 for model_ids, visuals, captions, cap_lengths in dataloader[phase]:
                     # visuals must be tensor
+                    if model_type == "2d":
+                        visuals = visuals[0]
+                    elif model_type == "3d":
+                        visuals = visuals[1]
+                        
                     caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                     caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
                     # target_ref = [item[0][:item[1]] for item in zip(caption_targets.tolist(), cap_lengths.tolist())]
