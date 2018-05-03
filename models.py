@@ -65,7 +65,8 @@ class Encoder3D(nn.Module):
             nn.MaxPool3d(2, 2)
         )
         self.fc_layer = nn.Sequential(
-            nn.Linear(64 * 14 * 14 * 14, 512),
+            nn.Linear(64 * 2 * 2 * 2, 512), # for 32
+            # nn.Linear(64 * 14 * 14 * 14, 512), # for 128
             nn.ReLU(),
             nn.BatchNorm1d(512),
             nn.Linear(512, 512),
