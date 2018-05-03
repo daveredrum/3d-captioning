@@ -130,6 +130,11 @@ def main(args):
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type)
     encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose)
 
+    # save
+    print("save models...")
+    torch.save(encoder, "models/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
+    torch.save(decoder, "models/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
+
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
@@ -138,6 +143,7 @@ def main(args):
     valid_blues = [np.mean(encoder_decoder_solver.log[i]["valid_blue"]) for i in range(epoch)]
 
     # plot training curve
+    print("plot training curves...")
     plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
@@ -150,6 +156,7 @@ def main(args):
     plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
 
     # plot blue curve
+    print("plot blue curves...")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_blues, label="train_blue")
@@ -159,41 +166,6 @@ def main(args):
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.savefig("figs/blue_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
-
-    # testing
-    descriptions = []
-    images = []
-    for i, (_, image_inputs, caps, cap_lengths) in enumerate(test_dl):
-        image_inputs = Variable(image_inputs).cuda()
-        descriptions += encoder_decoder.generate_text(image_inputs, dictionary, 50)
-        images.append(image_inputs)
-        
-    # edit the descriptions
-    for i in range(len(descriptions)):
-        text = descriptions[i].split(" ")
-        new = []
-        count = 0
-        for j in range(len(text)):
-            new.append(text[j])
-            count += 1
-            if count == 12:
-                new.append("\n")
-                count = 0
-        descriptions[i] = " ".join(new)
-    
-    # plot testing results
-    fig = plt.gcf()
-    fig.set_size_inches(8, 4 * len(descriptions))
-    fig.set_facecolor('white')
-    for i in range(len(descriptions)):
-        plt.subplot(len(descriptions), 1, i+1)
-        plt.imshow(transforms.ToPILImage()(images[i].cpu().view(3, 64, 64)))
-        plt.text(80, 32, descriptions[i], fontsize=14)
-    plt.savefig("figs/testing_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size))
-
-    # save
-    torch.save(encoder, "models/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
-    torch.save(decoder, "models/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
