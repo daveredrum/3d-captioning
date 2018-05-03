@@ -70,7 +70,7 @@ def main(args):
         for j in range(len(text)):
             new.append(text[j])
             count += 1
-            if count == 10:
+            if count == 16:
                 new.append("\n")
                 count = 0
         descriptions[i] = " ".join(new)
