@@ -70,6 +70,7 @@ def main(args):
         descriptions[i] = " ".join(new)
     
     # plot testing results
+    plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(8, 4 * len(descriptions))
     fig.set_facecolor('white')
