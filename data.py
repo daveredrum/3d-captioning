@@ -142,11 +142,11 @@ class ImageCaptionDataset(Dataset):
         return self.data_pairs[idx][0], image[:3, :, :], self.data_pairs[idx][2], self.data_pairs[idx][3]
 
 # pipeline dataset for the encoder-decoder of shape-caption
+# only two modes are available
+# default: load the shape data directly
+# hdf5: load the preprocessed data in hdf5 file, path to the database is required in this mode
 class ShapeCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file, mode='default', database=None):
-        # only two modes are available
-        # default: load the shape data directly
-        # hdf5: load the preprocessed data in hdf5 file
         self.mode = mode
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.shape_paths = [
