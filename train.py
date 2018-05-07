@@ -20,7 +20,7 @@ def main(args):
     # settings
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_128_solid/"
+    root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid/"
     captions = pandas.read_csv("captions.tablechair.csv")
     train_size = args.train_size
     valid_size = args.valid_size
