@@ -111,7 +111,10 @@ def main(args):
         fig.set_facecolor('white')
         for i in range(len(descriptions[phase])):
             plt.subplot(len(descriptions[phase]), 1, i+1)
-            plt.imshow(Image.open(images[phase][i]).resize((64, 64)))
+            if model_type == "2d":
+                plt.imshow(transforms.ToPILImage(images[phase][i]).resize((64, 64)))
+            elif model_type == "3d":
+                plt.imshow(Image.open(images[phase][i]).resize((64, 64)))
             plt.text(80, 32, descriptions[phase][i], fontsize=12)
         # fig.tight_layout()
         plt.savefig("figs/%s_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (phase, model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
