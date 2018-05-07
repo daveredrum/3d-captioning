@@ -323,8 +323,12 @@ class EncoderDecoderSolver():
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             valid_cider, _ = capcider.Cider().compute_score(references["valid"], candidates["valid"])
             # evaluate meteor
-            train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
-            valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
+            try:
+                train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
+                valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
+            except Exception:
+                train_meteor = 0
+                valid_meteor = 0
             # evaluate rouge
             train_rouge, _ = caprouge.Rouge().compute_score(references["train"], candidates["train"])
             valid_rouge, _ = caprouge.Rouge().compute_score(references["valid"], candidates["valid"])
