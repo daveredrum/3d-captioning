@@ -112,8 +112,8 @@ def main(args):
         for i in range(len(descriptions[phase])):
             plt.subplot(len(descriptions[phase]), 1, i+1)
             if model_type == "2d":
-                image = transforms.Resize(64)(images[phase][i])
-                image = transforms.ToPILImage(image)
+                image = transforms.ToPILImage(images[phase][i])
+                image = transforms.Resize(64)(image)
                 plt.imshow(image)
             elif model_type == "3d":
                 plt.imshow(Image.open(images[phase][i]).resize((64, 64)))
