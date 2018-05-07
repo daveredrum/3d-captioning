@@ -160,9 +160,7 @@ class ShapeCaptionDataset(Dataset):
         self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
         self.data_pairs = self._build_data_pairs()
-        if self.mode == 'default':
-            self._preprocess()
-        else:
+        if self.mode == 'hdf5':
             self.database = h5py.File(database, "r")
 
      # initialize data pairs: (model_id, image_path, shape_path, caption, cap_length)
@@ -199,15 +197,6 @@ class ShapeCaptionDataset(Dataset):
                     data_pairs[index][3].append(0)
         
         return data_pairs
-
-    # preprocess the data and store them as numpy arrays in the same path
-    def _preprocess(self):
-        for data_pair in self.data_pairs:
-            if not os.path.exists(data_pair[2] + '.npy'):
-                shape, _ = nrrd.read(data_pair[2])
-                shape = np.array(shape)[:3, :, :, :]
-                shape = (shape - shape.min()) / (shape.max() - shape.min())
-                np.save(data_pair[2] + '.npy', shape)
 
     def __len__(self):
         return self.csv_file.id.count()

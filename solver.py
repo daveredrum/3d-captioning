@@ -373,19 +373,19 @@ class EncoderDecoderSolver():
                     log['train_loss'], 
                     log['valid_loss'])
                 )
-                print("[BLEU] train_blue_1: %f, valid_blue_1: %f" % (
+                print("[BLEU-1] train_blue: %f, valid_blue: %f" % (
                     log['train_blue_1'],
                     log['valid_blue_1'])
                 )
-                print("[BLEU] train_blue_2: %f, valid_blue_2: %f" % (
+                print("[BLEU-2] train_blue: %f, valid_blue: %f" % (
                     log['train_blue_2'],
                     log['valid_blue_2'])
                 )
-                print("[BLEU] train_blue_3: %f, valid_blue_3: %f" % (
+                print("[BLEU-3] train_blue: %f, valid_blue: %f" % (
                     log['train_blue_3'],
                     log['valid_blue_3'])
                 )
-                print("[BLEU] train_blue_4: %f, valid_blue_4: %f" % (
+                print("[BLEU-4] train_blue: %f, valid_blue: %f" % (
                     log['train_blue_4'],
                     log['valid_blue_4'])
                 )
