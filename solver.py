@@ -6,7 +6,11 @@ from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
 from nltk.translate.bleu_score import sentence_bleu
-
+from tensorboardX import SummaryWriter
+import capeval.bleu.bleu as capbleu
+import capeval.cider.cider as capcider
+import capeval.meteor.meteor as capmeteor
+import capeval.rouge.rouge as caprouge
 
 # only for encoder offline training 
 class EncoderSolver():
@@ -154,17 +158,35 @@ class EncoderDecoderSolver():
         self.cuda_flag = cuda_flag
         self.log = {}
     
-    # unpack the sequence
-    def _unpack_outputs(self, sequence, pack_info):
+    # # unpack the sequence
+    # def _unpack_outputs(self, sequence, pack_info):
         
-        return pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
+    #     return pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
 
-    # unpad the sequence by removing the zeros
-    def _unpad_outputs(self, unpacked_sequence, cap_lengths):
-        return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+    # # unpad the sequence by removing the zeros
+    # def _unpad_outputs(self, unpacked_sequence, cap_lengths):
+    #     return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
 
-    # calculate the bleu score with respect to the corpus
-    def _calculate_blue(self, corpus, dictionary, model_ids, sequences):
+    def _decode_outputs(self, sequence, pack_info, cap_lengths, dictionary):
+        # unpack the sequence
+        unpacked_sequence = pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
+        # unpad the sequence by removing the zeros
+        unpadded_sequence = [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+        # decode the indices
+        decoded = []
+        for sequence in unpadded_sequence:
+            temp = []
+            for idx in sequence:
+                try:
+                    temp.append(dictionary[idx])
+                except Exception:
+                    pass
+            decoded.append(" ".join(temp))
+        
+        return decoded
+    
+    # calculate the bleu score with respect to the references
+    def _calculate_blue(self, references, dictionary, model_ids, sequences, weights):
         blue = []
         for model_id, sequence in zip(model_ids, sequences):
             sentence = []
@@ -176,24 +198,43 @@ class EncoderDecoderSolver():
             
             blue.append(
                 sentence_bleu(
-                    corpus[model_id],
-                    sentence
+                    references[model_id],
+                    sentence,
+                    weights
                 )
             )
         
         return np.mean(blue)
 
-    def train(self, encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type):
+    def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type):
+        # setup tensorboard
+        writer = SummaryWriter(log_dir="logs/")
         for epoch_id in range(epoch):
             log = {
                 'train_loss': [],
-                'train_blue': [],
+                'train_blue_1': [],
+                'train_blue_2': [],
+                'train_blue_3': [],
+                'train_blue_4': [],
                 'valid_loss': [],
-                'valid_blue': [],
+                'valid_blue_1': [],
+                'valid_blue_2': [],
+                'valid_blue_3': [],
+                'valid_blue_4': [],
+                'train_cider': [],
+                'valid_cider': [],
+                'train_meteor': [],
+                'valid_meteor': [],
+                'train_rouge': [],
+                'valid_rouge': [],
                 'forward': [],
                 'backward': [],
                 'valid_time': [],
                 'epoch_time': []
+            }
+            candidates = {
+                'train': {},
+                'valid': {}
             }
             start = time.time()
             for phase in ["train", "valid"]:
@@ -204,7 +245,7 @@ class EncoderDecoderSolver():
                 for model_ids, visuals, captions, cap_lengths in dataloader[phase]:
                     # visuals must be tensor
                     if model_type == "2d":
-                        visuals = visuals[0]
+                        visuals = visuals
                     elif model_type == "3d":
                         visuals = visuals[1]
                         
@@ -233,24 +274,25 @@ class EncoderDecoderSolver():
                         loss = self.criterion(outputs, caption_targets)
                         log['forward'].append(time.time() - forward_since)
                         
-                        # unpack outputs
-                        outputs_unpack = self._unpack_outputs(outputs.max(1)[1], pack_info)
-                        # unpadd outputs
-                        outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
+                        # decode outputs
+                        outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                        # save to candidates
+                        for model_id, output in zip(model_ids, outputs):
+                            if model_id not in candidates[phase].keys():
+                                candidates[phase][model_id] = [output]
+                            else:
+                                candidates[phase][model_id].append(output)
 
                         # backward pass
                         # save log
                         encoder.zero_grad()
                         decoder.zero_grad()
+                        self.optimizer.zero_grad()
                         backward_since = time.time()
                         loss.backward()
                         self.optimizer.step()
                         log['backward'].append(time.time() - backward_since)
-
-                        # calculate BLEU score
-                        blue = self._calculate_blue(corpus["train"], dictionary, model_ids, outputs_unpad)
                         log['train_loss'].append(loss.data[0])
-                        log['train_blue'].append(np.mean(blue))
                     else:
                         # validate
                         valid_since = time.time()
@@ -259,17 +301,67 @@ class EncoderDecoderSolver():
                         loss = self.criterion(outputs, caption_targets)
                         log['valid_time'].append(time.time() - valid_since)
                         
-                        # unpack outputs
-                        outputs_unpack = self._unpack_outputs(outputs.max(1)[1], pack_info)
-                        # unpadd outputs
-                        outputs_unpad = self._unpad_outputs(outputs_unpack, cap_lengths)
+                        # decode outputs
+                        outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                        # save to candidates
+                        for model_id, output in zip(model_ids, outputs):
+                            if model_id not in candidates[phase].keys():
+                                candidates[phase][model_id] = [output]
+                            else:
+                                candidates[phase][model_id].append(output)
 
-                        # calculate BLEU score
                         # save log
-                        blue = self._calculate_blue(corpus["valid"], dictionary, model_ids, outputs_unpad)
                         log['valid_loss'].append(loss.data[0])
-                        log['valid_blue'].append(np.mean(blue))
             
+            # accumulate loss
+            log['train_loss'] = np.mean(log['train_loss'])
+            log['valid_loss'] = np.mean(log['valid_loss'])
+            # evaluate bleu
+            train_blue, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
+            valid_blue, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
+            # evaluate cider
+            train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
+            valid_cider, _ = capcider.Cider().compute_score(references["valid"], candidates["valid"])
+            # evaluate meteor
+            train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
+            valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
+            # evaluate rouge
+            train_rouge, _ = caprouge.Rouge().compute_score(references["train"], candidates["train"])
+            valid_rouge, _ = caprouge.Rouge().compute_score(references["valid"], candidates["valid"])
+            # log
+            log['train_blue_1'] = train_blue[0]
+            log['train_blue_2'] = train_blue[1]
+            log['train_blue_3'] = train_blue[2]
+            log['train_blue_4'] = train_blue[3]
+            log['valid_blue_1'] = valid_blue[0]
+            log['valid_blue_2'] = valid_blue[1]
+            log['valid_blue_3'] = valid_blue[2]
+            log['valid_blue_4'] = valid_blue[3]
+            log['train_cider'] = train_cider
+            log['valid_cider'] = valid_cider
+            log['train_meteor'] = train_meteor
+            log['valid_meteor'] = valid_meteor
+            log['train_rouge'] = train_rouge
+            log['valid_rouge'] = valid_rouge
+
+            # update report on tensorboard after every epoch
+            writer.add_scalar("loss/train_loss", log['train_loss'], epoch_id)
+            writer.add_scalar("loss/valid_loss", log['valid_loss'], epoch_id)
+            writer.add_scalar("blue/train_blue_1", log['train_blue_1'], epoch_id)
+            writer.add_scalar("blue/valid_blue_1", log['valid_blue_1'], epoch_id)
+            writer.add_scalar("blue/train_blue_2", log['train_blue_2'], epoch_id)
+            writer.add_scalar("blue/valid_blue_2", log['valid_blue_2'], epoch_id)
+            writer.add_scalar("blue/train_blue_3", log['train_blue_3'], epoch_id)
+            writer.add_scalar("blue/valid_blue_3", log['valid_blue_3'], epoch_id)
+            writer.add_scalar("blue/train_blue_4", log['train_blue_4'], epoch_id)
+            writer.add_scalar("blue/valid_blue_4", log['valid_blue_4'], epoch_id)
+            writer.add_scalar("blue/train_cider", log['train_cider'], epoch_id)
+            writer.add_scalar("blue/valid_cider", log['valid_cider'], epoch_id)
+            writer.add_scalar("blue/train_meteor", log['train_meteor'], epoch_id)
+            writer.add_scalar("blue/valid_meteor", log['valid_meteor'], epoch_id)
+            writer.add_scalar("blue/train_rouge", log['train_rouge'], epoch_id)
+            writer.add_scalar("blue/valid_rouge", log['valid_rouge'], epoch_id)
+
             log['epoch_time'].append(np.mean(time.time() - start))
             # show report
             if epoch_id % verbose == (verbose - 1):
@@ -277,13 +369,37 @@ class EncoderDecoderSolver():
                 eta_s = exetime_s * (epoch - (epoch_id + 1))
                 eta_m = math.floor(eta_s / 60)
                 print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
-                print("[train] train_loss: %f, train_blue: %f" % (
-                    np.mean(log['train_loss']), 
-                    np.mean(log['train_blue']))
+                print("[Loss] train_loss: %f, valid_loss: %f" % (
+                    log['train_loss'], 
+                    log['valid_loss'])
                 )
-                print("[valid] valid_loss: %f, valid_blue: %f" % (
-                    np.mean(log['valid_loss']),
-                    np.mean(log['valid_blue']))
+                print("[BLEU] train_blue_1: %f, valid_blue_1: %f" % (
+                    log['train_blue_1'],
+                    log['valid_blue_1'])
+                )
+                print("[BLEU] train_blue_2: %f, valid_blue_2: %f" % (
+                    log['train_blue_2'],
+                    log['valid_blue_2'])
+                )
+                print("[BLEU] train_blue_3: %f, valid_blue_3: %f" % (
+                    log['train_blue_3'],
+                    log['valid_blue_3'])
+                )
+                print("[BLEU] train_blue_4: %f, valid_blue_4: %f" % (
+                    log['train_blue_4'],
+                    log['valid_blue_4'])
+                )
+                print("[CIDEr] train_cider: %f, valid_cider: %f" % (
+                    log['train_cider'],
+                    log['valid_cider'])
+                )
+                print("[METEOR] train_meteor: %f, valid_meteor: %f" % (
+                    log['train_meteor'],
+                    log['valid_meteor'])
+                )
+                print("[ROUGE_L] train_rouge: %f, valid_rouge: %f" % (
+                    log['train_rouge'],
+                    log['valid_rouge'])
                 )
                 print("[Info]  forward_per_epoch: %fs\n[Info]  backward_per_epoch: %fs\n[Info]  valid_per_epoch: %fs" % (
                     np.sum(log['forward']), 
@@ -297,12 +413,14 @@ class EncoderDecoderSolver():
                 )
             
             # save log
-            log['train_loss'] = np.mean(log['train_loss'])
-            log['valid_loss'] = np.mean(log['valid_loss'])
             self.log[epoch_id] = log
             
             # save model
             torch.save(encoder, "models/encoder_checkpoint_%s.pth" % self.model_type)
             torch.save(decoder, "models/decoder_checkpoint_%s.pth" % self.model_type)
+
+        # export scalar data to JSON for external processing
+        writer.export_scalars_to_json("logs/all_scalars.json")
+        writer.close()
 
                 

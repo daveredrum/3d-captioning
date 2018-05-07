@@ -146,9 +146,8 @@ class ImageCaptionDataset(Dataset):
 # default: load the shape data directly
 # hdf5: load the preprocessed data in hdf5 file, path to the database is required in this mode
 class ShapeCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file, transform=None, mode='default', database=None):
+    def __init__(self, root_dir, csv_file, mode='default', database=None):
         self.mode = mode
-        self.transform = transform
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
             os.path.join(root_dir, model_name, model_name + '.png') 
@@ -168,6 +167,7 @@ class ShapeCaptionDataset(Dataset):
 
      # initialize data pairs: (model_id, image_path, shape_path, caption, cap_length)
     def _build_data_pairs(self):
+        # for 3d models
         if self.mode == 'default':
             data_pairs = [(
                 self.model_ids[i],
@@ -212,12 +212,9 @@ class ShapeCaptionDataset(Dataset):
     def __len__(self):
         return self.csv_file.id.count()
 
-    # return (model_id, (image_inputs, shape_inputs), padded_caption, cap_length)
+    # 3d: (model_id, (image_path, shape_inputs), padded_caption, cap_length)
     def __getitem__(self, idx):
-        image = Image.open(self.data_pairs[idx][1])
-        if self.transform:
-            image = self.transform(image)[:3, :, :]
-
+        image = self.data_pairs[idx][1]
         if self.mode == 'default':
             # used preprocessed data
             shape = np.load(self.data_pairs[idx][2] + '.npy')
@@ -308,9 +305,9 @@ class Caption(object):
         for phase in ['train', 'valid', 'test']:
             for _, item in self.preprocessed_data[phase].iterrows():
                 if item.modelId in self.corpus[phase].keys():
-                    self.corpus[phase][item.modelId].append([item for item in item.description.split(" ") if item])
+                    self.corpus[phase][item.modelId].append(item.description)
                 else:
-                    self.corpus[phase][item.modelId] = [[item for item in item.description.split(" ") if item]]
+                    self.corpus[phase][item.modelId] = [item.description]
 
 
     def _preprocess(self):

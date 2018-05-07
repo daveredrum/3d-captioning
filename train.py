@@ -15,6 +15,7 @@ from models import *
 from solver import *
 import matplotlib.pyplot as plt
 
+
 def main(args):
     # settings
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
@@ -69,11 +70,9 @@ def main(args):
 
     # for 3d encoder   
     elif model_type == "3d":
-        transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
         train_ds = ShapeCaptionDataset(
             root, 
             train_captions, 
-            transform,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -81,16 +80,14 @@ def main(args):
         # valid_ds = ShapeCaptionDataset(root, valid_captions)
         valid_ds = ShapeCaptionDataset(
             root, 
-            valid_captions, 
-            transform,
+            valid_captions,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         valid_dl = DataLoader(valid_ds, batch_size=batch_size)
         test_ds = ShapeCaptionDataset(
             root, 
-            test_captions, 
-            transform,
+            test_captions,
             mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
@@ -142,29 +139,96 @@ def main(args):
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
     valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]
-    train_blues = [np.mean(encoder_decoder_solver.log[i]["train_blue"]) for i in range(epoch)]
-    valid_blues = [np.mean(encoder_decoder_solver.log[i]["valid_blue"]) for i in range(epoch)]
+    train_blues_1 = [encoder_decoder_solver.log[i]["train_blue_1"] for i in range(epoch)]
+    train_blues_2 = [encoder_decoder_solver.log[i]["train_blue_2"] for i in range(epoch)]
+    train_blues_3 = [encoder_decoder_solver.log[i]["train_blue_3"] for i in range(epoch)]
+    train_blues_4 = [encoder_decoder_solver.log[i]["train_blue_4"] for i in range(epoch)]
+    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_blue_1"] for i in range(epoch)]
+    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_blue_2"] for i in range(epoch)]
+    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_blue_3"] for i in range(epoch)]
+    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_blue_4"] for i in range(epoch)]
+    train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epoch)]
+    valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epoch)]
+    train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epoch)]
+    valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epoch)]
+    train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epoch)]
+    valid_rouge = [encoder_decoder_solver.log[i]["valid_rouge"] for i in range(epoch)]
 
     # plot training curve
     print("plot training curves...")
     plt.switch_backend("agg")
     fig = plt.gcf()
-    fig.set_size_inches(32,8)
-    plt.subplot(1, 2, 1)
+    fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_losses, label="train_loss")
     plt.plot(range(epochs), valid_losses, label="valid_loss")
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.subplot(1, 2, 2)
-    plt.plot(range(epochs), train_blues, "C3", label="train_blue")
-    plt.plot(range(epochs), valid_blues, "C4", label="valid_blue")
+    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # plot the bleu scores
+    fig.clf()
+    fig.set_size_inches(16,32)
+    plt.subplot(4, 1, 1)
+    plt.plot(range(epochs), train_blues_1, "C3", label="train_blue")
+    plt.plot(range(epochs), valid_blues_1, "C4", label="valid_blue")
     plt.xlabel('epoch')
-    plt.ylabel('BLEU')
+    plt.ylabel('BLEU-1')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    plt.subplot(4, 1, 2)
+    plt.plot(range(epochs), train_blues_2, "C3", label="train_blue")
+    plt.plot(range(epochs), valid_blues_2, "C4", label="valid_blue")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-2')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.subplot(4, 1, 3)
+    plt.plot(range(epochs), train_blues_3, "C3", label="train_blue")
+    plt.plot(range(epochs), valid_blues_3, "C4", label="valid_blue")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-3')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.subplot(4, 1, 4)
+    plt.plot(range(epochs), train_blues_4, "C3", label="train_blue")
+    plt.plot(range(epochs), valid_blues_4, "C4", label="valid_blue")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-4')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.savefig("figs/bleu_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # plot the cider scores
+    fig.clf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_cider, label="train_cider")
+    plt.plot(range(epochs), valid_cider, label="valid_cider")
+    plt.xlabel('epoch')
+    plt.ylabel('CIDEr')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.savefig("figs/cider_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # plot the cider scores
+    fig.clf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_meteor, label="train_meteor")
+    plt.plot(range(epochs), valid_meteor, label="valid_meteor")
+    plt.xlabel('epoch')
+    plt.ylabel('METEOR')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.savefig("figs/meteor_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # plot the rouge scores
+    fig.clf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_rouge, label="train_rouge")
+    plt.plot(range(epochs), valid_rouge, label="valid_rouge")
+    plt.xlabel('epoch')
+    plt.ylabel('ROUGE_L')
+    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    plt.legend()
+    plt.savefig("figs/rouge_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

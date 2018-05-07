@@ -34,17 +34,32 @@ def main(args):
     captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
     input_size = captions.dict_word2idx.__len__() + 1
     # split data
+    train_captions = captions.transformed_data['train']
     test_captions = captions.transformed_data['test']
     dictionary = captions.dict_idx2word
     transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
-    test_ds = ShapeCaptionDataset(
-        root, 
-        test_captions,
-        transform, 
-        mode="hdf5", 
-        database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
-    )
+    if model_type == "2d":
+        train_ds = ImageCaptionDataset(root, train_captions, transform)
+        test_ds = ImageCaptionDataset(root, test_captions, transform)
+    elif model_type == "3d":
+        train_ds = ShapeCaptionDataset(
+            root, 
+            train_captions,
+            mode="hdf5", 
+            database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
+        )
+        test_ds = ShapeCaptionDataset(
+            root, 
+            test_captions,
+            mode="hdf5", 
+            database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
+        )
+    train_dl = DataLoader(train_ds, batch_size=1)
     test_dl = DataLoader(test_ds, batch_size=1)
+    dataloader = {
+        'train': train_dl,
+        'test': test_dl
+    }
 
     # testing
     print("testing...")
@@ -52,41 +67,55 @@ def main(args):
     decoder_path = "models/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size)
     encoder_decoder = EncoderDecoder(encoder_path, decoder_path)
 
-    descriptions = []
-    images = []
-    for i, (_, visual_inputs, _, _) in enumerate(test_dl):
-        if model_type == "2d":
-            inputs = Variable(visual_inputs[0]).cuda() # image
-        elif model_type == "3d":
-            inputs = Variable(visual_inputs[1]).cuda() # shape
-        descriptions += encoder_decoder.generate_text(inputs, dictionary, 50)
-        images.append(visual_inputs[0])
-        
-    # edit the descriptions
-    for i in range(len(descriptions)):
-        text = descriptions[i].split(" ")
-        new = []
-        count = 0
-        for j in range(len(text)):
-            new.append(text[j])
-            count += 1
-            if count == 16:
-                new.append("\n")
-                count = 0
-        descriptions[i] = " ".join(new)
+    # captioning
+    descriptions = {
+        'train': [],
+        'test': []
+    }
+    images = {
+        'train': [],
+        'test': []
+    }
+    for phase in ["train", "test"]:
+        for i, (_, visual_inputs, _, _) in enumerate(dataloader[phase]):
+            if model_type == "2d":
+                inputs = Variable(visual_inputs).cuda() # image
+                images[phase].append(visual_inputs)
+            elif model_type == "3d":
+                inputs = Variable(visual_inputs[1]).cuda() # shape
+                images[phase].append(visual_inputs[0][0])
+            descriptions[phase] += encoder_decoder.generate_text(inputs, dictionary, 50)
+            # only use part of the dataset
+            if i >= 10:
+                break
+            
+            
+        # edit the descriptions
+        for i in range(len(descriptions)):
+            text = descriptions[phase][i].split(" ")
+            new = []
+            count = 0
+            for j in range(len(text)):
+                new.append(text[j])
+                count += 1
+                if count == 16:
+                    new.append("\n")
+                    count = 0
+            descriptions[phase][i] = " ".join(new)
     
-    # plot testing results
-    plt.switch_backend("agg")
+        # plot testing results
+        plt.switch_backend("agg")
 
-    fig = plt.gcf()
-    fig.set_size_inches(8, 4 * len(descriptions))
-    fig.set_facecolor('white')
-    for i in range(len(descriptions)):
-        plt.subplot(len(descriptions), 1, i+1)
-        plt.imshow(transforms.ToPILImage()(images[i].cpu().view(3, 64, 64)))
-        plt.text(80, 32, descriptions[i], fontsize=12)
-    # fig.tight_layout()
-    plt.savefig("figs/testing_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+        fig = plt.gcf()
+        fig.set_size_inches(8, 4 * len(descriptions[phase]))
+        fig.set_facecolor('white')
+        for i in range(len(descriptions[phase])):
+            plt.subplot(len(descriptions[phase]), 1, i+1)
+            plt.imshow(Image.open(images[phase][i]).resize((64, 64)))
+            plt.text(80, 32, descriptions[phase][i], fontsize=12)
+        # fig.tight_layout()
+        plt.savefig("figs/%s_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (phase, model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+        fig.clf()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
