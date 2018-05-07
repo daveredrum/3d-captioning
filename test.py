@@ -112,7 +112,7 @@ def main(args):
         for i in range(len(descriptions[phase])):
             plt.subplot(len(descriptions[phase]), 1, i+1)
             if model_type == "2d":
-                plt.imshow(Image.fromarray(images[phase][i].numpy()).resize((64, 64)))
+                plt.imshow(transforms.ToPILImage(images[phase][i]).view(3, 64, 64))
             elif model_type == "3d":
                 plt.imshow(Image.open(images[phase][i]).resize((64, 64)))
             plt.text(80, 32, descriptions[phase][i], fontsize=12)
