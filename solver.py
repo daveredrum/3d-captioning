@@ -223,8 +223,8 @@ class EncoderDecoderSolver():
                 'valid_blue_4': [],
                 'train_cider': [],
                 'valid_cider': [],
-                'train_meteor': [],
-                'valid_meteor': [],
+                # 'train_meteor': [],
+                # 'valid_meteor': [],
                 'train_rouge': [],
                 'valid_rouge': [],
                 'forward': [],
@@ -322,9 +322,9 @@ class EncoderDecoderSolver():
             # evaluate cider
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             valid_cider, _ = capcider.Cider().compute_score(references["valid"], candidates["valid"])
-            # evaluate meteor
-            train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
-            valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
+            # # evaluate meteor
+            # train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
+            # valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
             # evaluate rouge
             train_rouge, _ = caprouge.Rouge().compute_score(references["train"], candidates["train"])
             valid_rouge, _ = caprouge.Rouge().compute_score(references["valid"], candidates["valid"])
@@ -339,8 +339,8 @@ class EncoderDecoderSolver():
             log['valid_blue_4'] = valid_blue[3]
             log['train_cider'] = train_cider
             log['valid_cider'] = valid_cider
-            log['train_meteor'] = train_meteor
-            log['valid_meteor'] = valid_meteor
+            # log['train_meteor'] = train_meteor
+            # log['valid_meteor'] = valid_meteor
             log['train_rouge'] = train_rouge
             log['valid_rouge'] = valid_rouge
 
@@ -357,8 +357,8 @@ class EncoderDecoderSolver():
             writer.add_scalar("blue/valid_blue_4", log['valid_blue_4'], epoch_id)
             writer.add_scalar("blue/train_cider", log['train_cider'], epoch_id)
             writer.add_scalar("blue/valid_cider", log['valid_cider'], epoch_id)
-            writer.add_scalar("blue/train_meteor", log['train_meteor'], epoch_id)
-            writer.add_scalar("blue/valid_meteor", log['valid_meteor'], epoch_id)
+            # writer.add_scalar("blue/train_meteor", log['train_meteor'], epoch_id)
+            # writer.add_scalar("blue/valid_meteor", log['valid_meteor'], epoch_id)
             writer.add_scalar("blue/train_rouge", log['train_rouge'], epoch_id)
             writer.add_scalar("blue/valid_rouge", log['valid_rouge'], epoch_id)
 
@@ -393,10 +393,10 @@ class EncoderDecoderSolver():
                     log['train_cider'],
                     log['valid_cider'])
                 )
-                print("[METEOR] train_meteor: %f, valid_meteor: %f" % (
-                    log['train_meteor'],
-                    log['valid_meteor'])
-                )
+                # print("[METEOR] train_meteor: %f, valid_meteor: %f" % (
+                #     log['train_meteor'],
+                #     log['valid_meteor'])
+                # )
                 print("[ROUGE_L] train_rouge: %f, valid_rouge: %f" % (
                     log['train_rouge'],
                     log['valid_rouge'])

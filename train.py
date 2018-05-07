@@ -149,8 +149,8 @@ def main(args):
     valid_blues_4 = [encoder_decoder_solver.log[i]["valid_blue_4"] for i in range(epoch)]
     train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epoch)]
     valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epoch)]
-    train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epoch)]
-    valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epoch)]
+    # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epoch)]
+    # valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epoch)]
     train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epoch)]
     valid_rouge = [encoder_decoder_solver.log[i]["valid_rouge"] for i in range(epoch)]
 
@@ -208,16 +208,16 @@ def main(args):
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.savefig("figs/cider_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
-    # plot the cider scores
-    fig.clf()
-    fig.set_size_inches(16,8)
-    plt.plot(range(epochs), train_meteor, label="train_meteor")
-    plt.plot(range(epochs), valid_meteor, label="valid_meteor")
-    plt.xlabel('epoch')
-    plt.ylabel('METEOR')
-    plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
-    plt.legend()
-    plt.savefig("figs/meteor_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # # plot the cider scores
+    # fig.clf()
+    # fig.set_size_inches(16,8)
+    # plt.plot(range(epochs), train_meteor, label="train_meteor")
+    # plt.plot(range(epochs), valid_meteor, label="valid_meteor")
+    # plt.xlabel('epoch')
+    # plt.ylabel('METEOR')
+    # plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    # plt.legend()
+    # plt.savefig("figs/meteor_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
     # plot the rouge scores
     fig.clf()
     fig.set_size_inches(16,8)
