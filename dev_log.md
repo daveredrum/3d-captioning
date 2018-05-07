@@ -1,5 +1,15 @@
 # Development Log
 
+## May.7
+
+__progress:__
+- added more metrics: BLEU-n, CIDEr, ROUGE_L
+- enabled plotting the metrics above
+
+__TODOs:__
+- generalize the model
+- find a better implementation of METEOR
+
 ## May.3
 
 __progress:__
