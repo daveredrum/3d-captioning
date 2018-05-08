@@ -209,7 +209,7 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/")
-        for epoch_id in range(epoch):
+        for epoch_id in range(epoch + 1):
             log = {
                 'train_loss': [],
                 'train_blue_1': [],
@@ -230,6 +230,7 @@ class EncoderDecoderSolver():
                 'forward': [],
                 'backward': [],
                 'valid_time': [],
+                'eval_time': [],
                 'epoch_time': []
             }
             candidates = {
@@ -285,13 +286,16 @@ class EncoderDecoderSolver():
 
                         # backward pass
                         # save log
-                        encoder.zero_grad()
-                        decoder.zero_grad()
-                        self.optimizer.zero_grad()
-                        backward_since = time.time()
-                        loss.backward()
-                        self.optimizer.step()
-                        log['backward'].append(time.time() - backward_since)
+                        if epoch_id != 0:
+                            encoder.zero_grad()
+                            decoder.zero_grad()
+                            self.optimizer.zero_grad()
+                            backward_since = time.time()
+                            loss.backward()
+                            self.optimizer.step()
+                            log['backward'].append(time.time() - backward_since)
+                        else:
+                            log['backward'].append(0)
                         log['train_loss'].append(loss.data[0])
                     else:
                         # validate
@@ -317,6 +321,7 @@ class EncoderDecoderSolver():
             log['train_loss'] = np.mean(log['train_loss'])
             log['valid_loss'] = np.mean(log['valid_loss'])
             # evaluate bleu
+            eval_since = time.time()
             train_blue, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
             valid_blue, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
             # evaluate cider
@@ -332,6 +337,8 @@ class EncoderDecoderSolver():
             # evaluate rouge
             train_rouge, _ = caprouge.Rouge().compute_score(references["train"], candidates["train"])
             valid_rouge, _ = caprouge.Rouge().compute_score(references["valid"], candidates["valid"])
+            log['eval_time'] = time.time() - eval_since
+            
             # log
             log['train_blue_1'] = train_blue[0]
             log['train_blue_2'] = train_blue[1]
@@ -370,9 +377,9 @@ class EncoderDecoderSolver():
             # show report
             if epoch_id % verbose == (verbose - 1):
                 exetime_s = np.sum(log['epoch_time'])
-                eta_s = exetime_s * (epoch - (epoch_id + 1))
+                eta_s = exetime_s * (epoch - (epoch_id))
                 eta_m = math.floor(eta_s / 60)
-                print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
+                print("---------------------epoch %d/%d----------------------" % (epoch_id, epoch))
                 print("[Loss] train_loss: %f, valid_loss: %f" % (
                     log['train_loss'], 
                     log['valid_loss'])
@@ -409,6 +416,9 @@ class EncoderDecoderSolver():
                     np.sum(log['forward']), 
                     np.sum(log['backward']),
                     np.sum(log['valid_time']))
+                )
+                print("[Info]  eval_time: %fs" % ( 
+                    np.mean(log['eval_time']))
                 )
                 print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds \n" % ( 
                     np.mean(log['epoch_time']),

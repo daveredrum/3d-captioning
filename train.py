@@ -24,22 +24,12 @@ def main(args):
     captions = pandas.read_csv("captions.tablechair.csv")
     train_size = args.train_size
     valid_size = args.valid_size
-    test_size = args.valid_size
+    test_size = args.test_size
     epoch = args.epoch
     verbose = args.verbose
     lr = args.learning_rate
     batch_size = args.batch_size
     model_type = args.model_type
-    # preprocessing
-    print("preparing data....")
-    print()
-    captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
-    # split data
-    train_captions = captions.transformed_data['train']
-    valid_captions = captions.transformed_data['valid']
-    test_captions = captions.transformed_data['test']
-    dictionary = captions.dict_idx2word
-    corpus = captions.corpus
 
     ###################################################################
     #                                                                 #
@@ -51,14 +41,35 @@ def main(args):
 
     # for 2d encoder
     if model_type == "2d":
+        # preprocessing
+        print("preparing data....")
+        print()
+        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
+        # split data
+        train_captions = captions.transformed_data['train']
+        valid_captions = captions.transformed_data['valid']
+        test_captions = captions.transformed_data['test']
+        dictionary = captions.dict_idx2word
+        corpus = captions.corpus
         # prepare the dataloader
-        transform = transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor()])
-        train_ds = ImageCaptionDataset(root, train_captions, transform)
+        train_ds = ImageCaptionDataset(
+            root, 
+            train_captions, 
+            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+        )
         train_dl = DataLoader(train_ds, batch_size=batch_size)
-        valid_ds = ImageCaptionDataset(root, valid_captions, transform)
+        valid_ds = ImageCaptionDataset(
+            root, 
+            valid_captions, 
+            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+        )
         valid_dl = DataLoader(valid_ds, batch_size=batch_size)
-        test_ds = ImageCaptionDataset(root, test_captions, transform)
-        test_dl = DataLoader(test_ds, batch_size=batch_size)
+        test_ds = ImageCaptionDataset(
+            root, 
+            test_captions, 
+            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+            )
+        test_dl = DataLoader(test_ds, batch_size=1)
         dataloader = {
             'train': train_dl,
             'valid': valid_dl,
@@ -73,10 +84,20 @@ def main(args):
 
     # for 3d encoder   
     elif model_type == "3d":
+        # preprocessing
+        print("preparing data....")
+        print()
+        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
+        # split data
+        train_captions = captions.transformed_data['train']
+        valid_captions = captions.transformed_data['valid']
+        test_captions = captions.transformed_data['test']
+        dictionary = captions.dict_idx2word
+        corpus = captions.corpus
+        # prepare the dataloader
         train_ds = ShapeCaptionDataset(
             root, 
             train_captions, 
-            mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         train_dl = DataLoader(train_ds, batch_size=batch_size)
@@ -84,14 +105,12 @@ def main(args):
         valid_ds = ShapeCaptionDataset(
             root, 
             valid_captions,
-            mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         valid_dl = DataLoader(valid_ds, batch_size=batch_size)
         test_ds = ShapeCaptionDataset(
             root, 
             test_captions,
-            mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         test_dl = DataLoader(test_ds, batch_size=1)
@@ -106,6 +125,43 @@ def main(args):
 
         # initialize the encoder
         encoder = Encoder3D().cuda()
+
+    # for coco
+    elif model_type == "coco":
+        # preprocessing
+        print("preparing data....")
+        print()
+        coco = COCO(
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            [train_size, valid_size]
+        )
+        # split data
+        train_captions = coco.transformed_data['train']
+        valid_captions = coco.transformed_data['valid']
+        dictionary = coco.dict_idx2word
+        corpus = coco.corpus
+        # prepare the dataloader
+        train_ds = COCOCaptionDataset(
+            root, 
+            train_captions, 
+            database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.hdf5"
+        )
+        train_dl = DataLoader(train_ds, batch_size=batch_size)
+        # valid_ds = ShapeCaptionDataset(root, valid_captions)
+        valid_ds = ShapeCaptionDataset(
+            root, 
+            valid_captions,
+            database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
+        )
+        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+        dataloader = {
+            'train': train_dl,
+            'valid': valid_dl
+        }
+
+        # initialize the encoder
+        encoder = Encoder2D().cuda()
 
     else:
         print("invalid model type, exiting.....")
@@ -142,20 +198,20 @@ def main(args):
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
     valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]
-    train_blues_1 = [encoder_decoder_solver.log[i]["train_blue_1"] for i in range(epoch)]
-    train_blues_2 = [encoder_decoder_solver.log[i]["train_blue_2"] for i in range(epoch)]
-    train_blues_3 = [encoder_decoder_solver.log[i]["train_blue_3"] for i in range(epoch)]
-    train_blues_4 = [encoder_decoder_solver.log[i]["train_blue_4"] for i in range(epoch)]
-    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_blue_1"] for i in range(epoch)]
-    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_blue_2"] for i in range(epoch)]
-    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_blue_3"] for i in range(epoch)]
-    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_blue_4"] for i in range(epoch)]
-    train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epoch)]
-    valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epoch)]
-    # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epoch)]
-    # valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epoch)]
-    train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epoch)]
-    valid_rouge = [encoder_decoder_solver.log[i]["valid_rouge"] for i in range(epoch)]
+    train_blues_1 = [encoder_decoder_solver.log[i]["train_blue_1"] for i in range(epochs)]
+    train_blues_2 = [encoder_decoder_solver.log[i]["train_blue_2"] for i in range(epochs)]
+    train_blues_3 = [encoder_decoder_solver.log[i]["train_blue_3"] for i in range(epochs)]
+    train_blues_4 = [encoder_decoder_solver.log[i]["train_blue_4"] for i in range(epochs)]
+    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_blue_1"] for i in range(epochs)]
+    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_blue_2"] for i in range(epochs)]
+    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_blue_3"] for i in range(epochs)]
+    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_blue_4"] for i in range(epochs)]
+    train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epochs)]
+    valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epochs)]
+    # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epochs)]
+    # valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epochs)]
+    train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epochs)]
+    valid_rouge = [encoder_decoder_solver.log[i]["valid_rouge"] for i in range(epochs)]
 
     # plot training curve
     print("plot training curves...")

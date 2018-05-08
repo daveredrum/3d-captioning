@@ -45,13 +45,11 @@ def main(args):
         train_ds = ShapeCaptionDataset(
             root, 
             train_captions,
-            mode="hdf5", 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         test_ds = ShapeCaptionDataset(
             root, 
-            test_captions,
-            mode="hdf5", 
+            test_captions, 
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
     train_dl = DataLoader(train_ds, batch_size=1)

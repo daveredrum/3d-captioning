@@ -97,25 +97,63 @@ class CaptionDataset(Dataset):
     def __getitem__(self, idx):
         # return (visual, caption_inputs, caption_targets, cap_length)
         return self.data_pairs[idx]
-    
-# pipeline dataset for the encoder-decoder of image-caption
-class ImageCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file, transform=None):
-        self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
-        self.image_paths = [
-            os.path.join(root_dir, model_name, model_name + '.png') 
-            for model_name in self.model_ids
-        ]
-        self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
+
+# dataset for coco
+class COCOCaptionDataset(Dataset):
+    def __init__(self, root_dir, csv_file, database):
+        self.model_ids = copy.deepcopy(csv_file.image_id.values.tolist())
+        self.caption_lists = copy.deepcopy(csv_file.caption.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
-        self.transform = transform
         self.data_pairs = self._build_data_pairs()
+        self.database = h5py.File(database, "r")
 
     def _build_data_pairs(self):
         # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
             self.model_ids[i],
-            self.image_paths[i],
+            i,
+            self.caption_lists[i],
+            len(self.caption_lists[i])
+        ) for i in range(self.__len__())]
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+        # pad caption with 0 if it's length is not maximum
+        for index in range(1, len(data_pairs)):
+            for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+                data_pairs[index][2].append(0)
+        
+        return data_pairs
+
+    def __len__(self):
+        return self.csv_file.image_id.count()
+
+    def __getitem__(self, idx):
+        # return (model_id, image_inputs, padded_caption, cap_length)
+        image = self.database["images"][self.data_pairs[idx][1]]
+        size = int(np.sqrt(image.shape[0] / 3))
+        image = np.reshape(image, (3, size, size))
+        image = torch.FloatTensor(image)
+        # image = np.array(image)[:, :, :3]
+        # image = Image.fromarray(image)
+        # if self.transform:
+        #     image = self.transform(image)
+
+        return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
+
+# pipeline dataset for the encoder-decoder of image-caption
+class ImageCaptionDataset(Dataset):
+    def __init__(self, root_dir, csv_file, database):
+        self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
+        self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
+        self.csv_file = copy.deepcopy(csv_file)
+        self.data_pairs = self._build_data_pairs()
+        self.database = h5py.File(database, "r")
+
+    def _build_data_pairs(self):
+        # initialize data pairs: (model_id, image_path, caption, cap_length)
+        data_pairs = [(
+            self.model_ids[i],
+            i,
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
@@ -133,21 +171,23 @@ class ImageCaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         # return (model_id, image_inputs, padded_caption, cap_length)
-        image = Image.open(self.data_pairs[idx][1])
+        image = self.database["images"][self.data_pairs[idx][1]]
+        size = int(np.sqrt(image.shape[0] / 3))
+        image = np.reshape(image, (3, size, size))
+        image = torch.FloatTensor(image)
         # image = np.array(image)[:, :, :3]
         # image = Image.fromarray(image)
-        if self.transform:
-            image = self.transform(image)
+        # if self.transform:
+        #     image = self.transform(image)
 
-        return self.data_pairs[idx][0], image[:3, :, :], self.data_pairs[idx][2], self.data_pairs[idx][3]
+        return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
 # pipeline dataset for the encoder-decoder of shape-caption
 # only two modes are available
 # default: load the shape data directly
 # hdf5: load the preprocessed data in hdf5 file, path to the database is required in this mode
 class ShapeCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file, mode='default', database=None):
-        self.mode = mode
+    def __init__(self, root_dir, csv_file, database):
         self.model_ids = copy.deepcopy(csv_file.modelId.values.tolist())
         self.image_paths = [
             os.path.join(root_dir, model_name, model_name + '.png') 
@@ -160,41 +200,23 @@ class ShapeCaptionDataset(Dataset):
         self.caption_lists = copy.deepcopy(csv_file.description.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
         self.data_pairs = self._build_data_pairs()
-        if self.mode == 'hdf5':
-            self.database = h5py.File(database, "r")
+        self.database = h5py.File(database, "r")
 
      # initialize data pairs: (model_id, image_path, shape_path, caption, cap_length)
     def _build_data_pairs(self):
-        # for 3d models
-        if self.mode == 'default':
-            data_pairs = [(
-                self.model_ids[i],
-                self.image_paths[i],
-                self.shape_paths[i],
-                self.caption_lists[i],
-                len(self.caption_lists[i])
-            ) for i in range(self.__len__())]
-            # sort data pairs according to cap_length in descending order
-            data_pairs = sorted(data_pairs, key=lambda item: item[4], reverse=True)
-            # pad caption with 0 if it's length is not maximum
-            for index in range(1, len(data_pairs)):
-                for i in range(len(data_pairs[0][3]) - len(data_pairs[index][3])):
-                    data_pairs[index][3].append(0)
-        
-        elif self.mode == 'hdf5':
-            data_pairs = [(
-                self.model_ids[i],
-                self.image_paths[i],
-                i,
-                self.caption_lists[i],
-                len(self.caption_lists[i])
-            ) for i in range(self.__len__())]
-            # sort data pairs according to cap_length in descending order
-            data_pairs = sorted(data_pairs, key=lambda item: item[4], reverse=True)
-            # pad caption with 0 if it's length is not maximum
-            for index in range(1, len(data_pairs)):
-                for i in range(len(data_pairs[0][3]) - len(data_pairs[index][3])):
-                    data_pairs[index][3].append(0)
+        data_pairs = [(
+            self.model_ids[i],
+            self.image_paths[i],
+            i,
+            self.caption_lists[i],
+            len(self.caption_lists[i])
+        ) for i in range(self.__len__())]
+        # sort data pairs according to cap_length in descending order
+        data_pairs = sorted(data_pairs, key=lambda item: item[4], reverse=True)
+        # pad caption with 0 if it's length is not maximum
+        for index in range(1, len(data_pairs)):
+            for i in range(len(data_pairs[0][3]) - len(data_pairs[index][3])):
+                data_pairs[index][3].append(0)
         
         return data_pairs
 
@@ -203,23 +225,19 @@ class ShapeCaptionDataset(Dataset):
 
     # 3d: (model_id, (image_path, shape_inputs), padded_caption, cap_length)
     def __getitem__(self, idx):
+        # get images path
         image = self.data_pairs[idx][1]
-        if self.mode == 'default':
-            # used preprocessed data
-            shape = np.load(self.data_pairs[idx][2] + '.npy')
-            shape = torch.FloatTensor(shape)
-        
-        elif self.mode == 'hdf5':
-            shape = np.array(self.database["shapes"][self.data_pairs[idx][2]])
-            size = int(np.cbrt(shape.shape[0] / 3))
-            shape = np.reshape(shape, (3, size, size, size))
-            shape = torch.FloatTensor(shape)
+        # get preprocessed shapes
+        shape = np.array(self.database["shapes"][self.data_pairs[idx][2]])
+        size = int(np.cbrt(shape.shape[0] / 3))
+        shape = np.reshape(shape, (3, size, size, size))
+        shape = torch.FloatTensor(shape)
 
         visual = (image, shape)
 
         return self.data_pairs[idx][0], visual, self.data_pairs[idx][3], self.data_pairs[idx][4]
 
-# process csv file
+# process shapenet csv file
 class Caption(object):
     def __init__(self, csv_file, size_split):
         # size settings
@@ -261,7 +279,7 @@ class Caption(object):
         # preprcess and transform
         self._preprocess()
         self._tranform()
-        # build blue reference corpus
+        # build reference corpus
         self._make_corpus()
 
     # output the dictionary of captions
@@ -360,6 +378,143 @@ class Caption(object):
     def sanity_check(self):
         captions_list = self.preprocessed_csv.description.values.tolist()
         reverse_list = self.transformed_csv.description.values.tolist()
+        for i in range(len(reverse_list)):
+            temp_string = ""
+            for index in reverse_list[i]:
+                temp_string += self.dict_idx2word[index]
+                if index != reverse_list[i][-1]:
+                    temp_string += " "
+            reverse_list[i] = temp_string
+        
+        return reverse_list.sort() == captions_list.sort()
+
+# process coco csv file
+class COCO(object):
+    def __init__(self, train_csv, valid_csv, size_split):
+        # size settings
+        self.total_size = np.sum(size_split)
+        self.train_size, self.valid_size = size_split
+        # select data by the given total size
+        self.original_csv = {
+            'train': train_csv.iloc[:self.train_size],
+            'valid': valid_csv.iloc[:self.valid_size]
+        }
+        # dictionaries
+        self.dict_word2idx = None
+        self.dict_idx2word = None
+        self.dict_size = None
+        # ground truth captions grouped by image_id
+        # for calculating BLEU score
+        # e.g. 'e702f89ce87a0b6579368d1198f406e7': [['<START> a gray coloured round four legged steel table <END>']]
+        self.corpus = {
+            'train': {},
+            'valid': {},
+        }
+        # split the preprocessed data
+        self.preprocessed_data = {
+            'train': None,
+            'valid': None,
+        }
+        # split the transformed data
+        self.transformed_data = {
+            'train': None,
+            'valid': None,
+        }
+        
+        # preprcess and transform
+        self._preprocess()
+        self._tranform()
+        # build reference corpus
+        self._make_corpus()
+
+    # output the dictionary of captions
+    # indices of words are the rank of frequencies
+    def _make_dict(self):
+        captions_list = self.preprocessed_data["train"].caption.values.tolist() + self.preprocessed_data["valid"].caption.values.tolist()
+        word_list = {}
+        for text in captions_list:
+            try:
+                for word in re.split("[ ]", text):
+                    if word:
+                        if word in word_list.keys():
+                            word_list[word] += 1
+                        else:
+                            word_list[word] = 1
+            except Exception:
+                pass
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
+        # indexing starts at 1
+        self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
+        self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
+        # dictionary size
+        assert self.dict_idx2word.__len__() == self.dict_word2idx.__len__()
+        self.dict_size = self.dict_idx2word.__len__()
+        
+    # build the references for calculating BLEU score
+    # return the dictionary of image_id and corresponding captions
+    # input must be the preprocessed csv！
+    def _make_corpus(self):
+        for phase in ["train", "valid"]:
+            for _, item in self.preprocessed_data[phase].iterrows():
+                if item.image_id in self.corpus[phase].keys():
+                    self.corpus[phase][item.image_id].append(item.caption)
+                else:
+                    self.corpus[phase][item.image_id] = [item.caption]
+
+
+    def _preprocess(self):
+        # suppress all warnings
+        warnings.simplefilter('ignore')
+        for phase in ["train", "valid"]:
+            # drop items without captions
+            self.preprocessed_data[phase] = copy.deepcopy(self.original_csv[phase].loc[self.original_csv[phase].caption.notnull()].reset_index(drop=True))
+            # convert to lowercase
+            self.preprocessed_data[phase].caption = self.preprocessed_data[phase].caption.str.lower()
+            # preprocess
+            captions_list = self.preprocessed_data[phase].caption.values.tolist()
+            for i in range(len(captions_list)):
+                # padding before all punctuations
+                caption = captions_list[i]
+                caption = re.sub(r'([.,!?()])', r' \1 ', caption)
+                caption = re.sub(r'\s{2,}', ' ', caption)
+                # add start symbol
+                caption = '<START> ' + caption
+                # add end symbol
+                caption += ' <END>'
+                captions_list[i] = caption
+                # filter out empty element
+                caption = filter(None, caption)
+            # replace with the new column
+            new_captions = pandas.DataFrame({'caption': captions_list})
+            self.preprocessed_data[phase].caption = new_captions.caption
+            # sort the csv file by the lengths of descriptions
+            self.preprocessed_data[phase] = self.preprocessed_data[phase].iloc[(-self.preprocessed_data[phase].caption.str.len()).argsort()].reset_index(drop=True)
+
+        # build dict
+        self._make_dict()
+
+    # transform all words to their indices in the dictionary
+    def _tranform(self):
+        for phase in ["train", "valid"]:
+            self.transformed_data[phase] = copy.deepcopy(self.preprocessed_data[phase])
+            captions_list = self.transformed_data[phase].caption.values.tolist()
+            for i in range(len(captions_list)):
+                temp_list = []
+                for text in captions_list[i].split(" "):
+                    # filter out empty element
+                    if text:
+                        temp_list.append(self.dict_word2idx[text])
+                    captions_list[i] = temp_list
+            # replace with the new column
+            transformed_captions = pandas.DataFrame({'caption': captions_list})
+            self.transformed_data[phase].caption = transformed_captions.caption
+            # # sort the csv file by the lengths of descriptions
+            # self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.caption.str.len()).argsort()].reset_index(drop=True)
+
+    # check if the transformation is reversable
+    def sanity_check(self, phase="train"):
+        captions_list = self.preprocessed_data[phase].caption.values.tolist()
+        reverse_list = self.transformed_data[phase].caption.values.tolist()
         for i in range(len(reverse_list)):
             temp_string = ""
             for index in reverse_list[i]:
