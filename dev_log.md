@@ -1,5 +1,18 @@
 # Development Log
 
+## May.8
+
+__progress:__
+- fixed the bug with `solver.py`, now a new epoch in front of all epochs records losses before training, which also works as the sanity check for the training and validation losses
+- added data interface for MSCOCO dataset
+- added the preprocessing script for MSCOCO dataset
+- refine the proprocessing script for ShapeNetCore dataset
+- excluded METEOR for now
+
+__TODOs:__
+- generalize the model
+- train the model on MSCOCO dataset
+
 ## May.7
 
 __progress:__
