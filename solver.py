@@ -310,9 +310,9 @@ class EncoderDecoderSolver():
                         # save to candidates
                         for model_id, output in zip(model_ids, outputs):
                             if model_id not in candidates[phase].keys():
-                                candidates[phase][model_id] = [output]
+                                candidates[phase][model_id.item()] = [output]
                             else:
-                                candidates[phase][model_id].append(output)
+                                candidates[phase][model_id.item()].append(output)
 
                         # save log
                         log['valid_loss'].append(loss.data[0])
