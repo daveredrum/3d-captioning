@@ -170,7 +170,7 @@ def main(args):
     # define the decoder
     print("initializing models....")
     print()
-    input_size = captions.dict_word2idx.__len__() + 1
+    input_size = dictionary.__len__() + 1
     hidden_size = 512
     num_layer = 2
     decoder = Decoder(input_size, hidden_size, num_layer).cuda()
