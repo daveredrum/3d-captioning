@@ -149,7 +149,7 @@ def main(args):
         )
         train_dl = DataLoader(train_ds, batch_size=batch_size)
         # valid_ds = ShapeCaptionDataset(root, valid_captions)
-        valid_ds = ShapeCaptionDataset(
+        valid_ds = COCOCaptionDataset(
             root, 
             valid_captions,
             database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
