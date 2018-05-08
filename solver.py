@@ -312,14 +312,13 @@ class EncoderDecoderSolver():
                         # save to candidates
                         for model_id, output in zip(model_ids, outputs):
                             if model_id not in candidates[phase].keys():
-                                print(model_id.item())
                                 candidates[phase][model_id.item()] = [output]
                             else:
                                 candidates[phase][model_id.item()].append(output)
 
                         # save log
                         log['valid_loss'].append(loss.data[0])
-            
+            print(candidates["train"].keys())
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
             log['valid_loss'] = np.mean(log['valid_loss'])
