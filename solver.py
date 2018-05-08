@@ -249,6 +249,8 @@ class EncoderDecoderSolver():
                         visuals = visuals
                     elif model_type == "3d":
                         visuals = visuals[1]
+                    elif model_type == "coco":
+                        visuals = visuals
                         
                     caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                     caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
@@ -323,7 +325,6 @@ class EncoderDecoderSolver():
             log['valid_loss'] = np.mean(log['valid_loss'])
             # evaluate bleu
             eval_since = time.time()
-            print(candidates["train"].keys())
             train_blue, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
             valid_blue, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
             # evaluate cider
