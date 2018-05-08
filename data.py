@@ -110,7 +110,7 @@ class COCOCaptionDataset(Dataset):
     def _build_data_pairs(self):
         # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
-            self.model_ids[i],
+            np.array(self.model_ids[i]),
             i,
             self.caption_lists[i],
             len(self.caption_lists[i])
