@@ -322,7 +322,7 @@ class EncoderDecoderSolver():
             log['valid_loss'] = np.mean(log['valid_loss'])
             # evaluate bleu
             eval_since = time.time()
-            print(references["train"].keys())
+            print(candidates["train"].keys())
             train_blue, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
             valid_blue, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
             # evaluate cider
