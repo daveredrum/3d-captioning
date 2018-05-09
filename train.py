@@ -30,6 +30,8 @@ def main(args):
     lr = args.learning_rate
     batch_size = args.batch_size
     model_type = args.model_type
+    weight_decay = args.weight_decay
+    pretrained = args.pretrained
 
     ###################################################################
     #                                                                 #
@@ -51,36 +53,72 @@ def main(args):
         test_captions = captions.transformed_data['test']
         dictionary = captions.dict_idx2word
         corpus = captions.corpus
-        # prepare the dataloader
-        train_ds = ImageCaptionDataset(
-            root, 
-            train_captions, 
-            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
-        )
-        train_dl = DataLoader(train_ds, batch_size=batch_size)
-        valid_ds = ImageCaptionDataset(
-            root, 
-            valid_captions, 
-            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
-        )
-        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
-        test_ds = ImageCaptionDataset(
-            root, 
-            test_captions, 
-            "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+        if pretrained == "resnet50":
+            # prepare the dataloader
+            train_ds = ImageCaptionDataset(
+                root, 
+                train_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png224.hdf5"
             )
-        test_dl = DataLoader(test_ds, batch_size=1)
-        dataloader = {
-            'train': train_dl,
-            'valid': valid_dl,
-            'test': test_dl
-        }
+            train_dl = DataLoader(train_ds, batch_size=batch_size)
+            valid_ds = ImageCaptionDataset(
+                root, 
+                valid_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png224.hdf5"
+            )
+            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            test_ds = ImageCaptionDataset(
+                root, 
+                test_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png224.hdf5"
+                )
+            test_dl = DataLoader(test_ds, batch_size=1)
+            dataloader = {
+                'train': train_dl,
+                'valid': valid_dl,
+                'test': test_dl
+            }
 
-        # # load the pretrained encoder
-        # encoder = torch.load("data/encoder.pth").cuda()
+            # # load the pretrained encoder
+            # encoder = torch.load("data/encoder.pth").cuda()
 
-        # initialize the encoder
-        encoder = Encoder2D().cuda()
+            # initialize the encoder
+            print("initializing encoder....")
+            print()
+            encoder = EncoderResnet50().cuda()
+        else:
+            # prepare the dataloader
+            train_ds = ImageCaptionDataset(
+                root, 
+                train_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+            )
+            train_dl = DataLoader(train_ds, batch_size=batch_size)
+            valid_ds = ImageCaptionDataset(
+                root, 
+                valid_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+            )
+            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            test_ds = ImageCaptionDataset(
+                root, 
+                test_captions, 
+                "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
+                )
+            test_dl = DataLoader(test_ds, batch_size=1)
+            dataloader = {
+                'train': train_dl,
+                'valid': valid_dl,
+                'test': test_dl
+            }
+
+            # # load the pretrained encoder
+            # encoder = torch.load("data/encoder.pth").cuda()
+
+            # initialize the encoder
+            print("initializing encoder....")
+            print()
+            encoder = Encoder2D().cuda()
 
     # for 3d encoder   
     elif model_type == "3d":
@@ -142,33 +180,60 @@ def main(args):
         dictionary = coco.dict_idx2word
         corpus = coco.corpus
         # prepare the dataloader
-        train_ds = COCOCaptionDataset(
-            root, 
-            train_captions, 
-            database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.hdf5"
-        )
-        train_dl = DataLoader(train_ds, batch_size=batch_size)
-        # valid_ds = ShapeCaptionDataset(root, valid_captions)
-        valid_ds = COCOCaptionDataset(
-            root, 
-            valid_captions,
-            database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
-        )
-        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
-        dataloader = {
-            'train': train_dl,
-            'valid': valid_dl
-        }
-
-        # initialize the encoder
-        encoder = Encoder2D().cuda()
+        if not pretrained:
+            train_ds = COCOCaptionDataset(
+                root, 
+                train_captions, 
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224.hdf5"
+            )
+            valid_ds = COCOCaptionDataset(
+                root, 
+                valid_captions,
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014_224.hdf5"
+            )
+            train_dl = DataLoader(train_ds, batch_size=batch_size)
+            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            dataloader = {
+                'train': train_dl,
+                'valid': valid_dl
+            }
+            # initialize the encoder
+            if pretrained == "resnet50":
+                print("initializing encoder....")
+                print()
+                encoder = EncoderResnet50().cuda()
+            else:
+                print("invalid model name, terminating...")
+                return
+        else:
+            train_ds = COCOCaptionDataset(
+                root, 
+                train_captions, 
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.hdf5"
+            )
+            valid_ds = COCOCaptionDataset(
+                root, 
+                valid_captions,
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
+            )
+            train_dl = DataLoader(train_ds, batch_size=batch_size)
+            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            dataloader = {
+                'train': train_dl,
+                'valid': valid_dl
+            }
+            # initialize the encoder
+            print("initializing encoder....")
+            print()
+            encoder = Encoder2D().cuda()
+        
 
     else:
         print("invalid model type, exiting.....")
         return
 
     # define the decoder
-    print("initializing models....")
+    print("initializing decoder....")
     print()
     input_size = dictionary.__len__() + 1
     hidden_size = 512
@@ -176,9 +241,11 @@ def main(args):
     decoder = Decoder(input_size, hidden_size, num_layer).cuda()
 
     # prepare the training parameters
-    # optimizer = optim.Adam(list(decoder.parameters()) + list(encoder.fc_layer.parameters()), lr=0.001)
-    params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
-    optimizer = optim.Adam(params, lr=lr)
+    if pretrained:
+        params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
+    else:
+        params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
+    optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
     criterion = nn.CrossEntropyLoss()
     epoch = epoch
     verbose = verbose
@@ -191,8 +258,8 @@ def main(args):
 
     # save
     print("save models...")
-    torch.save(encoder, "models/encoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
-    torch.save(decoder, "models/decoder_%s_ts%d_e%d_lr%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, batch_size, input_size))
+    torch.save(encoder, "models/encoder_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size))
+    torch.save(decoder, "models/decoder_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size))
 
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
@@ -224,7 +291,7 @@ def main(args):
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # plot the bleu scores
     fig.clf()
     fig.set_size_inches(16,32)
@@ -256,7 +323,7 @@ def main(args):
     plt.ylabel('BLEU-4')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/bleu_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/bleu_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # plot the cider scores
     fig.clf()
     fig.set_size_inches(16,8)
@@ -266,7 +333,7 @@ def main(args):
     plt.ylabel('CIDEr')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/cider_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/cider_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # # plot the meteor scores
     # fig.clf()
     # fig.set_size_inches(16,8)
@@ -286,7 +353,7 @@ def main(args):
     plt.ylabel('ROUGE_L')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/rouge_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/rouge_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
 
 
 if __name__ == "__main__":
@@ -297,9 +364,11 @@ if __name__ == "__main__":
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
+    parser.add_argument("--weight_decay", type=float, default=0, help="penalty on the optimizer")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
     parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
+    parser.add_argument("--pretrained", type=str, default=None, help="choice for pretrained model")
     args = parser.parse_args()
     print(args)
     print()

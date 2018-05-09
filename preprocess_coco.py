@@ -10,15 +10,15 @@ from PIL import Image
 
 def main(args):
     verbose = args.verbose
+    coco_size = args.size
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
-    coco_size = 64
     for phase in ["train", "val"]:
         print("phase: ", phase)
         # settings
         coco_dir = os.path.join(coco_root, "%s2014" % phase)
         coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
         coco_paths = None
-        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014.hdf5" % phase), "w")  
+        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w")  
 
         # processing captions
         with open(coco_cap) as f:
@@ -62,6 +62,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", type=int, default=1, help="show report")
+    parser.add_argument("--size", type=int, default=64, help="height/width of the images")
     args = parser.parse_args()
     print(args)
     print()

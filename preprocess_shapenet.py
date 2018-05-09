@@ -10,12 +10,12 @@ from PIL import Image
 
 def main(args):
     visual_size = args.size
-    image_size = 64
+    image_size = args.image_size
     verbose = args.verbose
     mode = args.mode
     database_root = "/mnt/raid/davech2y/ShapeNetCore_vol/"
     if mode == "2d":
-        database_name = "nrrd_256_filter_div_%s_solid.png.hdf5" % visual_size
+        database_name = "nrrd_256_filter_div_%s_solid.png%d.hdf5" % (visual_size, image_size)
         database = h5py.File(os.path.join(database_root, database_name), "w")
         shapenet_root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_%s_solid/" % visual_size
         if not os.path.exists(shapenet_root):
@@ -77,6 +77,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", type=int, default=32, help="size of shapes")
+    parser.add_argument("--image_size", type=int, default=64, help="height/width of the images")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
     parser.add_argument("--mode", type=str, default="2d", help="specify the preprocessed data type")
     args = parser.parse_args()

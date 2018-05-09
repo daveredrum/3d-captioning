@@ -110,7 +110,7 @@ class COCOCaptionDataset(Dataset):
     def _build_data_pairs(self):
         # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
-            self.model_ids[i],
+            str(self.model_ids[i]),
             i,
             self.caption_lists[i],
             len(self.caption_lists[i])
@@ -457,9 +457,9 @@ class COCO(object):
         for phase in ["train", "valid"]:
             for _, item in self.preprocessed_data[phase].iterrows():
                 if item.image_id in self.corpus[phase].keys():
-                    self.corpus[phase][item.image_id].append(item.caption)
+                    self.corpus[phase][str(item.image_id)].append(item.caption)
                 else:
-                    self.corpus[phase][item.image_id] = [item.caption]
+                    self.corpus[phase][str(item.image_id)] = [item.caption]
 
 
     def _preprocess(self):
