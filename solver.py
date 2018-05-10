@@ -273,10 +273,10 @@ class EncoderDecoderSolver():
                         # forward pass
                         forward_since = time.time()
                         visual_contexts = encoder.extract(visual_inputs)
-                        # # teacher forcing
-                        # outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
-                        # no teacher forcing
-                        outputs = decoder.sample(visual_contexts, cap_lengths)
+                        # teacher forcing
+                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                        # # no teacher forcing
+                        # outputs = decoder.sample(visual_contexts, cap_lengths)
                         loss = self.criterion(outputs, caption_targets)
                         log['forward'].append(time.time() - forward_since)
                         
@@ -306,7 +306,10 @@ class EncoderDecoderSolver():
                         # validate
                         valid_since = time.time()
                         visual_contexts = encoder.extract(visual_inputs)
-                        outputs = decoder.sample(visual_contexts, cap_lengths)
+                        # teacher forcing
+                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                        # # no teacher forcing
+                        # outputs = decoder.sample(visual_contexts, cap_lengths)
                         loss = self.criterion(outputs, caption_targets)
                         log['valid_time'].append(time.time() - valid_since)
                         
