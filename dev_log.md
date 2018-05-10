@@ -1,5 +1,19 @@
 # Development Log
 
+## May.10
+
+> __milestone:__ pretrained model for image captioning are now available
+
+__progress:__
+- enabled implicit switch for teacher forcing in solver
+- added interface for specify pretrained model
+- refined the preprocessing scripts to resize the images to the desired sizes, both for ShapeNetCore and for MSCOCO
+- refined the title for saved images, all necessary parameters included
+
+__TODOs:__
+- figure out how to document experiments results and automatic synchronization
+- refine the testing script for captioning MSCOCO 
+
 ## May.8
 
 __progress:__
