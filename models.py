@@ -95,7 +95,7 @@ class EncoderResnet50(nn.Module):
 class EncoderVGG16(nn.Module):
     def __init__(self):
         super(EncoderVGG16, self).__init__()
-        vgg16 = torchmodels.vgg16_bn(pretrained=True)
+        vgg16 = torchmodels.vgg16(pretrained=True)
         modules = list(vgg16.children())[:-1]
         self.vgg16 = nn.Sequential(*modules)
         self.fc_layer = nn.Sequential(
