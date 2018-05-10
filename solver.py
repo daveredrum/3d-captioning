@@ -273,7 +273,10 @@ class EncoderDecoderSolver():
                         # forward pass
                         forward_since = time.time()
                         visual_contexts = encoder.extract(visual_inputs)
-                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                        # # teacher forcing
+                        # outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                        # no teacher forcing
+                        outputs = decoder.sample(visual_contexts, cap_lengths)
                         loss = self.criterion(outputs, caption_targets)
                         log['forward'].append(time.time() - forward_since)
                         
@@ -282,7 +285,6 @@ class EncoderDecoderSolver():
                         # save to candidates
                         for model_id, output in zip(model_ids, outputs):
                             if model_id not in candidates[phase].keys():
-                                
                                 candidates[phase][model_id] = [output]
                             else:
                                 candidates[phase][model_id].append(output)

@@ -32,6 +32,10 @@ def main(args):
     model_type = args.model_type
     weight_decay = args.weight_decay
     pretrained = args.pretrained
+    if pretrained:
+        model_name = pretrained
+    else:
+        model_name = "shallow"
 
     ###################################################################
     #                                                                 #
@@ -262,8 +266,8 @@ def main(args):
 
     # save
     print("save models...")
-    torch.save(encoder, "models/encoder_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size))
-    torch.save(decoder, "models/decoder_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size))
+    torch.save(encoder, "models/encoder_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size))
+    torch.save(decoder, "models/decoder_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size))
 
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
@@ -295,7 +299,7 @@ def main(args):
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/training_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/training_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # plot the bleu scores
     fig.clf()
     fig.set_size_inches(16,32)
@@ -327,7 +331,7 @@ def main(args):
     plt.ylabel('BLEU-4')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/bleu_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/bleu_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # plot the cider scores
     fig.clf()
     fig.set_size_inches(16,8)
@@ -337,7 +341,7 @@ def main(args):
     plt.ylabel('CIDEr')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/cider_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/cider_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
     # # plot the meteor scores
     # fig.clf()
     # fig.set_size_inches(16,8)
@@ -357,7 +361,7 @@ def main(args):
     plt.ylabel('ROUGE_L')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/rouge_curve_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/rouge_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
 
 
 if __name__ == "__main__":
