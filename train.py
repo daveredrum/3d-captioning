@@ -203,16 +203,17 @@ def main(args):
             }
             # initialize the encoder
             if pretrained == "resnet50":
-                print("initializing encoder....")
+                print("initializing encoder: resnet50....")
                 print()
                 encoder = EncoderResnet50().cuda()
             elif pretrained == "vgg16":
-                print("initializing encoder....")
+                print("initializing encoder: vgg16....")
                 print()
                 encoder = EncoderVGG16().cuda()
             else:
-                print("invalid model name, terminating...")
-                return
+                print("initializing shallow encoder....")
+                print()
+                encoder = Encoder2D().cuda()
         else:
             train_ds = COCOCaptionDataset(
                 root, 
