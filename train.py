@@ -202,6 +202,10 @@ def main(args):
                 print("initializing encoder....")
                 print()
                 encoder = EncoderResnet50().cuda()
+            elif pretrained == "vgg16":
+                print("initializing encoder....")
+                print()
+                encoder = EncoderVGG16().cuda()
             else:
                 print("invalid model name, terminating...")
                 return

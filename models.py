@@ -92,6 +92,37 @@ class EncoderResnet50(nn.Module):
         
         return outputs
 
+class EncoderVGG16(nn.Module):
+    def __init__(self):
+        super(EncoderVGG16, self).__init__()
+        vgg16 = torchmodels.vgg16_bn(pretrained=True)
+        modules = list(vgg16.children())[:-1]
+        self.vgg16 = nn.Sequential(*modules)
+        self.fc_layer = nn.Sequential(
+            nn.Linear(vgg16.classifier[0].in_features, 512),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(512, 2),
+            nn.Sigmoid()
+        )
+        
+    
+    def forward(self, inputs):
+        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
+        outputs = self.fc_layer(outputs)
+        outputs = self.output_layer(outputs)
+        
+        return outputs
+
+    # chop the last output layer
+    def extract(self, inputs):
+        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
+        outputs = self.fc_layer(outputs)
+        
+        return outputs
+
 class Encoder3D(nn.Module):
     def __init__(self):
         super(Encoder3D, self).__init__()
