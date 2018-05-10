@@ -184,7 +184,7 @@ def main(args):
         dictionary = coco.dict_idx2word
         corpus = coco.corpus
         # prepare the dataloader
-        if not pretrained:
+        if pretrained:
             train_ds = COCOCaptionDataset(
                 root, 
                 train_captions, 
@@ -211,9 +211,8 @@ def main(args):
                 print()
                 encoder = EncoderVGG16().cuda()
             else:
-                print("initializing shallow encoder....")
-                print()
-                encoder = Encoder2D().cuda()
+                print("invalid model name, terminating...")
+                return
         else:
             train_ds = COCOCaptionDataset(
                 root, 
@@ -238,7 +237,7 @@ def main(args):
         
 
     else:
-        print("invalid model type, exiting.....")
+        print("invalid model type, terminating.....")
         return
 
     # define the decoder
