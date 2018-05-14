@@ -1,5 +1,18 @@
 # Development Log
 
+## May.14
+
+__progress:__
+- added VGG16 with batch normalization as encoder
+- modified the last few layers of the encoders
+- refined the script for testing
+- added tensorboard support
+
+__TODOs:__
+- train models on full training set
+- try more powerful encoders, e.g. ResNet50
+- try to use text2shape pretrained embeddings
+
 ## May.10
 
 > __milestone:__ pretrained model for image captioning are now available
