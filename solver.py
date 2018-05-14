@@ -1,6 +1,7 @@
 import torch
 import time
 import math
+from datetime import datetime
 import numpy as np
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
@@ -151,11 +152,12 @@ class DecoderSolver():
             torch.save(model, "models/decoder.pth")
 
 class EncoderDecoderSolver():
-    def __init__(self, optimizer, criterion, model_type, cuda_flag=True):
+    def __init__(self, optimizer, criterion, model_type, settings, cuda_flag=True):
         self.optimizer = optimizer
         self.criterion = criterion
         self.model_type = model_type
         self.cuda_flag = cuda_flag
+        self.settings = settings
         self.log = {}
     
     # # unpack the sequence
@@ -187,7 +189,7 @@ class EncoderDecoderSolver():
     
     # calculate the bleu score with respect to the references
     def _calculate_blue(self, references, dictionary, model_ids, sequences, weights):
-        blue = []
+        bleu = []
         for model_id, sequence in zip(model_ids, sequences):
             sentence = []
             for idx in sequence:
@@ -196,7 +198,7 @@ class EncoderDecoderSolver():
                 except Exception:
                     pass
             
-            blue.append(
+            bleu.append(
                 sentence_bleu(
                     references[model_id],
                     sentence,
@@ -204,11 +206,11 @@ class EncoderDecoderSolver():
                 )
             )
         
-        return np.mean(blue)
+        return np.mean(bleu)
 
     def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type):
         # setup tensorboard
-        writer = SummaryWriter(log_dir="logs/")
+        writer = SummaryWriter(log_dir="logs/%s" % self.settings)
         for epoch_id in range(epoch + 1):
             log = {
                 'train_loss': [],
@@ -330,8 +332,8 @@ class EncoderDecoderSolver():
             log['valid_loss'] = np.mean(log['valid_loss'])
             # evaluate bleu
             eval_since = time.time()
-            train_blue, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
-            valid_blue, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
+            train_bleu, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
+            valid_bleu, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
             # evaluate cider
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             valid_cider, _ = capcider.Cider().compute_score(references["valid"], candidates["valid"])
@@ -348,14 +350,14 @@ class EncoderDecoderSolver():
             log['eval_time'] = time.time() - eval_since
             
             # log
-            log['train_blue_1'] = train_blue[0]
-            log['train_blue_2'] = train_blue[1]
-            log['train_blue_3'] = train_blue[2]
-            log['train_blue_4'] = train_blue[3]
-            log['valid_blue_1'] = valid_blue[0]
-            log['valid_blue_2'] = valid_blue[1]
-            log['valid_blue_3'] = valid_blue[2]
-            log['valid_blue_4'] = valid_blue[3]
+            log['train_bleu_1'] = train_bleu[0]
+            log['train_bleu_2'] = train_bleu[1]
+            log['train_bleu_3'] = train_bleu[2]
+            log['train_bleu_4'] = train_bleu[3]
+            log['valid_bleu_1'] = valid_bleu[0]
+            log['valid_bleu_2'] = valid_bleu[1]
+            log['valid_bleu_3'] = valid_bleu[2]
+            log['valid_bleu_4'] = valid_bleu[3]
             log['train_cider'] = train_cider
             log['valid_cider'] = valid_cider
             # log['train_meteor'] = train_meteor
@@ -364,22 +366,70 @@ class EncoderDecoderSolver():
             log['valid_rouge'] = valid_rouge
 
             # update report on tensorboard after every epoch
-            writer.add_scalar("loss/train_loss", log['train_loss'], epoch_id)
-            writer.add_scalar("loss/valid_loss", log['valid_loss'], epoch_id)
-            writer.add_scalar("blue/train_blue_1", log['train_blue_1'], epoch_id)
-            writer.add_scalar("blue/valid_blue_1", log['valid_blue_1'], epoch_id)
-            writer.add_scalar("blue/train_blue_2", log['train_blue_2'], epoch_id)
-            writer.add_scalar("blue/valid_blue_2", log['valid_blue_2'], epoch_id)
-            writer.add_scalar("blue/train_blue_3", log['train_blue_3'], epoch_id)
-            writer.add_scalar("blue/valid_blue_3", log['valid_blue_3'], epoch_id)
-            writer.add_scalar("blue/train_blue_4", log['train_blue_4'], epoch_id)
-            writer.add_scalar("blue/valid_blue_4", log['valid_blue_4'], epoch_id)
-            writer.add_scalar("blue/train_cider", log['train_cider'], epoch_id)
-            writer.add_scalar("blue/valid_cider", log['valid_cider'], epoch_id)
-            # writer.add_scalar("blue/train_meteor", log['train_meteor'], epoch_id)
-            # writer.add_scalar("blue/valid_meteor", log['valid_meteor'], epoch_id)
-            writer.add_scalar("blue/train_rouge", log['train_rouge'], epoch_id)
-            writer.add_scalar("blue/valid_rouge", log['valid_rouge'], epoch_id)
+            writer.add_scalars(
+                "Loss", 
+                {
+                    "train_loss": log['train_loss'], 
+                    "valid_loss": log['valid_loss']
+                }, 
+                epoch_id
+            )
+            writer.add_scalars(
+                "BLEU/BLEU-1", 
+                {
+                    "train_bleu_1": log['train_bleu_1'], 
+                    "valid_bleu_1": log['valid_bleu_1'],
+                }, 
+                epoch_id
+            )
+            writer.add_scalars(
+                "BLEU/BLEU-2", 
+                {
+                    "train_bleu_2": log['train_bleu_2'], 
+                    "valid_bleu_2": log['valid_bleu_2'],
+                }, 
+                epoch_id
+            )
+            writer.add_scalars(
+                "BLEU/BLEU-3", 
+                {
+                    "train_bleu_3": log['train_bleu_3'], 
+                    "valid_bleu_3": log['valid_bleu_3'],
+                }, 
+                epoch_id
+            )
+            writer.add_scalars(
+                "BLEU/BLEU-4", 
+                {
+                    "train_bleu_4": log['train_bleu_4'], 
+                    "valid_bleu_4": log['valid_bleu_4'],
+                }, 
+                epoch_id
+            )
+            writer.add_scalars(
+                "CIDEr", 
+                {
+                    "train_cider": log['train_cider'], 
+                    "valid_cider": log['valid_cider']
+                }, 
+                epoch_id
+            )
+            # writer.add_scalar(
+            #     "METEOR", 
+            #     {
+            #         "train_meteor": log['train_meteor'], 
+            #         "valid_meteor": log['valid_meteor']
+            #     }, 
+            #     epoch_id
+            # )
+            writer.add_scalars(
+                "ROUGE-L", 
+                {
+                    "train_rouge": log['train_rouge'], 
+                    "valid_rouge": log['valid_rouge']
+                }, 
+                epoch_id
+            )
 
             log['epoch_time'].append(np.mean(time.time() - start))
             # show report
@@ -392,21 +442,21 @@ class EncoderDecoderSolver():
                     log['train_loss'], 
                     log['valid_loss'])
                 )
-                print("[BLEU-1] train_blue: %f, valid_blue: %f" % (
-                    log['train_blue_1'],
-                    log['valid_blue_1'])
+                print("[BLEU-1] train_bleu: %f, valid_bleu: %f" % (
+                    log['train_bleu_1'],
+                    log['valid_bleu_1'])
                 )
-                print("[BLEU-2] train_blue: %f, valid_blue: %f" % (
-                    log['train_blue_2'],
-                    log['valid_blue_2'])
+                print("[BLEU-2] train_bleu: %f, valid_bleu: %f" % (
+                    log['train_bleu_2'],
+                    log['valid_bleu_2'])
                 )
-                print("[BLEU-3] train_blue: %f, valid_blue: %f" % (
-                    log['train_blue_3'],
-                    log['valid_blue_3'])
+                print("[BLEU-3] train_bleu: %f, valid_bleu: %f" % (
+                    log['train_bleu_3'],
+                    log['valid_bleu_3'])
                 )
-                print("[BLEU-4] train_blue: %f, valid_blue: %f" % (
-                    log['train_blue_4'],
-                    log['valid_blue_4'])
+                print("[BLEU-4] train_bleu: %f, valid_bleu: %f" % (
+                    log['train_bleu_4'],
+                    log['valid_bleu_4'])
                 )
                 print("[CIDEr] train_cider: %f, valid_cider: %f" % (
                     log['train_cider'],

@@ -297,6 +297,8 @@ class Caption(object):
                             word_list[word] = 1
             except Exception:
                 pass
+        # filter out all words that appear less than 5 times
+        word_list = {item[0]: item[1] for item in word_list.items() if item[1] >= 5}
         word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
@@ -360,7 +362,7 @@ class Caption(object):
             temp_list = []
             for text in captions_list[i].split(" "):
                 # filter out empty element
-                if text:
+                if text and text in self.dict_word2idx.keys():
                     temp_list.append(self.dict_word2idx[text])
                 captions_list[i] = temp_list
         # replace with the new column
@@ -442,6 +444,8 @@ class COCO(object):
                             word_list[word] = 1
             except Exception:
                 pass
+        # filter out all words that appear less than 5 times
+        word_list = {item[0]: item[1] for item in word_list.items() if item[1] >= 5}
         word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
@@ -502,7 +506,7 @@ class COCO(object):
                 temp_list = []
                 for text in captions_list[i].split(" "):
                     # filter out empty element
-                    if text:
+                    if text and text in self.dict_word2idx.keys():
                         temp_list.append(self.dict_word2idx[text])
                     captions_list[i] = temp_list
             # replace with the new column

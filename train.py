@@ -175,7 +175,7 @@ def main(args):
         print()
         coco = COCO(
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
             [train_size, valid_size]
         )
         # split data
@@ -193,7 +193,7 @@ def main(args):
             valid_ds = COCOCaptionDataset(
                 root, 
                 valid_captions,
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014_224.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             valid_dl = DataLoader(valid_ds, batch_size=batch_size)
@@ -210,6 +210,10 @@ def main(args):
                 print("initializing encoder: vgg16....")
                 print()
                 encoder = EncoderVGG16().cuda()
+            elif pretrained == "vgg16_bn":
+                print("initializing encoder: vgg16_bn....")
+                print()
+                encoder = EncoderVGG16BN().cuda()
             else:
                 print("invalid model name, terminating...")
                 return
@@ -222,7 +226,7 @@ def main(args):
             valid_ds = COCOCaptionDataset(
                 root, 
                 valid_captions,
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             valid_dl = DataLoader(valid_ds, batch_size=batch_size)
@@ -261,7 +265,8 @@ def main(args):
     # training
     print("start training....")
     print()
-    encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type)
+    settings = "%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size)
+    encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
     encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type)
 
     # save
@@ -273,14 +278,14 @@ def main(args):
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
     valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]
-    train_blues_1 = [encoder_decoder_solver.log[i]["train_blue_1"] for i in range(epochs)]
-    train_blues_2 = [encoder_decoder_solver.log[i]["train_blue_2"] for i in range(epochs)]
-    train_blues_3 = [encoder_decoder_solver.log[i]["train_blue_3"] for i in range(epochs)]
-    train_blues_4 = [encoder_decoder_solver.log[i]["train_blue_4"] for i in range(epochs)]
-    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_blue_1"] for i in range(epochs)]
-    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_blue_2"] for i in range(epochs)]
-    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_blue_3"] for i in range(epochs)]
-    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_blue_4"] for i in range(epochs)]
+    train_blues_1 = [encoder_decoder_solver.log[i]["train_bleu_1"] for i in range(epochs)]
+    train_blues_2 = [encoder_decoder_solver.log[i]["train_bleu_2"] for i in range(epochs)]
+    train_blues_3 = [encoder_decoder_solver.log[i]["train_bleu_3"] for i in range(epochs)]
+    train_blues_4 = [encoder_decoder_solver.log[i]["train_bleu_4"] for i in range(epochs)]
+    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_bleu_1"] for i in range(epochs)]
+    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_bleu_2"] for i in range(epochs)]
+    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_bleu_3"] for i in range(epochs)]
+    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_bleu_4"] for i in range(epochs)]
     train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epochs)]
     valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epochs)]
     # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epochs)]
@@ -304,29 +309,29 @@ def main(args):
     fig.clf()
     fig.set_size_inches(16,32)
     plt.subplot(4, 1, 1)
-    plt.plot(range(epochs), train_blues_1, "C3", label="train_blue")
-    plt.plot(range(epochs), valid_blues_1, "C4", label="valid_blue")
+    plt.plot(range(epochs), train_blues_1, "C3", label="train_bleu")
+    plt.plot(range(epochs), valid_blues_1, "C4", label="valid_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-1')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 2)
-    plt.plot(range(epochs), train_blues_2, "C3", label="train_blue")
-    plt.plot(range(epochs), valid_blues_2, "C4", label="valid_blue")
+    plt.plot(range(epochs), train_blues_2, "C3", label="train_bleu")
+    plt.plot(range(epochs), valid_blues_2, "C4", label="valid_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-2')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 3)
-    plt.plot(range(epochs), train_blues_3, "C3", label="train_blue")
-    plt.plot(range(epochs), valid_blues_3, "C4", label="valid_blue")
+    plt.plot(range(epochs), train_blues_3, "C3", label="train_bleu")
+    plt.plot(range(epochs), valid_blues_3, "C4", label="valid_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-3')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 4)
-    plt.plot(range(epochs), train_blues_4, "C3", label="train_blue")
-    plt.plot(range(epochs), valid_blues_4, "C4", label="valid_blue")
+    plt.plot(range(epochs), train_blues_4, "C3", label="train_bleu")
+    plt.plot(range(epochs), valid_blues_4, "C4", label="valid_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-4')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
