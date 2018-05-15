@@ -37,7 +37,7 @@ def main(args):
     else:
         model_name = "shallow"
 
-    print("[training settings]")
+    print("\n[training settings]")
     print("GPU:", args.gpu)
     print("train_size:", args.train_size)
     print("valid_size:", args.valid_size)
