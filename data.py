@@ -290,8 +290,8 @@ class Caption(object):
         for text in captions_list:
             try:
                 for word in re.split("[ ]", text):
-                    if word:
-                        if word in word_list.keys() and len(word_list.keys()) <= 5000:
+                    if word and len(word_list.keys()) <= 5000:
+                        if word in word_list.keys():
                             word_list[word] += 1
                         else:
                             word_list[word] = 1
@@ -437,9 +437,9 @@ class COCO(object):
         for text in captions_list:
             try:
                 for word in re.split("[ ]", text):
-                    if word:
+                    if word and len(word_list.keys()) <= 5000:
                         # set the maximum size of vocabulary
-                        if word in word_list.keys() and len(word_list.keys()) <= 5000:
+                        if word in word_list.keys():
                             word_list[word] += 1
                         else:
                             word_list[word] = 1
