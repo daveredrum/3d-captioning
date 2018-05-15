@@ -260,11 +260,15 @@ def main(args):
 
     # define the decoder
     print("initializing decoder....")
-    print()
     input_size = dictionary.__len__() + 1
     hidden_size = 512
     num_layer = 2
     decoder = Decoder(input_size, hidden_size, num_layer).cuda()
+    print("dict_size:", input_size)
+    print("hidden_size:", hidden_size)
+    print("num_layer:", num_layer)
+    print()
+
 
     # prepare the training parameters
     if pretrained:
