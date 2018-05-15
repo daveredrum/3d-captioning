@@ -1,5 +1,15 @@
 # Development Log
 
+## May.15
+
+__progress:__
+- fixed bug with cross entropy loss by specifying ignore_index=0 as 0 is only used for padding the sequences
+- refined the status report
+- constrainted the dictionary size, currently using 5000 as maximum
+
+__TODOs:__
+- add encoder with attention
+
 ## May.14
 
 __progress:__
