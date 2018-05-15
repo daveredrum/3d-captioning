@@ -277,7 +277,7 @@ def main(args):
     else:
         params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
     optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=0)
     epoch = epoch
     verbose = verbose
 
