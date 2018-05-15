@@ -298,8 +298,7 @@ class Caption(object):
             except Exception:
                 pass
         # filter out all words that appear less than 5 times
-        word_list = {item[0]: item[1] for item in word_list.items() if item[1] >= 5}
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:5000]
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
         self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
