@@ -37,6 +37,20 @@ def main(args):
     else:
         model_name = "shallow"
 
+    print("[training settings]")
+    print("GPU:", args.gpu)
+    print("train_size:", args.train_size)
+    print("valid_size:", args.valid_size)
+    print("test_size:", args.test_size)
+    print("epoch:", args.epoch)
+    print("verbose:", args.verbose)
+    print("learning_rate:", args.learning_rate)
+    print("batch_size:", args.batch_size)
+    print("model_type:", args.model_type)
+    print("weight_decay:", args.weight_decay)
+    print("pretrained:", args.pretrained)
+    print()
+
     ###################################################################
     #                                                                 #
     #                                                                 #
@@ -383,6 +397,4 @@ if __name__ == "__main__":
     parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
     parser.add_argument("--pretrained", type=str, default=None, help="choice for pretrained model")
     args = parser.parse_args()
-    print(args)
-    print()
     main(args)
