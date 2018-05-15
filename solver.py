@@ -279,7 +279,7 @@ class EncoderDecoderSolver():
                         outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
                         # # no teacher forcing
                         # outputs = decoder.sample(visual_contexts, cap_lengths)
-                        loss = self.criterion(outputs, caption_targets)
+                        loss = self.criterion(outputs, caption_targets, ignore_index=0)
                         log['forward'].append(time.time() - forward_since)
                         
                         # decode outputs
@@ -312,7 +312,7 @@ class EncoderDecoderSolver():
                         outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
                         # # no teacher forcing
                         # outputs = decoder.sample(visual_contexts, cap_lengths)
-                        loss = self.criterion(outputs, caption_targets)
+                        loss = self.criterion(outputs, caption_targets, ignore_index=0)
                         log['valid_time'].append(time.time() - valid_since)
                         
                         # decode outputs

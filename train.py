@@ -264,7 +264,8 @@ def main(args):
     hidden_size = 512
     num_layer = 2
     decoder = Decoder(input_size, hidden_size, num_layer).cuda()
-    print("dict_size:", input_size)
+    print("input_size:", input_size)
+    print("dict_size:", dictionary.__len__())
     print("hidden_size:", hidden_size)
     print("num_layer:", num_layer)
     print()
