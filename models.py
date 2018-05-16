@@ -1,9 +1,11 @@
+import math
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 import torchvision.models as torchmodels
 import torch.nn.functional as F
+from torch.nn import Parameter
 
 class Encoder2D(nn.Module):
     def __init__(self):
@@ -245,6 +247,79 @@ class Decoder(nn.Module):
         sampled = torch.cat(sampled, 0)
 
         return sampled
+
+# attention module for image encoder
+# implement soft attention
+class Attention2D(nn.Module):
+    def __init__(self, visual_channels, visual_size, hidden_size, num_layers, cuda_flag):
+        super(Attention2D, self).__init__()
+        # basic settings
+        self.visual_channels = visual_channels
+        self.visual_size = visual_size
+        self.hidden_size = hidden_size
+        self.visual_flat_size = visual_channels * visual_size * visual_size
+        # layers
+        self.attention = nn.Linear(self.visual_flat_size + hidden_size * num_layers, self.visual_flat_size)
+        self.attention_out = nn.Linear(visual_channels, hidden_size)
+
+    def forward(self, visual_inputs, states_h):
+        # settings
+        batch_size = visual_inputs.size(0)
+        visual_inputs = visual_inputs.view(batch_size, -1)
+        states_h = states_h.permute(1, 0, 2).contiguous().view(batch_size, -1)
+        # compute attention weights
+        attention_inputs = torch.cat((visual_inputs, states_h), dim=1)
+        attention_weights = F.softmax(self.attention(attention_inputs), dim=1)
+        attention_weights = attention_weights.view(batch_size, self.visual_channels, self.visual_size, self.visual_size)
+        # apply attention weights
+        attention_applied = visual_inputs * attention_weights
+        attention_applied = attention_applied.view(batch_size, self.visual_channels, self.visual_size * self.visual_size)
+        attention_applied = torch.sum(attention_applied, dim=2)
+        # outputs
+        attended = self.attention_out(attention_applied)
+
+        return attended
+
+# new LSTM with visual attention context
+class AttentionLSTMCell2D(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super(AttentionLSTMCell2D, self).__init__()
+        # basic settings
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        # parameters
+        for gate in ["i", "f", "c", "o"]:
+            setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
+            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "z_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "b_{}".format(gate), Parameter(torch.Tensor(hidden_size)))
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+    
+    # inputs = (batch, input_size)
+    # state_h = (batch, hidden_size)
+    # state_c = (batch, hidden_size)
+    # atteded = (batch, hidden_size)
+    def forward(self, inputs, states, atteded):
+        # unpack states
+        states_h, states_c = states
+        # forward feed
+        i = F.sigmoid(torch.matmul(inputs, self.w_i) + torch.matmul(states_h, self.u_i) + torch.matmul(atteded, self.z_i) + self.b_i)
+        f = F.sigmoid(torch.matmul(inputs, self.w_f) + torch.matmul(states_h, self.u_f) + torch.matmul(atteded, self.z_f) + self.b_f)
+        c_hat = F.tanh(torch.matmul(inputs, self.w_c) + torch.matmul(states_h, self.u_c) + torch.matmul(atteded, self.z_c) + self.b_c)
+        states_c = f * states_c + i * c_hat
+        o = F.sigmoid(torch.matmul(inputs, self.w_o) + torch.matmul(states_h, self.u_o) + torch.matmul(atteded, self.z_o) + self.b_o)
+        states_h = o * F.tanh(states_c)
+        # pack states
+        states = (states_h, states_c)
+
+        return states_h, states
+
 
 # decoder with attention
 class AttentionDecoder(nn.Module):
