@@ -1,5 +1,15 @@
 # Development Log
 
+## May.16
+
+__progress:__
+- added encoder with attention, more work needed to be done
+
+__TODOs:__
+- modularize the attention mechanism
+- implement a new LSTM module to make it compatiable with attended visual context
+- refine the encoder to make it compatiable with attention
+
 ## May.15
 
 __progress:__
