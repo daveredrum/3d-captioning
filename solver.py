@@ -169,6 +169,7 @@ class EncoderDecoderSolver():
     # def _unpad_outputs(self, unpacked_sequence, cap_lengths):
     #     return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
 
+    # for model without attention
     def _decode_outputs(self, sequence, pack_info, cap_lengths, dictionary):
         # unpack the sequence
         unpacked_sequence = pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
@@ -187,28 +188,26 @@ class EncoderDecoderSolver():
         
         return decoded
     
-    # calculate the bleu score with respect to the references
-    def _calculate_blue(self, references, dictionary, model_ids, sequences, weights):
-        bleu = []
-        for model_id, sequence in zip(model_ids, sequences):
-            sentence = []
+    # for model with attention
+    def _decode_attention_outputs(self, sequence, cap_lengths, dictionary):
+        # get the indices for each predicted word
+        _, indices = torch.max(sequence, 2)
+        # chop the sequences according to their lengths
+        unpadded_sequence = [indices[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+        # decode the indices
+        decoded = []
+        for sequence in unpadded_sequence:
+            temp = []
             for idx in sequence:
                 try:
-                    sentence.append(dictionary[idx])
+                    temp.append(dictionary[idx])
                 except Exception:
                     pass
-            
-            bleu.append(
-                sentence_bleu(
-                    references[model_id],
-                    sentence,
-                    weights
-                )
-            )
-        
-        return np.mean(bleu)
+            decoded.append(" ".join(temp))
 
-    def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type):
+        return decoded
+
+    def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
         for epoch_id in range(epoch + 1):
@@ -253,79 +252,149 @@ class EncoderDecoderSolver():
                         visuals = visuals[1]
                     elif model_type == "coco":
                         visuals = visuals
-                        
-                    caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
-                    caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
-                    # target_ref = [item[0][:item[1]] for item in zip(caption_targets.tolist(), cap_lengths.tolist())]
-                    
-                    if self.cuda_flag:
-                        visual_inputs = Variable(visuals).cuda()
-                        caption_inputs = Variable(caption_inputs).cuda()
-                        caption_targets = Variable(caption_targets).cuda()
-                        caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
-                        cap_lengths = Variable(cap_lengths).cuda()
-                    else:
-                        visual_inputs = Variable(visuals)
-                        caption_inputs = Variable(caption_inputs)
-                        caption_targets = Variable(caption_targets)
-                        caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
-                        cap_lengths = Variable(cap_lengths)
-                    
-                    if phase == "train":
-                        # forward pass
-                        forward_since = time.time()
-                        visual_contexts = encoder.extract(visual_inputs)
-                        # teacher forcing
-                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
-                        # # no teacher forcing
-                        # outputs = decoder.sample(visual_contexts, cap_lengths)
-                        loss = self.criterion(outputs, caption_targets)
-                        log['forward'].append(time.time() - forward_since)
-                        
-                        # decode outputs
-                        outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
-                        # save to candidates
-                        for model_id, output in zip(model_ids, outputs):
-                            if model_id not in candidates[phase].keys():
-                                candidates[phase][model_id] = [output]
-                            else:
-                                candidates[phase][model_id].append(output)
 
-                        # backward pass
-                        # save log
-                        if epoch_id != 0:
-                            encoder.zero_grad()
-                            decoder.zero_grad()
-                            self.optimizer.zero_grad()
-                            backward_since = time.time()
-                            loss.backward()
-                            self.optimizer.step()
-                            log['backward'].append(time.time() - backward_since)
+                    # inputs for decoder with attention
+                    if attention: 
+                        caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
+                        caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, 1:cap_lengths[0]]
+                        if self.cuda_flag:
+                            visual_inputs = Variable(visuals).cuda()
+                            caption_inputs = Variable(caption_inputs).cuda()
+                            caption_targets = Variable(caption_targets).cuda()
+                            cap_lengths = Variable(cap_lengths).cuda()
                         else:
-                            log['backward'].append(0)
-                        log['train_loss'].append(loss.data[0])
-                    else:
-                        # validate
-                        valid_since = time.time()
-                        visual_contexts = encoder.extract(visual_inputs)
-                        # teacher forcing
-                        outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
-                        # # no teacher forcing
-                        # outputs = decoder.sample(visual_contexts, cap_lengths)
-                        loss = self.criterion(outputs, caption_targets)
-                        log['valid_time'].append(time.time() - valid_since)
+                            visual_inputs = Variable(visuals)
+                            caption_inputs = Variable(caption_inputs)
+                            caption_targets = Variable(caption_targets)
+                            cap_lengths = Variable(cap_lengths)
                         
-                        # decode outputs
-                        outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
-                        # save to candidates
-                        for model_id, output in zip(model_ids, outputs):
-                            if model_id not in candidates[phase].keys():
-                                candidates[phase][model_id] = [output]
-                            else:
-                                candidates[phase][model_id].append(output)
+                        if phase == "train":
+                            # forward pass
+                            forward_since = time.time()
+                            visual_contexts = encoder.extract(visual_inputs)
+                            # teacher forcing
+                            outputs = decoder(visual_contexts, caption_inputs)
+                            # # no teacher forcing
+                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
+                            log['forward'].append(time.time() - forward_since)
+                            
+                            # decode outputs
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dictionary)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
 
-                        # save log
-                        log['valid_loss'].append(loss.data[0])
+                            # backward pass
+                            # save log
+                            if epoch_id != 0:
+                                encoder.zero_grad()
+                                decoder.zero_grad()
+                                self.optimizer.zero_grad()
+                                backward_since = time.time()
+                                loss.backward()
+                                self.optimizer.step()
+                                log['backward'].append(time.time() - backward_since)
+                            else:
+                                log['backward'].append(0)
+                            log['train_loss'].append(loss.data[0])
+                        else:
+                            # validate
+                            valid_since = time.time()
+                            visual_contexts = encoder.extract(visual_inputs)
+                            # teacher forcing
+                            outputs = decoder(visual_contexts, caption_inputs)
+                            # # no teacher forcing
+                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
+                            log['valid_time'].append(time.time() - valid_since)
+                            
+                            # decode outputs
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dictionary)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+
+                            # save log
+                            log['valid_loss'].append(loss.data[0])
+                    # decoder without attention
+                    else:
+                        caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
+                        caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
+                        if self.cuda_flag:
+                            visual_inputs = Variable(visuals).cuda()
+                            caption_inputs = Variable(caption_inputs).cuda()
+                            caption_targets = Variable(caption_targets).cuda()
+                            caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
+                            cap_lengths = Variable(cap_lengths).cuda()
+                        else:
+                            visual_inputs = Variable(visuals)
+                            caption_inputs = Variable(caption_inputs)
+                            caption_targets = Variable(caption_targets)
+                            caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
+                            cap_lengths = Variable(cap_lengths)
+                        
+                        if phase == "train":
+                            # forward pass
+                            forward_since = time.time()
+                            visual_contexts = encoder.extract(visual_inputs)
+                            # teacher forcing
+                            outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                            # # no teacher forcing
+                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            loss = self.criterion(outputs, caption_targets)
+                            log['forward'].append(time.time() - forward_since)
+                            
+                            # decode outputs
+                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+
+                            # backward pass
+                            # save log
+                            if epoch_id != 0:
+                                encoder.zero_grad()
+                                decoder.zero_grad()
+                                self.optimizer.zero_grad()
+                                backward_since = time.time()
+                                loss.backward()
+                                self.optimizer.step()
+                                log['backward'].append(time.time() - backward_since)
+                            else:
+                                log['backward'].append(0)
+                            log['train_loss'].append(loss.data[0])
+                        else:
+                            # validate
+                            valid_since = time.time()
+                            visual_contexts = encoder.extract(visual_inputs)
+                            # teacher forcing
+                            outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                            # # no teacher forcing
+                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            loss = self.criterion(outputs, caption_targets)
+                            log['valid_time'].append(time.time() - valid_since)
+                            
+                            # decode outputs
+                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+
+                            # save log
+                            log['valid_loss'].append(loss.data[0])
             
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])

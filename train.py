@@ -31,24 +31,30 @@ def main(args):
     batch_size = args.batch_size
     model_type = args.model_type
     weight_decay = args.weight_decay
+    if args.attention == "true":
+        args.attention = True
+    elif args.attention == "false":
+        args.attention = False
+    attention = args.attention
     pretrained = args.pretrained
     if pretrained:
         model_name = pretrained
     else:
         model_name = "shallow"
 
-    print("\n[training settings]")
+    print("\n[settings]")
     print("GPU:", args.gpu)
+    print("model_type:", args.model_type)
+    print("pretrained:", args.pretrained)
+    print("attention:", args.attention)
     print("train_size:", args.train_size)
     print("valid_size:", args.valid_size)
     print("test_size:", args.test_size)
     print("epoch:", args.epoch)
     print("verbose:", args.verbose)
-    print("learning_rate:", args.learning_rate)
     print("batch_size:", args.batch_size)
-    print("model_type:", args.model_type)
+    print("learning_rate:", args.learning_rate)
     print("weight_decay:", args.weight_decay)
-    print("pretrained:", args.pretrained)
     print()
 
     ###################################################################
@@ -259,11 +265,15 @@ def main(args):
         return
 
     # define the decoder
-    print("initializing decoder....")
     input_size = dictionary.__len__() + 1
     hidden_size = 512
     num_layer = 2
-    decoder = Decoder(input_size, hidden_size, num_layer).cuda()
+    if attention:
+        print("initializing decoder with attention....")
+        decoder = AttentionDecoder(input_size, hidden_size, num_layer).cuda()
+    else:
+        print("initializing decoder without attention....")        
+        decoder = Decoder(input_size, hidden_size, num_layer).cuda()
     print("input_size:", input_size)
     print("dict_size:", dictionary.__len__())
     print("hidden_size:", hidden_size)
@@ -284,14 +294,17 @@ def main(args):
     # training
     print("start training....")
     print()
-    settings = "%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size)
+    if attention:
+        settings = "%s_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, epoch, lr, weight_decay, batch_size, input_size)
+    else:
+        settings = "%s_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, epoch, lr, weight_decay, batch_size, input_size)
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
-    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type)
+    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type, attention)
 
     # save
     print("save models...")
-    torch.save(encoder, "models/encoder_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size))
-    torch.save(decoder, "models/decoder_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.pth"  % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size))
+    torch.save(encoder, "models/encoder_%s.pth"  % settings)
+    torch.save(decoder, "models/decoder_%s.pth"  % settings)
 
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
@@ -323,7 +336,7 @@ def main(args):
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/training_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/training_curve_%s.png" % settings, bbox_inches="tight")
     # plot the bleu scores
     fig.clf()
     fig.set_size_inches(16,32)
@@ -355,7 +368,7 @@ def main(args):
     plt.ylabel('BLEU-4')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/bleu_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/bleu_curve_%s.png" % settings, bbox_inches="tight")
     # plot the cider scores
     fig.clf()
     fig.set_size_inches(16,8)
@@ -365,7 +378,7 @@ def main(args):
     plt.ylabel('CIDEr')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/cider_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/cider_curve_%s.png" % settings, bbox_inches="tight")
     # # plot the meteor scores
     # fig.clf()
     # fig.set_size_inches(16,8)
@@ -385,7 +398,7 @@ def main(args):
     plt.ylabel('ROUGE_L')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
-    plt.savefig("figs/rouge_curve_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d.png" % (model_type, model_name, train_size, epoch, lr, weight_decay, batch_size, input_size), bbox_inches="tight")
+    plt.savefig("figs/rouge_curve_%s.png" % settings, bbox_inches="tight")
 
 
 if __name__ == "__main__":
@@ -400,6 +413,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
     parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
-    parser.add_argument("--pretrained", type=str, default=None, help="choice for pretrained model")
+    parser.add_argument("--pretrained", type=str, default=None, help="vgg16/vgg16_bn/resnet50")
+    parser.add_argument("--attention", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)
