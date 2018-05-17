@@ -82,10 +82,8 @@ class Attention2D(nn.Module):
         attention_weights = self.attention(attention_inputs)
         attention_weights = F.softmax(attention_weights, dim=1)
         attention_weights = attention_weights.view(batch_size, self.visual_channels, self.visual_size, self.visual_size)
-        print(attention_weights.size())
-        print(visual_inputs.size())
         # apply attention weights
-        attention_applied = visual_inputs * attention_weights
+        attention_applied = visual_inputs.view(batch_size, self.visual_channels, self.visual_size, self.visual_size) * attention_weights
         attention_applied = attention_applied.view(batch_size, self.visual_channels, self.visual_size * self.visual_size)
         attention_applied = torch.sum(attention_applied, dim=2)
         # outputs
