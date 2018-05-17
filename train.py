@@ -11,7 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 from constants import *
 from data import *
-from models import *
+from encoders import *
+from decoders import *
 from solver import *
 import matplotlib.pyplot as plt
 
@@ -223,17 +224,32 @@ def main(args):
             }
             # initialize the encoder
             if pretrained == "resnet50":
-                print("initializing encoder: resnet50....")
-                print()
-                encoder = EncoderResnet50().cuda()
+                if attention:
+                    print("initializing encoder: resnet50 with attention....")
+                    print()
+                    encoder = AttentionEncoderResnet50().cuda()
+                else:
+                    print("initializing encoder: resnet50....")
+                    print()
+                    encoder = EncoderResnet50().cuda()
             elif pretrained == "vgg16":
-                print("initializing encoder: vgg16....")
-                print()
-                encoder = EncoderVGG16().cuda()
+                if attention:
+                    print("initializing encoder: vgg16 with attention....")
+                    print()
+                    encoder = AttentionEncoderVGG16().cuda()
+                else:
+                    print("initializing encoder: vgg16....")
+                    print()
+                    encoder = EncoderVGG16().cuda()
             elif pretrained == "vgg16_bn":
-                print("initializing encoder: vgg16_bn....")
-                print()
-                encoder = EncoderVGG16BN().cuda()
+                if attention:
+                    print("initializing encoder: vgg16_bn....")
+                    print()
+                    encoder = AttentionEncoderVGG16BN().cuda()
+                else:
+                    print("initializing encoder: vgg16_bn....")
+                    print()
+                    encoder = EncoderVGG16BN().cuda()
             else:
                 print("invalid model name, terminating...")
                 return
@@ -269,8 +285,12 @@ def main(args):
     hidden_size = 512
     num_layer = 2
     if attention:
-        print("initializing decoder with attention....")
-        decoder = AttentionDecoder(input_size, hidden_size, num_layer).cuda()
+        if pretrained == "vgg16" or pretrained == "vgg16_bn":
+            print("initializing decoder with attention....")
+            decoder = AttentionDecoder2D(input_size, hidden_size, 512, 3, num_layer).cuda()
+        elif pretrained == "resnet50":
+            print("initializing decoder with attention....")
+            decoder = AttentionDecoder2D(input_size, hidden_size, 2048, 3, num_layer).cuda()
     else:
         print("initializing decoder without attention....")        
         decoder = Decoder(input_size, hidden_size, num_layer).cuda()

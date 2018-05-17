@@ -157,6 +157,61 @@ class EncoderVGG16BN(nn.Module):
         
         return outputs
 
+# for attention
+class AttentionEncoderVGG16(nn.Module):
+    def __init__(self):
+        super(AttentionEncoderVGG16, self).__init__()
+        vgg16 = torchmodels.vgg16(pretrained=True)
+        self.vgg16 = nn.Sequential(
+            *list(vgg16.features.children())[:-1],
+            # (512, 7, 7)
+            nn.MaxPool2d(kernel_size=2, stride=2)
+            # (512, 3, 3)
+        )    
+
+
+    def forward(self, inputs):
+        outputs = self.vgg16(inputs)
+        
+        return outputs
+
+# for attention
+class AttentionEncoderVGG16BN(nn.Module):
+    def __init__(self):
+        super(AttentionEncoderVGG16BN, self).__init__()
+        vgg16 = torchmodels.vgg16_bn(pretrained=True)
+        self.vgg16 = nn.Sequential(
+            *list(vgg16.features.children())[:-1],
+            # (512, 7, 7)
+            nn.MaxPool2d(kernel_size=2, stride=2)
+            # (512, 3, 3)
+        )    
+
+
+    def forward(self, inputs):
+        outputs = self.vgg16(inputs)
+        
+        return outputs
+
+# for attention
+class AttentionEncoderResnet50(nn.Module):
+    def __init__(self):
+        super(AttentionEncoderResnet50, self).__init__()
+        resnet = torchmodels.resnet50(pretrained=True)
+        self.resnet = nn.Sequential(
+            *list(resnet.children())[:-2],
+            # (2048, 7, 7)
+            nn.MaxPool2d(kernel_size=2, stride=2)
+            # (2048, 3, 3)
+        )
+        
+    
+    def forward(self, inputs):
+        outputs = self.resnet(inputs)
+        
+        return outputs
+
+
 class Encoder3D(nn.Module):
     def __init__(self):
         super(Encoder3D, self).__init__()
