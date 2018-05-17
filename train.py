@@ -243,7 +243,7 @@ def main(args):
                     encoder = EncoderVGG16().cuda()
             elif pretrained == "vgg16_bn":
                 if attention:
-                    print("initializing encoder: vgg16_bn....")
+                    print("initializing encoder: vgg16_bn with attention....")
                     print()
                     encoder = AttentionEncoderVGG16BN().cuda()
                 else:
