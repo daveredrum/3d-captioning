@@ -303,7 +303,10 @@ def main(args):
 
     # prepare the training parameters
     if pretrained:
-        params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
+        if attention:
+            params = list(decoder.parameters())
+        else:
+            params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
     else:
         params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
     optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
