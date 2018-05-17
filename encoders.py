@@ -164,8 +164,7 @@ class AttentionEncoderVGG16(nn.Module):
         vgg16 = torchmodels.vgg16(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
-            # (512, 7, 7)
-            nn.MaxPool2d(kernel_size=2, stride=2)
+            nn.MaxPool2d(kernel_size=5, stride=5, padding=1)
             # (512, 3, 3)
         )    
 
@@ -182,8 +181,7 @@ class AttentionEncoderVGG16BN(nn.Module):
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
-            # (512, 7, 7)
-            nn.MaxPool2d(kernel_size=2, stride=2)
+            nn.MaxPool2d(kernel_size=5, stride=5, padding=1)
             # (512, 3, 3)
         )    
 
