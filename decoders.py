@@ -89,6 +89,7 @@ class Attention2D(nn.Module):
         print(visual_inputs.size())
         print(attention_weights.size())
         attention_applied = torch.bmm(visual_inputs, attention_weights)
+        print(attention_applied.size())
         attention_applied = attention_applied.view(batch_size, self.visual_size * self.visual_size)
         # attention_applied = (batch_size, visual_channels)
         # outputs
