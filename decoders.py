@@ -147,7 +147,10 @@ class AttentionDecoder2D(nn.Module):
         # layer settings
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.attention = Attention2D(visual_channels, visual_size, hidden_size, num_layers)
-        self.lstm_layer = [AttentionLSTMCell2D(input_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
+        if cuda_flag:
+            self.lstm_layer = [AttentionLSTMCell2D(input_size, hidden_size).cuda()] + [nn.LSTMCell(hidden_size, hidden_size).cuda() for i in range(num_layers - 1)]
+        else:
+            self.lstm_layer = [AttentionLSTMCell2D(input_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
         self.output_layer = nn.Linear(hidden_size, input_size)
 
     def forward(self, visual_inputs, caption_inputs):
