@@ -272,6 +272,7 @@ class EncoderDecoderSolver():
                             # forward pass
                             forward_since = time.time()
                             visual_contexts = encoder(visual_inputs)
+                            print(visual_contexts.size())
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
                             # teacher forcing
                             outputs = decoder(visual_contexts, caption_inputs)
