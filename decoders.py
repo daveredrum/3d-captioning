@@ -182,6 +182,9 @@ class AttentionDecoder2D(nn.Module):
             # outputs = (batch_size, hidden_size)
             for layer_id in range(self.num_layers):
                 if layer_id == 0:
+                    print(embedded.size())
+                    print(states[layer_id][0].size())
+                    print(attended.size())
                     states[layer_id] = self.lstm_layer[layer_id](embedded, states[layer_id], attended)
                     outputs = states[layer_id][0]
                 else:
