@@ -148,9 +148,9 @@ class AttentionDecoder2D(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.attention = Attention2D(visual_channels, visual_size, hidden_size, num_layers)
         if cuda_flag:
-            self.lstm_layer = [AttentionLSTMCell2D(input_size, hidden_size).cuda()] + [nn.LSTMCell(hidden_size, hidden_size).cuda() for i in range(num_layers - 1)]
+            self.lstm_layer = [AttentionLSTMCell2D(hidden_size, hidden_size).cuda()] + [nn.LSTMCell(hidden_size, hidden_size).cuda() for i in range(num_layers - 1)]
         else:
-            self.lstm_layer = [AttentionLSTMCell2D(input_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
+            self.lstm_layer = [AttentionLSTMCell2D(hidden_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
         self.output_layer = nn.Linear(hidden_size, input_size)
 
     def forward(self, visual_inputs, caption_inputs):
@@ -182,9 +182,6 @@ class AttentionDecoder2D(nn.Module):
             # outputs = (batch_size, hidden_size)
             for layer_id in range(self.num_layers):
                 if layer_id == 0:
-                    print(embedded.size())
-                    print(states[layer_id][0].size())
-                    print(attended.size())
                     states[layer_id] = self.lstm_layer[layer_id](embedded, states[layer_id], attended)
                     outputs = states[layer_id][0]
                 else:
