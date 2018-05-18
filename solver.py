@@ -274,7 +274,7 @@ class EncoderDecoderSolver():
                             visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
                             # teacher forcing
-                            outputs = decoder(visual_contexts, caption_inputs)
+                            outputs, _ = decoder(visual_contexts, caption_inputs)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
                             loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
@@ -307,7 +307,7 @@ class EncoderDecoderSolver():
                             valid_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # teacher forcing
-                            outputs = decoder(visual_contexts, caption_inputs)
+                            outputs, _ = decoder(visual_contexts, caption_inputs)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
                             loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))

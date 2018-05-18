@@ -1,5 +1,6 @@
 import math
 import torch
+import numpy as np
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
@@ -77,7 +78,7 @@ class Attention2D(nn.Module):
         # settings
         batch_size = visual_inputs.size(0)
         # compute attention weights
-        attention_inputs = torch.cat((visual_inputs. view(batch_size, -1), states_h), dim=1)
+        attention_inputs = torch.cat((visual_inputs.view(batch_size, -1), states_h), dim=1)
         # attention_inputs = (batch_size, visual_channels * visual_size * visual_size + hidden_size * num_layers)
         attention_weights = F.softmax(self.attention(attention_inputs), dim=1)
         # attention_weights = (batch_size, visual_size * visual_size)
@@ -156,15 +157,15 @@ class AttentionDecoder2D(nn.Module):
             self.lstm_layer = [AttentionLSTMCell2D(hidden_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
         self.output_layer = nn.Linear(hidden_size, input_size)
 
-    def forward(self, visual_inputs, caption_inputs):
+    def forward(self, visual_inputs, caption_inputs, states=None):
         seq_length = caption_inputs.size(1)
         batch_size = visual_inputs.size(0)
-        if self.cuda_flag:
+        if self.cuda_flag and not states:
             states = [(
                 torch.zeros(batch_size, self.hidden_size).cuda(),
                 torch.zeros(batch_size, self.hidden_size).cuda()
             ) for i in range(self.num_layers)]
-        else:
+        elif not self.cuda_flag and not states:
             states = [(
                 torch.zeros(batch_size, self.hidden_size),
                 torch.zeros(batch_size, self.hidden_size)
@@ -196,7 +197,7 @@ class AttentionDecoder2D(nn.Module):
             decoder_outputs.append(outputs)
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
 
-        return decoder_outputs 
+        return decoder_outputs, states 
 
 # pipeline for pretrained encoder-decoder pipeline
 # same pipeline for both 2d and 3d
@@ -233,3 +234,69 @@ class EncoderDecoder():
             captions.append(" ".join(caption))
 
         return captions
+
+# for encoder-decoder pipeline with attention
+class AttentionEncoderDecoder():
+    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
+        if cuda_flag:
+            self.encoder = torch.load(encoder_path).cuda()
+            self.decoder = torch.load(decoder_path).cuda()
+        else:
+            self.encoder = torch.load(encoder_path)
+            self.decoder = torch.load(decoder_path)
+
+    def generate_text(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+        caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(dict_word2idx["<START>"]), (1, 1)))).cuda()
+        visual_contexts = self.encoder(image_inputs)
+        # sample text indices via greedy search
+        sampled = []
+        states = None
+        for i in range(max_length):
+            outputs, states = self.decoder(visual_contexts, caption_inputs, states)
+            # outputs = (1, 1, input_size)
+            predicted = outputs.max(2)[1]
+            # predicted = (1, 1)
+            sampled.append(predicted)
+            caption_inputs = predicted
+        sampled = torch.cat(sampled)
+        # decoder indices to words
+        captions = []
+        for sequence in sampled.cpu().numpy():
+            caption = []
+            for index in sequence:
+                word = dict_idx2word[index]
+                caption.append(word)
+                if word == '<END>':
+                    break
+            captions.append(" ".join(caption))
+
+        return captions
+
+    # image_inputs = (1, visual_channels, visual_size, visual_size)
+    # caption_inputs = (1)
+    def visual_attention(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+        caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(dict_word2idx["<START>"]), (1, 1)))).cuda()
+        visual_contexts = self.encoder(image_inputs)
+        # sample text indices via greedy search
+        pairs = []
+        states = None
+        hidden = torch.zeros(1, self.decoder.hidden_size * self.decoder.num_layers).cuda()
+        for i in range(max_length):
+            outputs, states = self.decoder(visual_contexts, caption_inputs, states)
+            # outputs = (1, input_size)
+            attention_inputs = torch.cat(
+                (visual_contexts.view(1, -1), hidden),
+                dim=1
+            )
+            attentions = self.decoder.attention.attention(attention_inputs).view(visual_contexts.size(2), visual_contexts.size(2))
+            # attentions = (visual_size, visual_size)
+            predicted = outputs.max(2)[1]
+            # predicted = (1, 1)
+            caption_inputs = predicted
+            hidden = torch.cat([states[i][0] for i in range(self.decoder.num_layers)], dim=1)
+            word = dict_idx2word[predicted.cpu().numpy()[0][0]]
+            pairs.append((word, attentions))
+            if word == '<END>':
+                break
+
+        return pairs
