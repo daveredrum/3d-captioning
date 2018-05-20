@@ -287,10 +287,10 @@ def main(args):
     if attention:
         if pretrained == "vgg16" or pretrained == "vgg16_bn":
             print("initializing decoder with attention....")
-            decoder = AttentionDecoder2D(input_size, hidden_size, 512, 14, num_layer).cuda()
+            decoder = AttentionDecoder2D(batch_size, input_size, hidden_size, 512, 14, num_layer).cuda()
         elif pretrained == "resnet50":
             print("initializing decoder with attention....")
-            decoder = AttentionDecoder2D(input_size, hidden_size, 2048, 7, num_layer).cuda()
+            decoder = AttentionDecoder2D(batch_size, input_size, hidden_size, 2048, 7, num_layer).cuda()
     else:
         print("initializing decoder without attention....")        
         decoder = Decoder(input_size, hidden_size, num_layer).cuda()

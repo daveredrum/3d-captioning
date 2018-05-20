@@ -164,7 +164,7 @@ class AttentionEncoderVGG16(nn.Module):
         vgg16 = torchmodels.vgg16(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
-        )    
+        )
 
 
     def forward(self, inputs):

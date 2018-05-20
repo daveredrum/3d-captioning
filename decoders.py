@@ -139,44 +139,98 @@ class AttentionLSTMCell2D(nn.Module):
 
 # decoder with attention
 class AttentionDecoder2D(nn.Module):
-    def __init__(self, input_size, hidden_size, visual_channels, visual_size, num_layers=2, cuda_flag=True):
+    def __init__(self, batch_size, input_size, hidden_size, visual_channels, visual_size, num_layers=2, cuda_flag=True):
         super(AttentionDecoder2D, self).__init__()
         # basic settings
+        self.batch_size = batch_size
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.visual_channels = visual_channels
         self.visual_size = visual_size
+        self.visual_flat = visual_size * visual_size
+        self.visual_feature_size = visual_channels * visual_size * visual_size
+        self.proj_size = 2 * hidden_size * num_layers
         self.num_layers = num_layers
         self.cuda_flag = cuda_flag
         # layer settings
+        # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
-        self.attention = Attention2D(visual_channels, visual_size, hidden_size, num_layers)
-        if cuda_flag:
-            self.lstm_layer = [AttentionLSTMCell2D(hidden_size, hidden_size).cuda()] + [nn.LSTMCell(hidden_size, hidden_size).cuda() for i in range(num_layers - 1)]
-        else:
-            self.lstm_layer = [AttentionLSTMCell2D(hidden_size, hidden_size)] + [nn.LSTMCell(hidden_size, hidden_size) for i in range(num_layers - 1)]
-        self.output_layer = nn.Linear(hidden_size, input_size)
+        # projection layer
+        # in = (batch_size, visual_channels * visual_size * visual_size)
+        # out = (batch_size, hidden_size * num_layers)
+        self.projection_layer = nn.Sequential(
+            nn.Linear(self.visual_feature_size, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.proj_size),
+            nn.ReLU()
+        )
+        # attention layer
+        # in = (batch_size, 2 * hidden_size * num_layers)
+        # out = (batch_size, visual_size * visual_size)
+        self.attention_layer = nn.Sequential(
+            nn.Linear(self.proj_size + hidden_size * num_layers, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.visual_flat),
+            nn.ReLU()
+        )
+        # in = (batch_size, visual_channels)
+        # out = (batch_size, hidden_size)
+        self.attention_out = nn.Sequential(
+            nn.Linear(self.visual_channels, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.hidden_size),
+            nn.ReLU(),
+        )
+        self.lstm_layer_1 = AttentionLSTMCell2D(hidden_size, hidden_size)
+        self.lstm_layer_2 = nn.LSTMCell(hidden_size, hidden_size)
+        # output layer
+        self.output_layer = nn.Sequential(
+            nn.Linear(hidden_size, input_size),
+            nn.ReLU()
+        )
 
-    def forward(self, visual_inputs, caption_inputs, states=None):
-        seq_length = caption_inputs.size(1)
-        batch_size = visual_inputs.size(0)
-        if self.cuda_flag and not states:
+    def init_hidden(self, batch_size):
+        if self.cuda_flag:
             states = [(
                 torch.zeros(batch_size, self.hidden_size).cuda(),
                 torch.zeros(batch_size, self.hidden_size).cuda()
             ) for i in range(self.num_layers)]
-        elif not self.cuda_flag and not states:
+        else:
             states = [(
                 torch.zeros(batch_size, self.hidden_size),
                 torch.zeros(batch_size, self.hidden_size)
             ) for i in range(self.num_layers)]
+
+        return states
+
+    def attend(self, visual_inputs, states):
+        # compute attention weights
+        visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
+        attention_proj = self.projection_layer(visual_inputs)
+        hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
+        attention_inputs = torch.cat((attention_proj, hidden), dim=1)
+        # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
+        attention_weights = F.softmax(self.attention_layer(attention_inputs), dim=1)
+
+        return attention_weights
+
+    def forward(self, visual_inputs, caption_inputs, states):
+        seq_length = caption_inputs.size(1)
+        batch_size = visual_inputs.size(0)
         decoder_outputs = []
         for step in range(seq_length):
             # get the attention weights
-            # hidden = (batch_size, hidden_size * num_layers)
-            hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
             # attended = (batch_size, hidden_size)
-            attended = self.attention(visual_inputs, hidden)
+            attention_weights = self.attend(visual_inputs, states)
+            attended = torch.matmul(
+                visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
+                attention_weights.view(batch_size, self.visual_flat, 1)    
+            ).view(batch_size, self.visual_channels)
+            attended = self.attention_out(attended)
             # embed words
             # caption_inputs = (batch_size)
             # embedded = (batch_size, hidden_size)
@@ -184,13 +238,10 @@ class AttentionDecoder2D(nn.Module):
             # apply attention weights
             # feed into AttentionLSTM
             # outputs = (batch_size, hidden_size)
-            for layer_id in range(self.num_layers):
-                if layer_id == 0:
-                    states[layer_id] = self.lstm_layer[layer_id](embedded, states[layer_id], attended)
-                    outputs = states[layer_id][0]
-                else:
-                    states[layer_id] = self.lstm_layer[layer_id](outputs, states[layer_id])
-                    outputs = states[layer_id][0]
+            states[0] = self.lstm_layer_1(embedded, states[0], attended)
+            outputs = states[0][0]
+            states[1] = self.lstm_layer_2(outputs, states[1])
+            outputs = states[1][0]
             # get predicted probabilities
             # outputs = (batch_size, 1, hidden_size)
             outputs = self.output_layer(outputs).unsqueeze(1)
@@ -279,23 +330,16 @@ class AttentionEncoderDecoder():
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         pairs = []
-        states = None
-        hidden = torch.zeros(1, self.decoder.hidden_size * self.decoder.num_layers).cuda()
+        states = self.decoder.init_hidden(visual_contexts.size(0))
         for i in range(max_length):
+            attention_weights = self.decoder.attend(visual_contexts, states).view(visual_contexts.size(2), visual_contexts.size(2))
             outputs, states = self.decoder(visual_contexts, caption_inputs, states)
-            # outputs = (1, input_size)
-            attention_inputs = torch.cat(
-                (visual_contexts.view(1, -1), hidden),
-                dim=1
-            )
-            attentions = self.decoder.attention.attention(attention_inputs).view(visual_contexts.size(2), visual_contexts.size(2))
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
             caption_inputs = predicted
-            hidden = torch.cat([states[i][0] for i in range(self.decoder.num_layers)], dim=1)
             word = dict_idx2word[predicted.cpu().numpy()[0][0]]
-            pairs.append((word, attentions))
+            pairs.append((word, attention_weights))
             if word == '<END>':
                 break
 

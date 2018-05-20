@@ -68,14 +68,14 @@ def main(args):
         if i == index:
             visual_inputs = Variable(visual_inputs).cuda()
             images = [model_id]
-            descriptions = " ".join(encoder_decoder.generate_text(visual_inputs, dict_word2idx, dict_idx2word, 10))
+            descriptions = " ".join(encoder_decoder.generate_text(visual_inputs, dict_word2idx, dict_idx2word, 20))
             new = []
             for i, text in enumerate(descriptions.split(" ")):
                 new.append(text)
                 if i != 0 and i % 16 == 0:
                     new.append("\n")
             descriptions = [" ".join(new)]
-            pairs = encoder_decoder.visual_attention(visual_inputs, dict_word2idx, dict_idx2word, 10)
+            pairs = encoder_decoder.visual_attention(visual_inputs, dict_word2idx, dict_idx2word, 20)
             break
     descriptions += [pairs[i][0] for i in range(len(pairs))]
     images += [pairs[i][1] for i in range(len(pairs))]
