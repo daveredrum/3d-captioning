@@ -142,7 +142,7 @@ class AttentionDecoder2D(nn.Module):
             nn.Linear(self.proj_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.visual_flat),
-            nn.ReLU()
+            nn.Softmax()
         )
         self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, hidden_size)
         self.lstm_layer_2 = nn.LSTMCell(hidden_size, hidden_size)
@@ -169,7 +169,7 @@ class AttentionDecoder2D(nn.Module):
         hidden = states[1][0]
         attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
-        attention_weights = F.softmax(self.attention_layer(attention_inputs), dim=1)
+        attention_weights = self.attention_layer(attention_inputs)
 
         return attention_weights
 
