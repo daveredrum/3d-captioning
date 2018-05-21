@@ -169,10 +169,10 @@ class AttentionDecoder2D(nn.Module):
     def attend(self, visual_inputs, states):
         # compute attention weights
         visual_inputs = self.max_pool(visual_inputs)
-        attention_proj = visual_inputs.view(visual_inputs.size(0), -1)
-        # attention_proj = self.projection_layer(visual_inputs)
+        visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
+        visual_inputs = self.projection_layer(visual_inputs)
         hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
-        attention_inputs = torch.cat((attention_proj, hidden), dim=1)
+        attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
         attention_weights = F.softmax(self.attention_layer(attention_inputs), dim=1)
 
