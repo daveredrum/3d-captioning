@@ -137,7 +137,7 @@ class AttentionDecoder2D(nn.Module):
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
         self.attention_layer = nn.Sequential(
-            nn.Linear(self.proj_size + num_layers * hidden_size, self.proj_size),
+            nn.Linear(self.proj_size + hidden_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
             nn.ReLU(),
