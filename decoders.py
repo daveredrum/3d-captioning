@@ -54,47 +54,6 @@ class Decoder(nn.Module):
 
         return sampled
 
-# attention module for image encoder
-# implement soft attention
-class Attention2D(nn.Module):
-    def __init__(self, visual_channels, visual_size, hidden_size, num_layers, cuda_flag=True):
-        super(Attention2D, self).__init__()
-        # basic settings
-        self.visual_channels = visual_channels
-        self.visual_size = visual_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.visual_flat_size = visual_channels * visual_size * visual_size
-        # layers
-        self.attention = nn.Linear(self.visual_flat_size + hidden_size * num_layers, visual_size * visual_size)
-        self.attention_out = nn.Linear(visual_channels, hidden_size)
-
-    # inputs:   
-    # visual_inputs = (batch, visual_channels, visual_size, visual_size)
-    # states_h = (batch, hidden_size)
-    # outputs:
-    # attended = (batch, hidden_size)
-    def forward(self, visual_inputs, states_h):
-        # settings
-        batch_size = visual_inputs.size(0)
-        # compute attention weights
-        attention_inputs = torch.cat((visual_inputs.view(batch_size, -1), states_h), dim=1)
-        # attention_inputs = (batch_size, visual_channels * visual_size * visual_size + hidden_size * num_layers)
-        attention_weights = F.softmax(self.attention(attention_inputs), dim=1)
-        # attention_weights = (batch_size, visual_size * visual_size)
-        # apply attention weights
-        visual_inputs = visual_inputs.view(batch_size, self.visual_channels, self.visual_size * self.visual_size)
-        # visual_inputs = (batch_size, visual_channels, visual_size * visual_size)
-        attention_weights = attention_weights.view(batch_size, self.visual_size * self.visual_size, 1)
-        # attention_weights = (batch_size, visual_size * visual_size, 1)
-        attention_applied = torch.bmm(visual_inputs, attention_weights)
-        attention_applied = attention_applied.view(batch_size, self.visual_channels)
-        # attention_applied = (batch_size, visual_channels)
-        # outputs
-        attended = self.attention_out(attention_applied)
-
-        return attended
-
 # new LSTM with visual attention context
 class AttentionLSTMCell2D(nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -149,7 +108,7 @@ class AttentionDecoder2D(nn.Module):
         self.visual_size = visual_size
         self.visual_flat = visual_size * visual_size
         self.visual_feature_size = visual_channels * visual_size * visual_size
-        self.proj_size = 2 * hidden_size * num_layers
+        self.proj_size = 2048
         self.num_layers = num_layers
         self.cuda_flag = cuda_flag
         # layer settings
@@ -158,32 +117,32 @@ class AttentionDecoder2D(nn.Module):
         # projection layer
         # in = (batch_size, visual_channels * visual_size * visual_size)
         # out = (batch_size, hidden_size * num_layers)
-        self.projection_layer = nn.Sequential(
-            nn.Linear(self.visual_feature_size, self.proj_size),
-            nn.ReLU(),
-            nn.Linear(self.proj_size, self.proj_size),
-            nn.ReLU(),
-            nn.Linear(self.proj_size, self.proj_size),
-            nn.ReLU()
-        )
+        # kernel_size = 2
+        # stride = 2
+        # padding = 0
+        # self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        # self.projection_layer = nn.Sequential(
+        #     nn.Linear(visual_channels * ((visual_size + padding) // kernel_size) * ((visual_size + padding) // kernel_size), self.proj_size),
+        #     nn.ReLU(),
+        #     nn.Linear(self.proj_size, self.proj_size),
+        #     nn.ReLU()
+        # )
         # attention layer
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
         self.attention_layer = nn.Sequential(
-            nn.Linear(self.proj_size + hidden_size * num_layers, self.proj_size),
+            nn.Linear(self.visual_feature_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
-            nn.ReLU(),
+            nn.ReLU()
             nn.Linear(self.proj_size, self.visual_flat),
             nn.ReLU()
         )
         # in = (batch_size, visual_channels)
         # out = (batch_size, hidden_size)
         self.attention_out = nn.Sequential(
-            nn.Linear(self.visual_channels, self.proj_size),
-            nn.ReLU(),
-            nn.Linear(self.proj_size, self.hidden_size),
-            nn.ReLU(),
+            nn.Linear(self.visual_channels, self.hidden_size),
+            nn.ReLU()
         )
         self.lstm_layer_1 = AttentionLSTMCell2D(hidden_size, hidden_size)
         self.lstm_layer_2 = nn.LSTMCell(hidden_size, hidden_size)
@@ -209,8 +168,9 @@ class AttentionDecoder2D(nn.Module):
 
     def attend(self, visual_inputs, states):
         # compute attention weights
-        visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
-        attention_proj = self.projection_layer(visual_inputs)
+        # visual_inputs = self.max_pool(visual_inputs)
+        attention_proj = visual_inputs.view(visual_inputs.size(0), -1)
+        # attention_proj = self.projection_layer(visual_inputs)
         hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
         attention_inputs = torch.cat((attention_proj, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
