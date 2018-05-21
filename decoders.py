@@ -157,9 +157,6 @@ class AttentionDecoder2D(nn.Module):
 
     def attend(self, visual_inputs, states):
         # compute attention weights
-        visual_inputs = self.max_pool(visual_inputs)
-        visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
-        visual_inputs = self.projection_layer(visual_inputs)
         # get the hidden state of the last LSTM layer
         # which is also the output of LSTM layer
         hidden = states[-1][0]
@@ -173,6 +170,9 @@ class AttentionDecoder2D(nn.Module):
         seq_length = caption_inputs.size(1)
         batch_size = visual_inputs.size(0)
         decoder_outputs = []
+        visual_proj = self.max_pool(visual_inputs)
+        visual_proj = visual_proj.view(visual_proj.size(0), -1)
+        visual_proj = self.projection_layer(visual_proj)
         for step in range(seq_length):
             # embed words
             # caption_inputs = (batch_size)
@@ -181,7 +181,7 @@ class AttentionDecoder2D(nn.Module):
             # get the attention weights
             # attended = (batch_size, hidden_size)
             # attention_weights = self.attend(visual_inputs, states)
-            attention_weights = self.attend(visual_inputs, states)
+            attention_weights = self.attend(visual_proj, states)
             attended = torch.matmul(
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
