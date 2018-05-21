@@ -194,6 +194,8 @@ class AttentionEncoderVGG16BN(nn.Module):
             nn.Linear(512 * 7 * 7, 2048),
             nn.ReLU(),
             nn.Linear(2048, 2048),
+            nn.ReLU(),
+            nn.Linear(2048, 512),
             nn.ReLU()
         )
 
