@@ -113,8 +113,14 @@ class AttentionDecoder2D(nn.Module):
         self.cuda_flag = cuda_flag
         # layer settings
         # initialize hidden states
-        self.init_h = nn.Linear(self.visual_channels, hidden_size)
-        self.init_c = nn.Linear(self.visual_channels, hidden_size)
+        self.init_h = nn.Sequential(
+            nn.Linear(self.visual_channels, hidden_size),
+            nn.ReLU()
+        )
+        self.init_c = nn.Sequential(
+            nn.Linear(self.visual_channels, hidden_size),
+            nn.ReLU()
+        )
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
         # projection layer
