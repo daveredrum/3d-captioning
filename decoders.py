@@ -108,7 +108,7 @@ class AttentionDecoder2D(nn.Module):
         self.visual_size = visual_size
         self.visual_flat = visual_size * visual_size
         self.visual_feature_size = visual_channels * visual_size * visual_size
-        self.proj_size = hidden_size
+        self.proj_size = 2048
         self.num_layers = num_layers
         self.cuda_flag = cuda_flag
         # layer settings

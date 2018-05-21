@@ -304,7 +304,7 @@ def main(args):
     # prepare the training parameters
     if pretrained:
         if attention:
-            params = list(decoder.parameters())
+            params = list(decoder.parameters()) + list(encoder.projection_layer.parameters())
         else:
             params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
     else:
