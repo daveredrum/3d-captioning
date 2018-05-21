@@ -164,8 +164,9 @@ class AttentionDecoder2D(nn.Module):
         visual_inputs = self.max_pool(visual_inputs)
         visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
         visual_inputs = self.projection_layer(visual_inputs)
-        # hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
-        hidden = states
+        # get the hidden state of the last LSTM layer
+        # which is also the output of LSTM layer
+        hidden = states[1][0]
         attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
         attention_weights = F.softmax(self.attention_layer(attention_inputs), dim=1)
@@ -184,7 +185,7 @@ class AttentionDecoder2D(nn.Module):
             # get the attention weights
             # attended = (batch_size, hidden_size)
             # attention_weights = self.attend(visual_inputs, states)
-            attention_weights = self.attend(visual_inputs, embedded)
+            attention_weights = self.attend(visual_inputs, states)
             attended = torch.matmul(
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
