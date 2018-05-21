@@ -180,10 +180,11 @@ class AttentionDecoder2D(nn.Module):
             # embed words
             # caption_inputs = (batch_size)
             # embedded = (batch_size, hidden_size)
-            embedded = self.embedding(caption_inputs[:, embedded])
+            embedded = self.embedding(caption_inputs[:, step])
             # get the attention weights
             # attended = (batch_size, hidden_size)
-            attention_weights = self.attend(visual_inputs, states)
+            # attention_weights = self.attend(visual_inputs, states)
+            attention_weights = self.attend(visual_inputs, embedded)
             attended = torch.matmul(
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
