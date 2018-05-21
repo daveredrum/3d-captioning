@@ -164,7 +164,8 @@ class AttentionDecoder2D(nn.Module):
         visual_inputs = self.max_pool(visual_inputs)
         visual_inputs = visual_inputs.view(visual_inputs.size(0), -1)
         visual_inputs = self.projection_layer(visual_inputs)
-        hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
+        # hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
+        hidden = states
         attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
         attention_weights = F.softmax(self.attention_layer(attention_inputs), dim=1)
@@ -176,6 +177,10 @@ class AttentionDecoder2D(nn.Module):
         batch_size = visual_inputs.size(0)
         decoder_outputs = []
         for step in range(seq_length):
+            # embed words
+            # caption_inputs = (batch_size)
+            # embedded = (batch_size, hidden_size)
+            embedded = self.embedding(caption_inputs[:, embedded])
             # get the attention weights
             # attended = (batch_size, hidden_size)
             attention_weights = self.attend(visual_inputs, states)
@@ -183,10 +188,6 @@ class AttentionDecoder2D(nn.Module):
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
             ).view(batch_size, self.visual_channels)
-            # embed words
-            # caption_inputs = (batch_size)
-            # embedded = (batch_size, hidden_size)
-            embedded = self.embedding(caption_inputs[:, step])
             # apply attention weights
             # feed into AttentionLSTM
             # outputs = (batch_size, hidden_size)
