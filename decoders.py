@@ -247,7 +247,7 @@ class AttentionEncoderDecoder():
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         sampled = []
-        states = self.decoder.init_hidden(visual_contexts.size(0))
+        states = self.decoder.init_hidden(visual_contexts)
         for i in range(max_length):
             outputs, states, _ = self.decoder(visual_contexts, caption_inputs, states)
             # outputs = (1, 1, input_size)
@@ -276,7 +276,7 @@ class AttentionEncoderDecoder():
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         pairs = []
-        states = self.decoder.init_hidden(visual_contexts.size(0))
+        states = self.decoder.init_hidden(visual_contexts)
         for i in range(max_length):
             outputs, states, attention_weights = self.decoder(visual_contexts, caption_inputs, states)
             # attentions = (visual_size, visual_size)
