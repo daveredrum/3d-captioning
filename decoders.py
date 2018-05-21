@@ -147,10 +147,7 @@ class AttentionDecoder2D(nn.Module):
         self.lstm_layer_1 = AttentionLSTMCell2D(hidden_size, hidden_size)
         self.lstm_layer_2 = nn.LSTMCell(hidden_size, hidden_size)
         # output layer
-        self.output_layer = nn.Sequential(
-            nn.Linear(hidden_size, input_size),
-            nn.ReLU()
-        )
+        self.output_layer = nn.Linear(hidden_size, input_size)
 
     def init_hidden(self, batch_size):
         if self.cuda_flag:
