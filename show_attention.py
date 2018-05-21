@@ -27,7 +27,7 @@ def main(args):
     outname = args.outname
     encoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.encoder)
     decoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.decoder)
-    print("[settings]")
+    print("\n[settings]")
     print("mode:", mode)
     print("phase:", phase)
     print("index:", index)
