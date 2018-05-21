@@ -108,10 +108,13 @@ class AttentionDecoder2D(nn.Module):
         self.visual_size = visual_size
         self.visual_flat = visual_size * visual_size
         self.visual_feature_size = visual_channels * visual_size * visual_size
-        self.proj_size = 2048
+        self.proj_size = hidden_size
         self.num_layers = num_layers
         self.cuda_flag = cuda_flag
         # layer settings
+        # initialize hidden states
+        self.init_h = nn.Linear(self.visual_channels, hidden_size)
+        self.init_c = nn.Linear(self.visual_channels, hidden_size)
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
         # projection layer
@@ -140,17 +143,13 @@ class AttentionDecoder2D(nn.Module):
         # output layer
         self.output_layer = nn.Linear(hidden_size, input_size)
 
-    def init_hidden(self, batch_size):
-        if self.cuda_flag:
-            states = [(
-                torch.zeros(batch_size, self.hidden_size).cuda(),
-                torch.zeros(batch_size, self.hidden_size).cuda()
-            ) for i in range(self.num_layers)]
-        else:
-            states = [(
-                torch.zeros(batch_size, self.hidden_size),
-                torch.zeros(batch_size, self.hidden_size)
-            ) for i in range(self.num_layers)]
+    def init_hidden(self, visual_inputs):
+        visual_flat = visual_inputs.view(visual_inputs.size(0), visual_inputs.size(1), visual_inputs.size(2) * visual_inputs.size(2))
+        visual_flat = visual_flat.mean(2)
+        states = [(
+            self.init_h(visual_flat),
+            self.init_c(visual_flat)
+        ) for i in range(self.num_layers)]
 
         return states
 
@@ -280,7 +279,6 @@ class AttentionEncoderDecoder():
         states = self.decoder.init_hidden(visual_contexts.size(0))
         for i in range(max_length):
             outputs, states, attention_weights = self.decoder(visual_contexts, caption_inputs, states)
-            print(attention_weights[0])
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
