@@ -71,8 +71,8 @@ class AttentionLSTMCell2D(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
             weight.data.uniform_(-stdv, stdv)
     
     # inputs = (batch, input_size)
