@@ -137,7 +137,11 @@ class AttentionDecoder2D(nn.Module):
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
         self.attention_layer = nn.Sequential(
-            nn.Linear(self.proj_size + hidden_size, self.visual_flat),
+            nn.Linear(self.proj_size + hidden_size, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.proj_size),
+            nn.ReLU(),
+            nn.Linear(self.proj_size, self.visual_flat),
             nn.Softmax()
         )
         self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, hidden_size)
