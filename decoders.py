@@ -137,7 +137,7 @@ class AttentionDecoder2D(nn.Module):
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
         self.attention_layer = nn.Sequential(
-            nn.Linear(self.proj_size + num_layers * hidden_size, self.proj_size),
+            nn.Linear(self.proj_size + hidden_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
             nn.ReLU(),
@@ -166,7 +166,7 @@ class AttentionDecoder2D(nn.Module):
         visual_inputs = self.projection_layer(visual_inputs)
         # get the hidden state of the last LSTM layer
         # which is also the output of LSTM layer
-        hidden = torch.cat([states[i][0] for i in range(self.num_layers)], dim=1)
+        hidden = states[-1][0]
         attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
         # attention_inputs = (batch_size, 2 * hidden_size * num_layers)
         attention_weights = self.attention_layer(attention_inputs)
