@@ -171,6 +171,7 @@ class AttentionDecoder2D(nn.Module):
         batch_size = visual_inputs.size(0)
         decoder_outputs = []
         for step in range(seq_length):
+            print(states[0][0].max(1)[0])
             # get the attention weights
             # attended = (batch_size, hidden_size)
             attention_weights = self.attend(visual_inputs, states)
