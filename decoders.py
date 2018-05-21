@@ -64,8 +64,8 @@ class AttentionLSTMCell2D(nn.Module):
         # parameters
         for gate in ["i", "f", "c", "o"]:
             setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
-            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
-            setattr(self, "z_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "z_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
             setattr(self, "b_{}".format(gate), Parameter(torch.Tensor(hidden_size)))
         # initialize weights
         self.reset_parameters()
