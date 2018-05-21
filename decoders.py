@@ -63,8 +63,8 @@ class AttentionLSTMCell2D(nn.Module):
         self.hidden_size = hidden_size
         # parameters
         for gate in ["i", "f", "c", "o"]:
-            setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
-            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
             setattr(self, "z_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
             setattr(self, "b_{}".format(gate), Parameter(torch.Tensor(hidden_size)))
         # initialize weights
@@ -135,13 +135,7 @@ class AttentionDecoder2D(nn.Module):
             nn.Linear(self.proj_size, self.visual_flat),
             nn.ReLU()
         )
-        # in = (batch_size, visual_channels)
-        # out = (batch_size, hidden_size)
-        self.attention_out = nn.Sequential(
-            nn.Linear(self.visual_channels, self.hidden_size),
-            nn.ReLU()
-        )
-        self.lstm_layer_1 = AttentionLSTMCell2D(hidden_size, hidden_size)
+        self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, hidden_size)
         self.lstm_layer_2 = nn.LSTMCell(hidden_size, hidden_size)
         # output layer
         self.output_layer = nn.Linear(hidden_size, input_size)
@@ -184,7 +178,6 @@ class AttentionDecoder2D(nn.Module):
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
             ).view(batch_size, self.visual_channels)
-            attended = self.attention_out(attended)
             # embed words
             # caption_inputs = (batch_size)
             # embedded = (batch_size, hidden_size)
