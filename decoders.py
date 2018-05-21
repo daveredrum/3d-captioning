@@ -134,7 +134,7 @@ class AttentionDecoder2D(nn.Module):
             nn.Linear(self.visual_feature_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
-            nn.ReLU()
+            nn.ReLU(),
             nn.Linear(self.proj_size, self.visual_flat),
             nn.ReLU()
         )
