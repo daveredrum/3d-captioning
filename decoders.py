@@ -165,7 +165,6 @@ class AttentionDecoder2D(nn.Module):
             embedded = self.embedding(caption_inputs[:, step])
             # get the attention weights
             # attended = (batch_size, hidden_size)
-            # attention_weights = self.attend(visual_inputs, states)
             attention_weights = self.attend(visual_proj, states)
             attended = torch.matmul(
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
@@ -234,12 +233,12 @@ class AttentionEncoderDecoder():
 
     def generate_text(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
         caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(dict_word2idx["<START>"]), (1, 1)))).cuda()
-        visual_contexts = self.encoder(image_inputs)
+        visual_contexts, visual_proj = self.encoder(image_inputs)
         # sample text indices via greedy search
         sampled = []
         states = self.decoder.init_hidden(visual_contexts)
         for i in range(max_length):
-            outputs, states, _ = self.decoder(visual_contexts, caption_inputs, states)
+            outputs, states, _ = self.decoder(visual_contexts, visual_proj, caption_inputs, states)
             # outputs = (1, 1, input_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
@@ -263,12 +262,12 @@ class AttentionEncoderDecoder():
     # caption_inputs = (1)
     def visual_attention(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
         caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(dict_word2idx["<START>"]), (1, 1)))).cuda()
-        visual_contexts = self.encoder(image_inputs)
+        visual_contexts, visual_proj = self.encoder(image_inputs)
         # sample text indices via greedy search
         pairs = []
         states = self.decoder.init_hidden(visual_contexts)
         for i in range(max_length):
-            outputs, states, attention_weights = self.decoder(visual_contexts, caption_inputs, states)
+            outputs, states, attention_weights = self.decoder(visual_contexts, visual_proj, caption_inputs, states)
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
