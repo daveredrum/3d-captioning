@@ -174,7 +174,6 @@ class AttentionDecoder2D(nn.Module):
             # get the attention weights
             # attended = (batch_size, hidden_size)
             attention_weights = self.attend(visual_inputs, states)
-            print(attention_weights[0])
             attended = torch.matmul(
                 visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
                 attention_weights.view(batch_size, self.visual_flat, 1)    
@@ -281,6 +280,7 @@ class AttentionEncoderDecoder():
         states = self.decoder.init_hidden(visual_contexts.size(0))
         for i in range(max_length):
             outputs, states, attention_weights = self.decoder(visual_contexts, caption_inputs, states)
+            print(attention_weights)
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
