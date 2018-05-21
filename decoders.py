@@ -109,6 +109,7 @@ class AttentionDecoder2D(nn.Module):
         self.visual_flat = visual_size * visual_size
         self.visual_feature_size = visual_channels * visual_size * visual_size
         self.proj_size = 512
+        self.feat_size = 256
         self.num_layers = num_layers
         self.cuda_flag = cuda_flag
         # layer settings
@@ -121,7 +122,7 @@ class AttentionDecoder2D(nn.Module):
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
         self.attention_layer = nn.Sequential(
-            nn.Linear(hidden_size + hidden_size, self.proj_size),
+            nn.Linear(self.feat_size + self.hidden_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
             nn.ReLU(),
