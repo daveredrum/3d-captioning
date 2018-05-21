@@ -292,7 +292,7 @@ class AttentionEncoderDecoder():
             # predicted = (1, 1)
             caption_inputs = predicted
             word = dict_idx2word[predicted.cpu().numpy()[0][0]]
-            pairs.append((word, attention_weights))
+            pairs.append((word, attention_weights.view(visual_contexts.size(2), visual_contexts.size(2))))
             if word == '<END>':
                 break
 
