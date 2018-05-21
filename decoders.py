@@ -117,16 +117,6 @@ class AttentionDecoder2D(nn.Module):
         self.init_c = nn.Linear(self.visual_channels, hidden_size)
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
-        # projection layer
-        # in = (batch_size, visual_channels * visual_size * visual_size)
-        # out = (batch_size, hidden_size * num_layers)
-        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.projection_layer = nn.Sequential(
-            nn.Linear(visual_channels * (visual_size // 2) * (visual_size // 2), self.proj_size),
-            nn.ReLU(),
-            nn.Linear(self.proj_size, self.proj_size),
-            nn.ReLU()
-        )
         # attention layer
         # in = (batch_size, 2 * hidden_size * num_layers)
         # out = (batch_size, visual_size * visual_size)
@@ -164,13 +154,10 @@ class AttentionDecoder2D(nn.Module):
 
         return attention_weights
 
-    def forward(self, visual_inputs, caption_inputs, states):
+    def forward(self, visual_inputs, visual_proj, caption_inputs, states):
         seq_length = caption_inputs.size(1)
         batch_size = visual_inputs.size(0)
         decoder_outputs = []
-        visual_proj = self.max_pool(visual_inputs)
-        visual_proj = visual_proj.view(visual_proj.size(0), -1)
-        visual_proj = self.projection_layer(visual_proj)
         for step in range(seq_length):
             # embed words
             # caption_inputs = (batch_size)
