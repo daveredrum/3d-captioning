@@ -188,13 +188,22 @@ class AttentionEncoderVGG16BN(nn.Module):
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
-        )    
+        )
+        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.projection_layer = nn.Sequential(
+            nn.Linear(512 * 7 * 7, 2048),
+            nn.ReLU(),
+            nn.Linear(2048, 2048),
+            nn.ReLU()
+        )
 
 
     def forward(self, inputs):
-        outputs = self.vgg16(inputs)
+        features = self.vgg16(inputs)
+        proj = self.max_pool(features)
+        proj = self.projection_layer(proj.view(proj.size(0), -1))
         
-        return outputs
+        return features, proj
 
 # for attention
 class AttentionEncoderResnet50(nn.Module):
