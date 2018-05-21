@@ -117,12 +117,9 @@ class AttentionDecoder2D(nn.Module):
         # projection layer
         # in = (batch_size, visual_channels * visual_size * visual_size)
         # out = (batch_size, hidden_size * num_layers)
-        kernel_size = 2
-        stride = 2
-        padding = 0
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.projection_layer = nn.Sequential(
-            nn.Linear(visual_channels * ((visual_size + padding) // kernel_size) * ((visual_size + padding) // kernel_size), self.proj_size),
+            nn.Linear(visual_channels * (visual_size // 2) * (visual_size // 2), self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.proj_size),
             nn.ReLU()
@@ -205,7 +202,7 @@ class AttentionDecoder2D(nn.Module):
             decoder_outputs.append(outputs)
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
 
-        return decoder_outputs, states 
+        return decoder_outputs, states, attention_weights 
 
 # pipeline for pretrained encoder-decoder pipeline
 # same pipeline for both 2d and 3d
@@ -260,7 +257,7 @@ class AttentionEncoderDecoder():
         sampled = []
         states = None
         for i in range(max_length):
-            outputs, states = self.decoder(visual_contexts, caption_inputs, states)
+            outputs, states, _ = self.decoder(visual_contexts, caption_inputs, states)
             # outputs = (1, 1, input_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
@@ -289,8 +286,7 @@ class AttentionEncoderDecoder():
         pairs = []
         states = self.decoder.init_hidden(visual_contexts.size(0))
         for i in range(max_length):
-            attention_weights = self.decoder.attend(visual_contexts, states).view(visual_contexts.size(2), visual_contexts.size(2))
-            outputs, states = self.decoder(visual_contexts, caption_inputs, states)
+            outputs, states, attention_weights = self.decoder(visual_contexts, caption_inputs, states)
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]
             # predicted = (1, 1)
