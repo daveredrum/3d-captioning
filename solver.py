@@ -275,6 +275,10 @@ class EncoderDecoderSolver():
                             # forward pass
                             forward_since = time.time()
                             visual_contexts = encoder(visual_inputs)
+                            # rescale
+                            visual_min = visual_contexts.min(1)[0].view(visual_contexts.size(0), 1).expand_as(visual_contexts)
+                            visual_max = visual_contexts.max(1)[0].view(visual_contexts.size(0), 1).expand_as(visual_contexts)
+                            visual_contexts = (visual_contexts - visual_min) / (visual_max - visual_min)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
                             # # teacher forcing
                             # states = decoder.init_hidden(visual_contexts)
@@ -314,6 +318,10 @@ class EncoderDecoderSolver():
                             # validate
                             valid_since = time.time()
                             visual_contexts = encoder(visual_inputs)
+                            # rescale
+                            visual_min = visual_contexts.min(1)[0].view(visual_contexts.size(0), 1).expand_as(visual_contexts)
+                            visual_max = visual_contexts.max(1)[0].view(visual_contexts.size(0), 1).expand_as(visual_contexts)
+                            visual_contexts = (visual_contexts - visual_min) / (visual_max - visual_min)
                             # # teacher forcing
                             # states = decoder.init_hidden(visual_contexts)
                             # outputs = decoder(visual_contexts, caption_inputs, states)

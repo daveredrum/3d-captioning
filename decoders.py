@@ -63,9 +63,9 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         # parameters
-        self.w_v = Parameter(torch.Tensor(visual_size, output_size))
+        self.w_v = Parameter(torch.Tensor(visual_size, hidden_size))
         self.b_v = Parameter(torch.Tensor(output_size))
-        self.w_h = Parameter(torch.Tensor(hidden_size, output_size))
+        self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
         self.b_h = Parameter(torch.Tensor(output_size))
         self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
         self.b_o = Parameter(torch.Tensor(output_size))
@@ -87,21 +87,17 @@ class Attention2D(nn.Module):
         # outputs = (batch_size, hidden_size)
 
         # rescale
-        visual_min = visual_inputs.min(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        visual_max = visual_inputs.max(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
         hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
-        V = F.sigmoid(torch.matmul(visual_inputs, self.w_v) + self.b_v)
-        H = F.sigmoid(torch.matmul(hidden, self.w_h) + self.b_h)
+        V = torch.matmul(visual_inputs, self.w_v) + self.b_v
+        H = torch.matmul(hidden, self.w_h) + self.b_h
         # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
         # print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # combine
-        # outputs = torch.matmul(V + H, self.w_o) + self.b_o
-        outputs = V + H
         # outputs = (batch_size, output_size)
-        # outputs = torch.matmul(outputs, self.w_o) + self.b_o
+        outputs = F.tanh(V + H)
+        outputs = torch.matmul(outputs, self.w_o) + self.b_o
         # compress to probability distribution
         outputs = F.softmax(outputs, dim=1)
 
