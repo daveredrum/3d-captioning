@@ -84,13 +84,13 @@ class Attention2D(nn.Module):
         # hidden = (batch_size, hidden_size)
         # outputs = (batch_size, hidden_size)
 
-        # visual_min = visual_inputs.min(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        # visual_max = visual_inputs.max(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        # visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
-        # hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        # hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
-        visual_inputs = F.tanh(visual_inputs) * 100.0
+        visual_min = visual_inputs.min(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
+        visual_max = visual_inputs.max(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
+        visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
+        hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
+        hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
+        hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
+        visual_inputs *= 100.0
         hidden *= 100.0
         print(visual_inputs[0].min(0)[0].item(), visual_inputs[0].max(0)[0].item())
         print(hidden[0].min(0)[0].item(), hidden[0].max(0)[0].item())
