@@ -63,8 +63,10 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         # parameters
-        self.w_v = Parameter(torch.Tensor(visual_size, output_size))
-        self.w_h = Parameter(torch.Tensor(hidden_size, output_size))
+        self.w_v = Parameter(torch.Tensor(visual_size, hidden_size))
+        self.b_v = Parameter(torch.Tensor(hidden_size))
+        self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.b_h = Parameter(torch.Tensor(hidden_size))
         self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
         self.b_o = Parameter(torch.Tensor(output_size))
         # initialize weights
@@ -84,15 +86,17 @@ class Attention2D(nn.Module):
         # hidden = (batch_size, hidden_size)
         # outputs = (batch_size, hidden_size)
 
-        V = torch.matmul(visual_inputs, self.w_v)
-        H = torch.matmul(hidden, self.w_h)
+        V = torch.matmul(visual_inputs, self.w_v) + self.b_v
+        H = torch.matmul(hidden, self.w_h) + self.b_h
+        # rescale
         V_min = V.min(1)[0].view(V.size(0), 1).expand_as(V)
         V_max = V.max(1)[0].view(V.size(0), 1).expand_as(V)
         V = (V - V_min) / (V_max - V_min)
         H_min = H.min(1)[0].view(H.size(0), 1).expand_as(H)
         H_max = H.max(1)[0].view(H.size(0), 1).expand_as(H)
         H = (H - H_min) / (H_max - H_min)
-        outputs = V + H
+        # combine
+        outputs = torch.matmul(V + H, self.w_o) + self.b_o
         # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
         # print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # outputs = (batch_size, output_size)
