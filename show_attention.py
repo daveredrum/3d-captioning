@@ -98,7 +98,7 @@ def main(args):
             plt.text(80, 32, descriptions[i], fontsize=12)
         else:
             plt.imshow(images[i].data.cpu().numpy())
-            plt.text(20, 4, descriptions[i], fontsize=12)
+            plt.text(80, 32, descriptions[i], fontsize=12)
     # fig.tight_layout()
     plt.savefig("results/{}/{}.png".format(outname, outname), bbox_inches="tight")
     fig.clf()

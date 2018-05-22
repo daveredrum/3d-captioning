@@ -202,7 +202,8 @@ def main(args):
         # split data
         train_captions = coco.transformed_data['train']
         valid_captions = coco.transformed_data['valid']
-        dictionary = coco.dict_idx2word
+        dict_idx2word = coco.dict_idx2word
+        dict_word2idx = coco.dict_word2idx
         corpus = coco.corpus
         # prepare the dataloader
         if pretrained:
@@ -281,7 +282,7 @@ def main(args):
         return
 
     # define the decoder
-    input_size = dictionary.__len__() + 1
+    input_size = dict_word2idx.__len__() + 1
     hidden_size = 512
     num_layer = 2
     if attention:
@@ -295,7 +296,7 @@ def main(args):
         print("initializing decoder without attention....")        
         decoder = Decoder(input_size, hidden_size, num_layer).cuda()
     print("input_size:", input_size)
-    print("dict_size:", dictionary.__len__())
+    print("dict_size:", dict_word2idx.__len__())
     print("hidden_size:", hidden_size)
     print("num_layer:", num_layer)
     print()
@@ -304,7 +305,7 @@ def main(args):
     # prepare the training parameters
     if pretrained:
         if attention:
-            params = list(decoder.parameters()) + list(encoder.projection_layer.parameters())
+            params = list(decoder.parameters())
         else:
             params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
     else:
@@ -322,7 +323,7 @@ def main(args):
     else:
         settings = "%s_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, epoch, lr, weight_decay, batch_size, input_size)
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
-    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dictionary, epoch, verbose, model_type, attention)
+    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention)
 
     # save
     print("save models...")

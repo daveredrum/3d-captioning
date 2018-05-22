@@ -207,7 +207,7 @@ class EncoderDecoderSolver():
 
         return decoded
 
-    def train(self, encoder, decoder, dataloader, references, dictionary, epoch, verbose, model_type, attention):
+    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
         for epoch_id in range(epoch + 1):
@@ -269,20 +269,30 @@ class EncoderDecoderSolver():
                             cap_lengths = Variable(cap_lengths)
                         
                         if phase == "train":
+                            encoder.zero_grad()
+                            decoder.zero_grad()
+                            self.optimizer.zero_grad()
                             # forward pass
                             forward_since = time.time()
-                            visual_contexts, visual_proj = encoder(visual_inputs)
+                            visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
-                            # teacher forcing
+                            # # teacher forcing
+                            # states = decoder.init_hidden(visual_contexts)
+                            # outputs = decoder(visual_contexts, caption_inputs, states)
+                            # no teacher forcing
+                            outputs = []
+                            inputs = caption_inputs[:, 0]
                             states = decoder.init_hidden(visual_contexts)
-                            outputs, _, _ = decoder(visual_contexts, visual_proj, caption_inputs, states)
-                            # # no teacher forcing
-                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            for i in range(cap_lengths[0].item() - 1):
+                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
+                                inputs = predicted.max(2)[1].view(visual_contexts.size(0))
+                                outputs.append(predicted)
+                            outputs = torch.cat(outputs, dim=1)
                             loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
                             log['forward'].append(time.time() - forward_since)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dictionary)
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -293,9 +303,6 @@ class EncoderDecoderSolver():
                             # backward pass
                             # save log
                             if epoch_id != 0:
-                                encoder.zero_grad()
-                                decoder.zero_grad()
-                                self.optimizer.zero_grad()
                                 backward_since = time.time()
                                 loss.backward()
                                 self.optimizer.step()
@@ -306,17 +313,24 @@ class EncoderDecoderSolver():
                         else:
                             # validate
                             valid_since = time.time()
-                            visual_contexts, visual_proj = encoder(visual_inputs)
-                            # teacher forcing
+                            visual_contexts = encoder(visual_inputs)
+                            # # teacher forcing
+                            # states = decoder.init_hidden(visual_contexts)
+                            # outputs = decoder(visual_contexts, caption_inputs, states)
+                            # no teacher forcing
+                            outputs = []
+                            inputs = caption_inputs[:, 0]
                             states = decoder.init_hidden(visual_contexts)
-                            outputs, _, _ = decoder(visual_contexts, visual_proj, caption_inputs, states)
-                            # # no teacher forcing
-                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            for i in range(cap_lengths[0].item() - 1):
+                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
+                                inputs = predicted.max(2)[1].view(visual_contexts.size(0))
+                                outputs.append(predicted)
+                            outputs = torch.cat(outputs, dim=1)
                             loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
                             log['valid_time'].append(time.time() - valid_since)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dictionary)
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -355,7 +369,7 @@ class EncoderDecoderSolver():
                             log['forward'].append(time.time() - forward_since)
                             
                             # decode outputs
-                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -388,7 +402,7 @@ class EncoderDecoderSolver():
                             log['valid_time'].append(time.time() - valid_since)
                             
                             # decode outputs
-                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dictionary)
+                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
