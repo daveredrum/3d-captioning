@@ -246,7 +246,7 @@ class AttentionDecoder2D(nn.Module):
             embedded = self.embedding(caption_inputs[:, step])
             # get the attention weights
             # attention_weights = (batch_size, visual_size * visual_size)
-            attention_weights = self.attention(visual_inputs.view(visual_inputs.size(0), self.visual_feature_size), states)
+            attention_weights = self.attention(visual_inputs.view(batch_size, -1), states)
             # attention_weights = self.attend(visual_proj, states)
             # attended = (batch_size, visual_channels)
             attended = torch.matmul(
