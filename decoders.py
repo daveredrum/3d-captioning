@@ -90,9 +90,9 @@ class Attention2D(nn.Module):
         # hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         # hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
-        # visual_inputs = F.tanh(visual_inputs)
-        print(visual_inputs[0].min(0)[0].item(), visual_inputs[0].max(0)[0].item())
-        print(hidden[0].min(0)[0].item(), hidden[0].max(0)[0].item())
+        visual_inputs = F.tanh(visual_inputs)
+        # print(visual_inputs[0].min(0)[0].item(), visual_inputs[0].max(0)[0].item())
+        # print(hidden[0].min(0)[0].item(), hidden[0].max(0)[0].item())
         outputs = torch.matmul(visual_inputs, self.w_v) + torch.matmul(hidden, self.w_h)
         # outputs = (batch_size, output_size)
         outputs = torch.matmul(outputs, self.w_o) + self.b_o
