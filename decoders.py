@@ -64,11 +64,8 @@ class Attention2D(nn.Module):
         self.output_size = output_size
         # parameters
         self.w_v = Parameter(torch.Tensor(visual_size, hidden_size))
-        self.b_v = Parameter(torch.Tensor(hidden_size))
         self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
-        self.b_h = Parameter(torch.Tensor(hidden_size))
         self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
-        self.b_o = Parameter(torch.Tensor(output_size))
         # initialize weights
         self.reset_parameters()
 
@@ -90,14 +87,14 @@ class Attention2D(nn.Module):
         # hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         # hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
         # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
-        V = torch.matmul(visual_inputs, self.w_v) + self.b_v
-        H = torch.matmul(hidden, self.w_h) + self.b_h
-        # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
-        # print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
+        V = torch.matmul(visual_inputs, self.w_v)
+        H = torch.matmul(hidden, self.w_h)
+        print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
+        print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # combine
         # outputs = (batch_size, output_size)
         outputs = F.tanh(V + H)
-        outputs = torch.matmul(outputs, self.w_o) + self.b_o
+        outputs = torch.matmul(outputs, self.w_o)
         # compress to probability distribution
         outputs = F.softmax(outputs, dim=1)
 
