@@ -92,7 +92,11 @@ class Attention2D(nn.Module):
         hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
         # print(visual_inputs[0].min(0)[0].item(), visual_inputs[0].max(0)[0].item())
         # print(hidden[0].min(0)[0].item(), hidden[0].max(0)[0].item())
-        outputs = torch.matmul(visual_inputs, self.w_v) + torch.matmul(hidden, self.w_h)
+        V = torch.matmul(visual_inputs, self.w_v)
+        H = torch.matmul(hidden, self.w_h)
+        outputs = V + H
+        print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
+        print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # outputs = (batch_size, output_size)
         # outputs = torch.matmul(outputs, self.w_o) + self.b_o
         # compress to probability distribution
