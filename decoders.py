@@ -63,8 +63,8 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         # parameters
-        self.w_v = Parameter(torch.Tensor(visual_size, hidden_size))
-        self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.w_v = Parameter(torch.Tensor(visual_size, output_size))
+        self.w_h = Parameter(torch.Tensor(hidden_size, output_size))
         self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
         self.b_o = Parameter(torch.Tensor(output_size))
         # initialize weights
@@ -94,7 +94,7 @@ class Attention2D(nn.Module):
         # print(hidden[0].min(0)[0].item(), hidden[0].max(0)[0].item())
         outputs = torch.matmul(visual_inputs, self.w_v) + torch.matmul(hidden, self.w_h)
         # outputs = (batch_size, output_size)
-        outputs = torch.matmul(outputs, self.w_o) + self.b_o
+        # outputs = torch.matmul(outputs, self.w_o) + self.b_o
         # compress to probability distribution
         outputs = F.softmax(outputs, dim=1)
 
