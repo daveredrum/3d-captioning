@@ -237,13 +237,11 @@ class AttentionDecoder2D(nn.Module):
     def forward(self, visual_inputs, caption_inputs, states):
         # rescale
         batch_size = visual_inputs.size(0)
-        visual_channels = visual_inputs.size(1)
-        visual_size = visual_inputs.size(2)
-        visual_inputs = visual_inputs.view(batch_size, visual_channels * visual_size * visual_size)
+        visual_inputs = visual_inputs.view(batch_size, self.visual_feature_size)
         visual_min = visual_inputs.min(1)[0].view(batch_size, 1).expand_as(visual_inputs)
         visual_max = visual_inputs.max(1)[0].view(batch_size, 1).expand_as(visual_inputs)
         visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
-        visual_inputs = visual_inputs.view(batch_size, visual_channels, visual_size, visual_size)
+        visual_inputs = visual_inputs.view(batch_size, self.visual_channels, self.visual_size, self.visual_size)
         # feed
         seq_length = caption_inputs.size(1)
         batch_size = visual_inputs.size(0)
@@ -282,13 +280,11 @@ class AttentionDecoder2D(nn.Module):
     def sample(self, visual_inputs, caption_inputs, states):
         # rescale
         batch_size = visual_inputs.size(0)
-        visual_channels = visual_inputs.size(1)
-        visual_size = visual_inputs.size(2)
-        visual_inputs = visual_inputs.view(batch_size, visual_channels * visual_size * visual_size)
+        visual_inputs = visual_inputs.view(batch_size, self.visual_feature_size)
         visual_min = visual_inputs.min(1)[0].view(batch_size, 1).expand_as(visual_inputs)
         visual_max = visual_inputs.max(1)[0].view(batch_size, 1).expand_as(visual_inputs)
         visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
-        visual_inputs = visual_inputs.view(batch_size, visual_channels, visual_size, visual_size)
+        visual_inputs = visual_inputs.view(batch_size, self.visual_channels, self.visual_size, self.visual_size)
         # feed
         # embed words
         # caption_inputs = (batch_size)
