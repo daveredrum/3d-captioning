@@ -67,7 +67,7 @@ class Attention2D(nn.Module):
         self.b_v = Parameter(torch.Tensor(hidden_size))
         self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
         self.b_h = Parameter(torch.Tensor(hidden_size))
-        self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
+        self.w_o = Parameter(torch.Tensor(2 * hidden_size, output_size))
         self.b_o = Parameter(torch.Tensor(output_size))
         # initialize weights
         self.reset_parameters()
@@ -88,8 +88,8 @@ class Attention2D(nn.Module):
 
         V = torch.matmul(visual_inputs, self.w_v) + self.b_v
         H = torch.matmul(hidden, self.w_h) + self.b_h
-        print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
-        print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
+        # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
+        # print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # rescale
         V_min = V.min(1)[0].view(V.size(0), 1).expand_as(V)
         V_max = V.max(1)[0].view(V.size(0), 1).expand_as(V)
@@ -98,7 +98,7 @@ class Attention2D(nn.Module):
         H_max = H.max(1)[0].view(H.size(0), 1).expand_as(H)
         H = (H - H_min) / (H_max - H_min)
         # combine
-        outputs = torch.matmul(V + H, self.w_o) + self.b_o
+        outputs = torch.matmul(torch.cat((V, H), dim=1), self.w_o) + self.b_o
         # outputs = (batch_size, output_size)
         # outputs = torch.matmul(outputs, self.w_o) + self.b_o
         # compress to probability distribution
