@@ -86,13 +86,13 @@ class Attention2D(nn.Module):
         # hidden = (batch_size, hidden_size)
         # outputs = (batch_size, hidden_size)
 
-        # rescale
-        visual_min = visual_inputs.min(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        visual_max = visual_inputs.max(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
-        visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
-        hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
+        # # rescale
+        # visual_min = visual_inputs.min(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
+        # visual_max = visual_inputs.max(1)[0].view(visual_inputs.size(0), 1).expand_as(visual_inputs)
+        # visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
+        # hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
+        # hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
+        # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
         V = F.sigmoid(torch.matmul(visual_inputs, self.w_v) + self.b_v)
         H = F.sigmoid(torch.matmul(hidden, self.w_h) + self.b_h)
         # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
