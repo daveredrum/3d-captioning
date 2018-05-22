@@ -271,6 +271,7 @@ class AttentionDecoder2D(nn.Module):
         return decoder_outputs 
 
     def sample(self, visual_inputs, caption_inputs, states):
+        batch_size = visual_inputs.size(0)
         # feed
         # embed words
         # caption_inputs = (batch_size)
