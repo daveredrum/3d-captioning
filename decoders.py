@@ -78,7 +78,7 @@ class Attention2D(nn.Module):
         # get the hidden state of the last LSTM layer
         # which is also the output of LSTM layer
         batch_size = visual_inputs.size(0)
-        hidden = copy.deepcopy(states[-1][0])
+        hidden = states[-1][0]
         # compute weighted sum of visual_inputs and hidden
         # visual_inputs = (batch_size, visual_channels, visual_flat)
         # hidden = (batch_size, hidden_size) = (batch_size, visual_channels)
