@@ -79,11 +79,22 @@ class Attention2D(nn.Module):
             weight.data.uniform_(-stdv, stdv)
     
     def forward(self, visual_inputs, states):
+        batch_size = visual_inputs.size(0)
         # visual_inputs = (batch_size, visual_flat, visual_channels)
         visual_inputs = visual_inputs.view(visual_inputs.size(0), self.visual_channels, self.visual_flat)
         visual_inputs = visual_inputs.permute(0, 2, 1).contiguous()
         # get the hidden state
         hidden = states[0][0]
+        # rescale visual
+        visual_inputs = visual_inputs.view(batch_size, -1)
+        visual_min = visual_inputs.min(1)[0].view(batch_size, 1).expand_as(visual_inputs)
+        visual_max = visual_inputs.max(1)[0].view(batch_size, 1).expand_as(visual_inputs)
+        visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
+        visual_inputs = visual_inputs.view(batch_size, self.visual_flat, self.visual_channels)
+        # rescale hidden
+        hidden_min = hidden.min(1)[0].view(batch_size, 1).expand_as(hidden)
+        hidden_max = hidden.max(1)[0].view(batch_size, 1).expand_as(hidden)
+        hidden = (hidden - visual_min) / (visual_max - visual_min)
         # in = (batch_size, visual_flat, visual_channels)
         # out = (batch_size, visual_flat, hidden_size)
         V = self.comp_visual(visual_inputs)
