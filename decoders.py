@@ -78,6 +78,7 @@ class Attention2D(nn.Module):
         # which is also the output of LSTM layer
         batch_size = visual_inputs.size(0)
         hidden = states[-1][0]
+        print("hidden", V[0].view(-1).min(0)[0].item(), V[0].view(-1).max(0)[0].item())
         # compute weighted sum of visual_inputs and hidden
         # visual_inputs = (batch_size, visual_channels, visual_flat)
         # hidden = (batch_size, hidden_size) = (batch_size, visual_channels)
@@ -88,8 +89,8 @@ class Attention2D(nn.Module):
         hidden_expand = hidden.view(batch_size, self.visual_channels, 1).expand(batch_size, self.visual_channels, self.visual_flat)
         V = torch.matmul(w_v_expand, visual_inputs)
         H = torch.matmul(w_h_expand, hidden_expand)
-        print("V", V[0].view(-1).min(0)[0].item(), V[0].view(-1).max(0)[0].item())
-        print("H", H[0].view(-1).min(0)[0].item(), H[0].view(-1).max(0)[0].item())
+        # print("V", V[0].view(-1).min(0)[0].item(), V[0].view(-1).max(0)[0].item())
+        # print("H", H[0].view(-1).min(0)[0].item(), H[0].view(-1).max(0)[0].item())
         # combine
         # outputs = (batch_size, visual_flat, visual_flat)
         outputs = F.tanh(V + H)
