@@ -117,7 +117,7 @@ class Attention2D(nn.Module):
         self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, visual_flat, bias=False),
-            nn.Softmax()
+            nn.Softmax(dim=1)
         )
         # initialize weights
         self.reset_parameters()
