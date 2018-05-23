@@ -78,7 +78,7 @@ class Attention2D(nn.Module):
         # which is also the output of LSTM layer
         batch_size = visual_inputs.size(0)
         hidden = states[-1][0]
-        print("hidden", V[0].view(-1).min(0)[0].item(), V[0].view(-1).max(0)[0].item())
+        print("hidden", hidden[0].view(-1).min(0)[0].item(), hidden[0].view(-1).max(0)[0].item())
         # compute weighted sum of visual_inputs and hidden
         # visual_inputs = (batch_size, visual_channels, visual_flat)
         # hidden = (batch_size, hidden_size) = (batch_size, visual_channels)
