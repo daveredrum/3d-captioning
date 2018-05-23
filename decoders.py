@@ -56,16 +56,15 @@ class Decoder(nn.Module):
 
 # attention module
 class Attention2D(nn.Module):
-    def __init__(self, visual_size, hidden_size, output_size):
+    def __init__(self, visual_channels, visual_flat):
         super(Attention2D, self).__init__()
         # basic settings
-        self.visual_size = visual_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
+        self.visual_channels = visual_channels
+        self.visual_flat = visual_flat
         # parameters
-        self.w_v = Parameter(torch.Tensor(visual_size, hidden_size))
-        self.w_h = Parameter(torch.Tensor(hidden_size, hidden_size))
-        self.w_o = Parameter(torch.Tensor(hidden_size, output_size))
+        self.w_v = Parameter(torch.Tensor(visual_flat, visual_channels))
+        self.w_h = Parameter(torch.Tensor(visual_flat, visual_channels))
+        self.w_o = Parameter(torch.Tensor(1, visual_flat))
         # initialize weights
         self.reset_parameters()
 
@@ -77,24 +76,26 @@ class Attention2D(nn.Module):
     def forward(self, visual_inputs, states):
         # get the hidden state of the last LSTM layer
         # which is also the output of LSTM layer
+        batch_size = visual_inputs.size(0)
         hidden = states[-1][0]
         # compute weighted sum of visual_inputs and hidden
-        # visual_inputs = (batch_size, visual_size)
-        # hidden = (batch_size, hidden_size)
-        # outputs = (batch_size, hidden_size)
-
-        # rescale
-        # hidden_min = hidden.min(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        # hidden_max = hidden.max(1)[0].view(hidden.size(0), 1).expand_as(hidden)
-        # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
-        V = torch.matmul(visual_inputs, self.w_v)
-        H = torch.matmul(hidden, self.w_h)
-        print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
-        print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
+        # visual_inputs = (batch_size, visual_channels, visual_flat)
+        # hidden = (batch_size, hidden_size) = (batch_size, visual_channels)
+        # V = (batch_size, visual_flat, visual_flat)
+        # H = (batch_size, visual_flat, visual_flat)
+        w_v_expand = self.w_v.view(1, self.visual_flat, self.visual_channels).expand(batch_size, self.visual_flat, self.visual_channels)
+        w_h_expand = self.w_h.view(1, self.visual_flat, self.visual_channels).expand(batch_size, self.visual_flat, self.visual_channels)
+        hidden_expand = hidden.view(batch_size, self.visual_channels, 1).expand(batch_size, self.visual_channels, self.visual_flat)
+        V = torch.matmul(w_v_expand, visual_inputs)
+        H = torch.matmul(w_h_expand, hidden_expand)
+        # print(V[0].min(0)[0].item(), V[0].max(0)[0].item())
+        # print(H[0].min(0)[0].item(), H[0].max(0)[0].item())
         # combine
-        # outputs = (batch_size, output_size)
+        # outputs = (batch_size, visual_flat, visual_flat)
         outputs = F.tanh(V + H)
-        outputs = torch.matmul(outputs, self.w_o)
+        w_o_expand = self.w_o.view(1, 1, self.visual_flat).expand(batch_size, 1, self.visual_flat)
+        # outputs = (batch_size, visual_flat)
+        outputs = torch.matmul(w_o_expand, outputs).view(batch_size, self.visual_flat)
         # compress to probability distribution
         outputs = F.softmax(outputs, dim=1)
 
@@ -178,7 +179,7 @@ class AttentionDecoder2D(nn.Module):
         #     nn.Softmax()
         # )
 
-        self.attention = Attention2D(self.visual_feature_size, self.hidden_size, self.visual_flat)
+        self.attention = Attention2D(self.visual_channels, self.visual_flat)
         # self.attention_layer = nn.Sequential(
         #     nn.Linear(self.hidden_size, self.proj_size),
         #     nn.ReLU(),
@@ -242,8 +243,9 @@ class AttentionDecoder2D(nn.Module):
             # embedded = (batch_size, hidden_size)
             embedded = self.embedding(caption_inputs[:, step])
             # get the attention weights
+            # attention_inputs = (batch_size, visual_channels, visual_size * visual_size)
             # attention_weights = (batch_size, visual_size * visual_size)
-            attention_weights = self.attention(visual_inputs.view(batch_size, -1), states)
+            attention_weights = self.attention(visual_inputs.view(batch_size, self.visual_channels, -1), states)
             # attention_weights = self.attend(visual_proj, states)
             # attended = (batch_size, visual_channels)
             attended = torch.matmul(
@@ -276,7 +278,7 @@ class AttentionDecoder2D(nn.Module):
         embedded = self.embedding(caption_inputs)
         # get the attention weights
         # attention_weights = (batch_size, visual_size * visual_size)
-        attention_weights = self.attention(visual_inputs.view(visual_inputs.size(0), self.visual_feature_size), states)
+        attention_weights = self.attention(visual_inputs.view(batch_size, self.visual_channels, -1), states)
         # attention_weights = self.attend(visual_proj, states)
         # attended = (batch_size, visual_channels)
         attended = torch.matmul(
