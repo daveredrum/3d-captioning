@@ -118,7 +118,7 @@ class Attention2D(nn.Module):
         # outputs = (batch_size, visual_flat)
         outputs = torch.matmul(outputs, self.w_o).view(batch_size, self.visual_flat)
         # compress to probability distribution
-        outputs = F.sigmoid(outputs, dim=1)
+        outputs = F.softmax(outputs, dim=1)
         # print("outputs", outputs[0].view(-1).min(0)[0].item(), outputs[0].view(-1).max(0)[0].item())
 
         return outputs
@@ -300,10 +300,7 @@ class AttentionDecoder2D(nn.Module):
 
             # attention_weights = self.attend(visual_proj, states)
             # attended = (batch_size, visual_channels)
-            attended = torch.matmul(
-                visual_inputs.view(batch_size, self.visual_channels, self.visual_flat),
-                attention_weights.view(batch_size, self.visual_flat, 1)    
-            ).view(batch_size, self.visual_channels)
+            attended = torch.sum(visual_inputs.view(batch_size, self.visual_channels, self.visual_flat) * attention_weights.unsqueeze(1), 2)
             # apply attention weights
             # feed into AttentionLSTM
             # outputs = (batch_size, hidden_size)
