@@ -93,7 +93,7 @@ class Attention2D(nn.Module):
         # print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
         # print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
-        outputs = F.tanh(V + H)
+        outputs = F.relu(V + H)
         # outputs = (batch_size, visual_flat)
         outputs = self.output_layer(outputs).squeeze(2)
 
