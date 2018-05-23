@@ -118,7 +118,7 @@ class Attention2D(nn.Module):
         # outputs = (batch_size, visual_flat)
         outputs = torch.matmul(outputs, self.w_o).view(batch_size, self.visual_flat)
         # compress to probability distribution
-        outputs = F.log_softmax(outputs, dim=1)
+        outputs = F.sigmoid(outputs, dim=1)
         # print("outputs", outputs[0].view(-1).min(0)[0].item(), outputs[0].view(-1).max(0)[0].item())
 
         return outputs
