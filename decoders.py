@@ -65,7 +65,7 @@ class Attention2D(nn.Module):
         # parameters
         self.w_v = Parameter(torch.Tensor(visual_channels, visual_flat))
         self.w_h = Parameter(torch.Tensor(visual_channels, visual_flat))
-        self.w_o = Parameter(torch.Tensor(visual_flat))
+        self.w_o = Parameter(torch.Tensor(visual_flat, 1))
         # initialize weights
         self.reset_parameters()
 
@@ -114,9 +114,9 @@ class Attention2D(nn.Module):
         # combine
         # outputs = (batch_size, visual_flat, visual_flat)
         outputs = F.tanh(V + H)
-        # outputs = outputs.permute(0, 2, 1).contiguous()
+        outputs = outputs.permute(0, 2, 1).contiguous()
         # outputs = (batch_size, visual_flat)
-        outputs = torch.matmul(outputs, self.w_o)
+        outputs = torch.matmul(outputs, self.w_o).view(batch_size, self.visual_flat)
         # compress to probability distribution
         outputs = F.softmax(outputs, dim=1)
         # print("outputs", outputs[0].view(-1).min(0)[0].item(), outputs[0].view(-1).max(0)[0].item())
