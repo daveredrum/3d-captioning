@@ -113,8 +113,14 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.comp_visual = nn.Linear(visual_feature_size, hidden_size, bias=False)
-        self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.comp_visual = nn.Sequential(
+            nn.Linear(visual_feature_size, hidden_size, bias=False),
+            nn.Sigmoid
+        )
+        self.comp_hidden = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size, bias=False),
+            nn.Sigmoid
+        )
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, visual_flat, bias=False),
             nn.Softmax(dim=1)
@@ -136,8 +142,8 @@ class Attention2D(nn.Module):
         # in = (batch_size, hidden_size)
         # out = (batch_size, hidden_size)
         H = self.comp_hidden(hidden)
-        print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
-        print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
+        # print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
+        # print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
         outputs = F.tanh(V + H)
         outputs = self.output_layer(outputs)
