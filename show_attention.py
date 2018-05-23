@@ -84,6 +84,9 @@ def main(args):
     if not os.path.exists("/home/davech2y/3d_captioning/results/{}".format(outname)):
         os.mkdir("/home/davech2y/3d_captioning/results/{}".format(outname))
     print("saving results...")
+    df = {i: images[i].data.cpu().numpy().tolist() for i in range(1, len(images))}
+    df = pandas.DataFrame(df)
+    df.to_csv("results/{}/{}.csv".format(outname, outname), index=False)
     plt.switch_backend("agg")
 
     fig = plt.gcf()
