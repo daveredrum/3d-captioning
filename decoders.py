@@ -100,6 +100,7 @@ class Attention2D(nn.Module):
         # combine
         # outputs = (batch_size, visual_flat, visual_flat)
         outputs = F.tanh(V + H)
+        outputs = outputs.permute(0, 2, 1).contiguous()
         # outputs = (batch_size, visual_flat)
         outputs = torch.matmul(outputs, self.w_o)
         # compress to probability distribution
