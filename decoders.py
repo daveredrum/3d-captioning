@@ -113,7 +113,7 @@ class Attention2D(nn.Module):
         # print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
         # outputs = (batch_size, visual_flat, visual_flat)
-        outputs = V + H
+        outputs = F.tanh(V + H)
         outputs = outputs.permute(0, 2, 1).contiguous()
         # outputs = (batch_size, visual_flat)
         outputs = torch.matmul(outputs, self.w_o)
