@@ -128,7 +128,7 @@ class AttentionLSTMCell2D(nn.Module):
     # inputs = (batch, input_size)
     # states_h = (batch, hidden_size)
     # states_c = (batch, hidden_size)
-    # atteded = (batch, hidden_size)
+    # atteded = (batch, visual_size)
     # outputs = (states_h, states_c)
     def forward(self, embedded, states, atteded):
         # unpack states
@@ -399,7 +399,7 @@ class AttentionEncoderDecoder():
             caption_inputs = predicted.view(1)
             word = dict_idx2word[predicted.cpu().numpy()[0][0]]
             attention_weights = F.upsample_bilinear(attention_weights.view(1, 1, visual_contexts.size(2), visual_contexts.size(2)), size=(64, 64))
-            pairs.append((word, attention_weights.view(64, 64)))
+            pairs.append((word, attention_weights.view(64, 64), states[0][0]))
             if word == '<END>':
                 break
 
