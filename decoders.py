@@ -94,7 +94,7 @@ class Attention2D(nn.Module):
         # rescale hidden
         hidden_min = hidden.min(1)[0].view(batch_size, 1).expand_as(hidden)
         hidden_max = hidden.max(1)[0].view(batch_size, 1).expand_as(hidden)
-        hidden = (hidden - visual_min) / (visual_max - visual_min)
+        hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
         # in = (batch_size, visual_flat, visual_channels)
         # out = (batch_size, visual_flat, hidden_size)
         V = self.comp_visual(visual_inputs)
