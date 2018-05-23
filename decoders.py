@@ -93,6 +93,8 @@ class Attention2D(nn.Module):
         # H = (batch_size, visual_flat, visual_flat)
         V = torch.matmul(visual_inputs, self.w_v)
         H = torch.matmul(hidden, self.w_h)
+        V = V.permute(0, 2, 1).contiguous()
+        H = H.permute(0, 2, 1).contiguous()
         # print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
         # print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
