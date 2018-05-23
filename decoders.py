@@ -1,5 +1,6 @@
 import math
 import torch
+import copy
 import numpy as np
 import torch.nn as nn
 from torch.autograd import Variable
@@ -77,9 +78,7 @@ class Attention2D(nn.Module):
         # get the hidden state of the last LSTM layer
         # which is also the output of LSTM layer
         batch_size = visual_inputs.size(0)
-        hidden = states[-1][0]
-        print(hidden.size())
-        print("hidden", hidden[0].view(-1).min(0)[0].item(), hidden[0].view(-1).max(0)[0].item())
+        hidden = copy.deepcopy(states[-1][0])
         # compute weighted sum of visual_inputs and hidden
         # visual_inputs = (batch_size, visual_channels, visual_flat)
         # hidden = (batch_size, hidden_size) = (batch_size, visual_channels)
@@ -281,6 +280,7 @@ class AttentionDecoder2D(nn.Module):
         embedded = self.embedding(caption_inputs)
         # get the attention weights
         # attention_weights = (batch_size, visual_size * visual_size)
+        print("hidden", states[0][0].view(-1).min(0)[0].item(), states[0][0].view(-1).max(0)[0].item())
         attention_weights = self.attention(visual_inputs.view(batch_size, self.visual_channels, -1), states)
         # attention_weights = self.attend(visual_proj, states)
         # attended = (batch_size, visual_channels)
