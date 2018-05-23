@@ -87,7 +87,7 @@ class Attention2D(nn.Module):
         # hidden = (batch_size, visual_flat, visual_channels)
         visual_inputs = visual_inputs.permute(0, 2, 1).contiguous()
         hidden = hidden.view(hidden.size(0), hidden.size(1), 1)
-        hidden = torch.matmul(hidden, torch.zeros(1, self.visual_flat))
+        hidden = torch.matmul(hidden, torch.zeros(1, self.visual_flat).cuda())
         hidden = hidden.permute(0, 2, 1).contiguous()
         # V = (batch_size, visual_flat, visual_flat)
         # H = (batch_size, visual_flat, visual_flat)
