@@ -85,7 +85,7 @@ class Attention2D(nn.Module):
         # compute weighted sum of visual_inputs and hidden
         # visual_inputs = (batch_size, visual_flat, visual_channels)
         # hidden = (batch_size, visual_flat, visual_channels)
-        visual_inputs = visual_inputs.permute(0, 2, 1).contiguous()
+        visual_inputs = F.tanh(visual_inputs.permute(0, 2, 1).contiguous())
         hidden = hidden.view(hidden.size(0), hidden.size(1), 1)
         hidden = torch.matmul(hidden, torch.ones(1, self.visual_flat).cuda())
         hidden = hidden.permute(0, 2, 1).contiguous()
@@ -93,7 +93,7 @@ class Attention2D(nn.Module):
         # print("H", hidden.view(-1).min(0)[0].item(), hidden.view(-1).max(0)[0].item())
         # V = (batch_size, visual_flat, visual_flat)
         # H = (batch_size, visual_flat, visual_flat)
-        V = F.tanh(torch.matmul(visual_inputs, self.w_v))
+        V = torch.matmul(visual_inputs, self.w_v)
         H = torch.matmul(hidden, self.w_h)
         V = V.permute(0, 2, 1).contiguous()
         H = H.permute(0, 2, 1).contiguous()
