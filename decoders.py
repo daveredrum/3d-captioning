@@ -129,7 +129,7 @@ class Attention2D(nn.Module):
     
     def forward(self, visual_inputs, states):
         # get the hidden state
-        hidden = state[0][0]
+        hidden = states[0][0]
         # in = (batch_size, visual_feature_size)
         # out = (batch_size, hidden_size)
         V = self.comp_visual(visual_inputs)
