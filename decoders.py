@@ -136,6 +136,8 @@ class Attention2D(nn.Module):
         # in = (batch_size, hidden_size)
         # out = (batch_size, hidden_size)
         H = self.comp_hidden(hidden)
+        print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
+        print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
         outputs = F.tanh(V + H)
         outputs = self.output_layer(outputs)
