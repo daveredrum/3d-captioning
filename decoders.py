@@ -147,7 +147,7 @@ class AttentionLSTMCell2D(nn.Module):
 
 # decoder with attention
 class AttentionDecoder2D(nn.Module):
-    def __init__(self, batch_size, input_size, hidden_size, visual_channels, visual_size, num_layers=2, cuda_flag=True):
+    def __init__(self, batch_size, input_size, hidden_size, visual_channels, visual_size, num_layers=1, cuda_flag=True):
         super(AttentionDecoder2D, self).__init__()
         # basic settings
         self.batch_size = batch_size
@@ -191,7 +191,7 @@ class AttentionDecoder2D(nn.Module):
         # )
 
         self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, self.hidden_size)
-        self.lstm_layer_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
+        # self.lstm_layer_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
         # output layer
         self.output_layer = nn.Sequential(
             nn.Linear(self.visual_channels + self.hidden_size, self.proj_size),
@@ -258,8 +258,8 @@ class AttentionDecoder2D(nn.Module):
             # outputs = (batch_size, hidden_size)
             states[0] = self.lstm_layer_1(embedded, states[0], attended)
             outputs = states[0][0]
-            states[1] = self.lstm_layer_2(outputs, states[1])
-            outputs = states[1][0]
+            # states[1] = self.lstm_layer_2(outputs, states[1])
+            # outputs = states[1][0]
             # get predicted probabilities
             # in = (batch_size, visual_channels + hidden_size)
             # out = (batch_size, 1, hidden_size)
@@ -291,8 +291,8 @@ class AttentionDecoder2D(nn.Module):
         # outputs = (batch_size, hidden_size)
         states[0] = self.lstm_layer_1(embedded, states[0], attended)
         outputs = states[0][0]
-        states[1] = self.lstm_layer_2(outputs, states[1])
-        outputs = states[1][0]
+        # states[1] = self.lstm_layer_2(outputs, states[1])
+        # outputs = states[1][0]
         # get predicted probabilities
         # in = (batch_size, visual_channels + hidden_size)
         # out = (batch_size, 1, hidden_size)
