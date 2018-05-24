@@ -328,10 +328,7 @@ class EncoderDecoderSolver():
                             # validate
                             valid_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            # # teacher forcing
-                            # states = decoder.init_hidden(visual_contexts)
-                            # outputs = decoder(visual_contexts, caption_inputs, states)
-                            # no teacher forcing
+                            # generate until <END> token
                             outputs = []
                             states = decoder.init_hidden(visual_contexts)
                             max_length = 50
@@ -346,21 +343,11 @@ class EncoderDecoderSolver():
                                     if inputs[0].item() == dict_word2idx['<END>']:
                                         break
                                 outputs.append(temp)
-                            # for i in range(len(outputs)):
-                            #     for j in range(len(outputs[i])):
-                            #         try:
-                            #             outputs[i][j] = dict_idx2word[outputs[i][j]]
-                            #         except Exception:
-                            #             pass
-                            #     outputs[i] = " ".join(outputs[i])
+
+                            # decode the outputs
                             outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
-                            # outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
-                            # targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
-                            # loss = self.criterion(outputs_packed, targets)
                             log['valid_time'].append(time.time() - valid_since)
                             
-                            # decode outputs
-                            # outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -368,8 +355,6 @@ class EncoderDecoderSolver():
                                 else:
                                     candidates[phase][model_id].append(output)
 
-                            # save log
-                            # log['valid_loss'].append(loss.data[0])
                     # decoder without attention
                     else:
                         caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]

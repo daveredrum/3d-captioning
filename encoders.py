@@ -193,13 +193,13 @@ class AttentionEncoderVGG16BN(nn.Module):
 
     def forward(self, inputs):
         features = self.vgg16(inputs)
-        # # rescale
-        # batch_size, visual_channels, visual_size, visual_size = features.size()
-        # features = features.view(batch_size, -1)
-        # visual_min = features.min(1)[0].view(batch_size, 1).expand_as(features)
-        # visual_max = features.max(1)[0].view(batch_size, 1).expand_as(features)
-        # features = (features - visual_min) / (visual_max - visual_min)
-        # features = features.view(batch_size, visual_channels, visual_size, visual_size)
+        # rescale
+        batch_size, visual_channels, visual_size, visual_size = features.size()
+        features = features.view(batch_size, -1)
+        visual_min = features.min(1)[0].view(batch_size, 1).expand_as(features)
+        visual_max = features.max(1)[0].view(batch_size, 1).expand_as(features)
+        features = (features - visual_min) / (visual_max - visual_min)
+        features = features.view(batch_size, visual_channels, visual_size, visual_size)
 
 
         return features

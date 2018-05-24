@@ -148,17 +148,6 @@ class Attention2D(nn.Module):
         feature = visual_inputs.permute(0, 2, 1).contiguous()
         # get the hidden state
         hidden = states[0]
-        # rescale visual
-        batch_size = visual_inputs.size(0)
-        visual_inputs = visual_inputs.view(batch_size, -1)
-        visual_min = visual_inputs.min(1)[0].view(batch_size, 1).expand_as(visual_inputs)
-        visual_max = visual_inputs.max(1)[0].view(batch_size, 1).expand_as(visual_inputs)
-        visual_inputs = (visual_inputs - visual_min) / (visual_max - visual_min)
-        visual_inputs = visual_inputs.view(batch_size, self.visual_flat, self.visual_channels)
-        # # rescale hidden
-        # hidden_min = hidden.min(1)[0].view(batch_size, 1).expand_as(hidden)
-        # hidden_max = hidden.max(1)[0].view(batch_size, 1).expand_as(hidden)
-        # hidden = (hidden - hidden_min) / (hidden_max - hidden_min)
         # in = (batch_size, visual_flat, visual_channels)
         # out = (batch_size, visual_flat, hidden_size)
         V = self.comp_visual(feature)
@@ -269,28 +258,6 @@ class AttentionDecoder2D(nn.Module):
         # ) for i in range(self.num_layers)]
 
         return states
-
-    # def attend(self, visual_inputs, states):
-    #     # compute attention weights
-    #     # get the hidden state of the last LSTM layer
-    #     # which is also the output of LSTM layer
-    #     hidden = states[-1][0]
-        
-    #     # # concat visual_inputs and hidden
-    #     # attention_inputs = torch.cat((visual_inputs, hidden), dim=1)
-    #     # # use only hidden
-    #     # attention_inputs = hidden
-    #     # sum of visual_inputs and hidden (ensure the sizes are the same)
-    #     attention_inputs = hidden + visual_inputs
-    #     # # weighted sum of visual_inputs and hidden (ensure the sizes are the same)
-    #     # alpha = 0.4
-    #     # attention_inputs = hidden + alpha * visual_inputs
-
-    #     # attention_inputs = (batch_size, hidden_size)
-    #     # attention_weights = (batch_size, visual_size * visual_size)
-    #     attention_weights = self.attention_layer(attention_inputs)
-
-    #     return attention_weights
 
     def forward(self, visual_inputs, caption_inputs, states):
         # feed
