@@ -220,7 +220,7 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        for epoch_id in range(epoch + 1):
+        for epoch_id in range(epoch):
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
@@ -315,13 +315,10 @@ class EncoderDecoderSolver():
 
                             # backward pass
                             # save log
-                            if epoch_id != 0:
-                                backward_since = time.time()
-                                loss.backward()
-                                self.optimizer.step()
-                                log['backward'].append(time.time() - backward_since)
-                            else:
-                                log['backward'].append(0)
+                            backward_since = time.time()
+                            loss.backward()
+                            self.optimizer.step()
+                            log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
                             log['train_perplexity'].append(np.exp(loss.data[0]))
                         else:
@@ -540,7 +537,7 @@ class EncoderDecoderSolver():
                 exetime_s = np.sum(log['epoch_time'])
                 eta_s = exetime_s * (epoch - (epoch_id))
                 eta_m = math.floor(eta_s / 60)
-                print("---------------------epoch %d/%d----------------------" % (epoch_id, epoch))
+                print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
                 print("[Loss] train_loss: %f, perplexity: %f" % (
                     log['train_loss'], 
                     log['train_perplexity'])
