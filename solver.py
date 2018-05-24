@@ -189,21 +189,31 @@ class EncoderDecoderSolver():
         return decoded
     
     # for model with attention
-    def _decode_attention_outputs(self, sequence, cap_lengths, dictionary):
-        # get the indices for each predicted word
-        _, indices = torch.max(sequence, 2)
-        # chop the sequences according to their lengths
-        unpadded_sequence = [indices[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
-        # decode the indices
+    def _decode_attention_outputs(self, sequence, cap_lengths, dictionary, phase):
         decoded = []
-        for sequence in unpadded_sequence:
-            temp = []
-            for idx in sequence:
-                try:
-                    temp.append(dictionary[idx])
-                except Exception:
-                    pass
-            decoded.append(" ".join(temp))
+        if phase == "train":
+            # get the indices for each predicted word
+            _, indices = torch.max(sequence, 2)
+            # chop the sequences according to their lengths
+            unpadded_sequence = [indices[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+            # decode the indices
+            for sequence in unpadded_sequence:
+                temp = []
+                for idx in sequence:
+                    try:
+                        temp.append(dictionary[idx])
+                    except Exception:
+                        pass
+                decoded.append(" ".join(temp))
+        elif phase == "valid":
+            for i in range(len(sequence)):
+                temp = []
+                for j in range(len(sequence[i])):
+                    try:
+                        temp.append(dictionary[sequence[i][j]])
+                    except Exception:
+                        pass
+                decoded.append(" ".join(temp))
 
         return decoded
 
@@ -295,7 +305,7 @@ class EncoderDecoderSolver():
                             log['forward'].append(time.time() - forward_since)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -336,13 +346,14 @@ class EncoderDecoderSolver():
                                     if inputs[0].item() == dict_word2idx['<END>']:
                                         break
                                 outputs.append(temp)
-                            for i in range(len(outputs)):
-                                for j in range(len(outputs[i])):
-                                    try:
-                                        outputs[i][j] = dict_idx2word[outputs[i][j]]
-                                    except Exception:
-                                        pass
-                                outputs[i] = " ".join(outputs[i])
+                            # for i in range(len(outputs)):
+                            #     for j in range(len(outputs[i])):
+                            #         try:
+                            #             outputs[i][j] = dict_idx2word[outputs[i][j]]
+                            #         except Exception:
+                            #             pass
+                            #     outputs[i] = " ".join(outputs[i])
+                            outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
                             # outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
                             # targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
                             # loss = self.criterion(outputs_packed, targets)
