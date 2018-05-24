@@ -284,7 +284,7 @@ def main(args):
     # define the decoder
     input_size = dict_word2idx.__len__() + 1
     hidden_size = 512
-    num_layer = 2
+    num_layer = 1
     if attention:
         if pretrained == "vgg16" or pretrained == "vgg16_bn":
             print("initializing decoder with attention....")
@@ -333,7 +333,8 @@ def main(args):
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
-    valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]
+    # valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]train_perplexity
+    train_perplexity = [encoder_decoder_solver.log[i]["train_perplexity"] for i in range(epochs)]
     train_blues_1 = [encoder_decoder_solver.log[i]["train_bleu_1"] for i in range(epochs)]
     train_blues_2 = [encoder_decoder_solver.log[i]["train_bleu_2"] for i in range(epochs)]
     train_blues_3 = [encoder_decoder_solver.log[i]["train_bleu_3"] for i in range(epochs)]
@@ -355,7 +356,8 @@ def main(args):
     fig = plt.gcf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_losses, label="train_loss")
-    plt.plot(range(epochs), valid_losses, label="valid_loss")
+    # plt.plot(range(epochs), valid_losses, label="valid_loss")
+    # plt.plot(range(epochs), train_perplexity, label="train_perplexity")
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))

@@ -213,6 +213,7 @@ class EncoderDecoderSolver():
         for epoch_id in range(epoch + 1):
             log = {
                 'train_loss': [],
+                'train_perplexity': [],
                 'train_blue_1': [],
                 'train_blue_2': [],
                 'train_blue_3': [],
@@ -276,19 +277,21 @@ class EncoderDecoderSolver():
                             forward_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
-                            # # teacher forcing
-                            # states = decoder.init_hidden(visual_contexts)
-                            # outputs = decoder(visual_contexts, caption_inputs, states)
-                            # no teacher forcing
-                            outputs = []
-                            inputs = caption_inputs[:, 0]
+                            # teacher forcing
                             states = decoder.init_hidden(visual_contexts)
-                            for i in range(cap_lengths[0].item() - 1):
-                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
-                                inputs = predicted.max(2)[1].view(visual_contexts.size(0))
-                                outputs.append(predicted)
-                            outputs = torch.cat(outputs, dim=1)
-                            loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
+                            outputs = decoder(visual_contexts, caption_inputs, states)
+                            # # no teacher forcing
+                            # outputs = []
+                            # inputs = caption_inputs[:, 0]
+                            # states = decoder.init_hidden(visual_contexts)
+                            # for i in range(cap_lengths[0].item() - 1):
+                            #     predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
+                            #     inputs = predicted.max(2)[1].view(visual_contexts.size(0))
+                            #     outputs.append(predicted)
+                            # outputs = torch.cat(outputs, dim=1)
+                            outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            loss = self.criterion(outputs_packed, targets)
                             log['forward'].append(time.time() - forward_since)
                             
                             # decode outputs
@@ -310,6 +313,7 @@ class EncoderDecoderSolver():
                             else:
                                 log['backward'].append(0)
                             log['train_loss'].append(loss.data[0])
+                            log['train_perplexity'].append(np.exp(loss.data[0]))
                         else:
                             # validate
                             valid_since = time.time()
@@ -319,18 +323,33 @@ class EncoderDecoderSolver():
                             # outputs = decoder(visual_contexts, caption_inputs, states)
                             # no teacher forcing
                             outputs = []
-                            inputs = caption_inputs[:, 0]
                             states = decoder.init_hidden(visual_contexts)
-                            for i in range(cap_lengths[0].item() - 1):
-                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
-                                inputs = predicted.max(2)[1].view(visual_contexts.size(0))
-                                outputs.append(predicted)
-                            outputs = torch.cat(outputs, dim=1)
-                            loss = self.criterion(outputs.view(-1, outputs.size(2)), caption_targets.contiguous().view(-1))
+                            max_length = 50
+                            for idx in range(visual_contexts.size(0)):
+                                h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                                inputs = caption_inputs[idx, 0]
+                                temp = []
+                                for i in range(max_length):
+                                    predicted, (h, c), _ = decoder.sample(visual_contexts[idx].unsqueeze(0), inputs.view(1), (h, c))
+                                    inputs = predicted.max(2)[1].view(1)
+                                    temp.append(inputs[0].item())
+                                    if inputs[0].item() == dict_word2idx['<END>']:
+                                        break
+                                outputs.append(temp)
+                            for i in range(len(outputs)):
+                                for j in range(len(outputs[i])):
+                                    try:
+                                        outputs[i][j] = dict_idx2word[outputs[i][j]]
+                                    except Exception:
+                                        pass
+                                outputs[i] = " ".join(outputs[i])
+                            # outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            # targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            # loss = self.criterion(outputs_packed, targets)
                             log['valid_time'].append(time.time() - valid_since)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
+                            # outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -339,7 +358,7 @@ class EncoderDecoderSolver():
                                     candidates[phase][model_id].append(output)
 
                             # save log
-                            log['valid_loss'].append(loss.data[0])
+                            # log['valid_loss'].append(loss.data[0])
                     # decoder without attention
                     else:
                         caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
@@ -415,7 +434,8 @@ class EncoderDecoderSolver():
             
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
-            log['valid_loss'] = np.mean(log['valid_loss'])
+            # log['valid_loss'] = np.mean(log['valid_loss'])
+            log['train_perplexity'] = np.mean(log['train_perplexity'])
             # evaluate bleu
             eval_since = time.time()
             train_bleu, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
@@ -456,7 +476,8 @@ class EncoderDecoderSolver():
                 "Loss", 
                 {
                     "train_loss": log['train_loss'], 
-                    "valid_loss": log['valid_loss']
+                    # "valid_loss": log['valid_loss']
+                    # "train_perplexity": log['train_perplexity']
                 }, 
                 epoch_id
             )
@@ -524,9 +545,9 @@ class EncoderDecoderSolver():
                 eta_s = exetime_s * (epoch - (epoch_id))
                 eta_m = math.floor(eta_s / 60)
                 print("---------------------epoch %d/%d----------------------" % (epoch_id, epoch))
-                print("[Loss] train_loss: %f, valid_loss: %f" % (
+                print("[Loss] train_loss: %f, perplexity: %f" % (
                     log['train_loss'], 
-                    log['valid_loss'])
+                    log['train_perplexity'])
                 )
                 print("[BLEU-1] train_bleu: %f, valid_bleu: %f" % (
                     log['train_bleu_1'],

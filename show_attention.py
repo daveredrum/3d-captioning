@@ -24,7 +24,7 @@ def main(args):
     mode = args.mode
     phase = args.phase
     index = args.index
-    outname = args.outname
+    outname = "{}_{}".format(args.outname, args.index)
     encoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.encoder)
     decoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.decoder)
     print("\n[settings]")
@@ -78,14 +78,14 @@ def main(args):
             pairs = encoder_decoder.visual_attention(visual_inputs, dict_word2idx, dict_idx2word, 20)
             break
     descriptions += [pairs[i][0] for i in range(len(pairs))]
-    images += [pairs[i][1] for i in range(len(pairs))]
+    images += [pairs[i][2] for i in range(len(pairs))]
 
     # plot testing results
     if not os.path.exists("/home/davech2y/3d_captioning/results/{}".format(outname)):
         os.mkdir("/home/davech2y/3d_captioning/results/{}".format(outname))
     print("saving results...")
-    df = {i: images[i].view(-1).data.cpu().numpy().tolist() for i in range(1, len(images))}
-    df = pandas.DataFrame(df)
+    df = {"step {}".format(i+1): pairs[i][1].view(-1).data.cpu().numpy().tolist() for i in range(len(pairs))}
+    df = pandas.DataFrame(df, columns=['step {}'.format(str(i+1)) for i in range(len(pairs))])
     df.to_csv("results/{}/{}.csv".format(outname, outname), index=False)
     plt.switch_backend("agg")
 
@@ -102,6 +102,7 @@ def main(args):
         else:
             plt.imshow(images[i].data.cpu().numpy())
             plt.text(80, 32, descriptions[i], fontsize=12)
+            # plt.text(18, 8, descriptions[i], fontsize=12)
     # fig.tight_layout()
     plt.savefig("results/{}/{}.png".format(outname, outname), bbox_inches="tight")
     fig.clf()
