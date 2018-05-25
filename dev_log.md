@@ -5,8 +5,9 @@
 __progress:__
 - fixed attention, but the attention weights don't change much on small dataset
 - applied new architecture
-- omit validation loss, refer to NLP metrics in validation phase
+- omitted validation loss, refer to NLP metrics in validation phase
 - generating of text in validation phase won't stop until __<END>__
+- added a script to visualize the attention weights, upsampling is applied
 
 __TODOs:__
 - investigate why the attention weights don't change much
