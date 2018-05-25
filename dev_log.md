@@ -1,5 +1,17 @@
 # Development Log
 
+## May.25
+
+__progress:__
+- fixed attention, but the attention weights don't change much on small dataset
+- applied new architecture
+- omit validation loss, refer to NLP metrics in validation phase
+- generating of text in validation phase won't stop until __<END>__
+
+__TODOs:__
+- investigate why the attention weights don't change much
+- implement beam decoder
+
 ## May.16
 
 __progress:__
