@@ -288,7 +288,7 @@ class EncoderDecoderSolver():
                             visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
                             # teacher forcing
-                            states = decoder.init_hidden(visual_contexts)
+                            states = decoder.init_hidden(visual_contexts[0])
                             outputs = decoder(visual_contexts, caption_inputs, states)
                             # # no teacher forcing
                             # outputs = []
@@ -327,14 +327,19 @@ class EncoderDecoderSolver():
                             visual_contexts = encoder(visual_inputs)
                             # generate until <END> token
                             outputs = []
-                            states = decoder.init_hidden(visual_contexts)
+                            states = decoder.init_hidden(visual_contexts[0])
                             max_length = 50
-                            for idx in range(visual_contexts.size(0)):
+                            for idx in range(visual_contexts[0].size(0)):
                                 h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
                                 inputs = caption_inputs[idx, 0]
                                 temp = []
                                 for i in range(max_length):
-                                    predicted, (h, c), _ = decoder.sample(visual_contexts[idx].unsqueeze(0), inputs.view(1), (h, c))
+                                    features = (
+                                        visual_contexts[0][idx].unsqueeze(0), 
+                                        visual_contexts[1][idx].unsqueeze(0), 
+                                        visual_contexts[2][idx].unsqueeze(0)
+                                    )
+                                    predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
                                     inputs = predicted.max(2)[1].view(1)
                                     temp.append(inputs[0].item())
                                     if inputs[0].item() == dict_word2idx['<END>']:

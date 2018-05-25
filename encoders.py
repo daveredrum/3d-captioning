@@ -165,21 +165,54 @@ class AttentionEncoderVGG16(nn.Module):
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
         )
-        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.projection_layer = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 2048),
-            nn.ReLU(),
-            nn.Linear(2048, 2048),
+        self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
+        self.globle_mapping = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.ReLU()
+        )
+        self.area_mapping = nn.Sequential(
+            nn.Linear(512, 512),
             nn.ReLU()
         )
 
 
     def forward(self, inputs):
-        features = self.vgg16(inputs)
-        proj = self.max_pool(features)
-        proj = self.projection_layer(proj.view(proj.size(0), -1))
-        
-        return features, proj
+        '''
+        original_features: (batch_size, 512, 14, 14)
+        global_features: (batch_size, 512)
+        area_features: (batch_size, 512, 196)
+        '''
+        # get sizes
+        # (batch_size, 512, 14, 14)
+        original_features = self.vgg16(inputs)
+        batch_size, visual_channels, visual_size, visual_size = original_features.size()
+        # (batch_size, 512, 196)
+        area_features = original_features.view(batch_size, visual_channels, -1).transpose(2, 1).contiguous()
+        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, visual_channels, -1)
+        # (batch_size, 512)
+        global_features = self.avg_pool(original_features).view(batch_size, 512)
+        global_features = self.globle_mapping(global_features)
+        # rescale original_features
+        original_features = original_features.view(batch_size, -1)
+        visual_min = original_features.min(1)[0].view(batch_size, 1).expand_as(original_features)
+        visual_max = original_features.max(1)[0].view(batch_size, 1).expand_as(original_features)
+        original_features = (original_features - visual_min) / (visual_max - visual_min)
+        original_features = original_features.view(batch_size, visual_channels, visual_size, visual_size)
+        # rescale area_features
+        area_features = area_features.view(batch_size, -1)
+        visual_min = area_features.min(1)[0].view(batch_size, 1).expand_as(area_features)
+        visual_max = area_features.max(1)[0].view(batch_size, 1).expand_as(area_features)
+        area_features = (area_features - visual_min) / (visual_max - visual_min)
+        area_features = area_features.view(batch_size, visual_channels, visual_size * visual_size)
+        # rescale global_features
+        global_features = global_features.view(batch_size, -1)
+        visual_min = global_features.min(1)[0].view(batch_size, 1).expand_as(global_features)
+        visual_max = global_features.max(1)[0].view(batch_size, 1).expand_as(global_features)
+        global_features = (global_features - visual_min) / (visual_max - visual_min)
+        global_features = global_features.view(batch_size, visual_channels)
+
+
+        return original_features, global_features, area_features
 
 # for attention
 class AttentionEncoderVGG16BN(nn.Module):
@@ -189,20 +222,54 @@ class AttentionEncoderVGG16BN(nn.Module):
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
         )
+        self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
+        self.globle_mapping = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.ReLU()
+        )
+        self.area_mapping = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.ReLU()
+        )
 
 
     def forward(self, inputs):
-        features = self.vgg16(inputs)
-        # rescale
-        batch_size, visual_channels, visual_size, visual_size = features.size()
-        features = features.view(batch_size, -1)
-        visual_min = features.min(1)[0].view(batch_size, 1).expand_as(features)
-        visual_max = features.max(1)[0].view(batch_size, 1).expand_as(features)
-        features = (features - visual_min) / (visual_max - visual_min)
-        features = features.view(batch_size, visual_channels, visual_size, visual_size)
+        '''
+        original_features: (batch_size, 512, 14, 14)
+        global_features: (batch_size, 512)
+        area_features: (batch_size, 512, 196)
+        '''
+        # get sizes
+        # (batch_size, 512, 14, 14)
+        original_features = self.vgg16(inputs)
+        batch_size, visual_channels, visual_size, visual_size = original_features.size()
+        # (batch_size, 512, 196)
+        area_features = original_features.view(batch_size, visual_channels, -1).transpose(2, 1).contiguous()
+        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, visual_channels, -1)
+        # (batch_size, 512)
+        global_features = self.avg_pool(original_features).view(batch_size, 512)
+        global_features = self.globle_mapping(global_features)
+        # rescale original_features
+        original_features = original_features.view(batch_size, -1)
+        visual_min = original_features.min(1)[0].view(batch_size, 1).expand_as(original_features)
+        visual_max = original_features.max(1)[0].view(batch_size, 1).expand_as(original_features)
+        original_features = (original_features - visual_min) / (visual_max - visual_min)
+        original_features = original_features.view(batch_size, visual_channels, visual_size, visual_size)
+        # rescale area_features
+        area_features = area_features.view(batch_size, -1)
+        visual_min = area_features.min(1)[0].view(batch_size, 1).expand_as(area_features)
+        visual_max = area_features.max(1)[0].view(batch_size, 1).expand_as(area_features)
+        area_features = (area_features - visual_min) / (visual_max - visual_min)
+        area_features = area_features.view(batch_size, visual_channels, visual_size * visual_size)
+        # rescale global_features
+        global_features = global_features.view(batch_size, -1)
+        visual_min = global_features.min(1)[0].view(batch_size, 1).expand_as(global_features)
+        visual_max = global_features.max(1)[0].view(batch_size, 1).expand_as(global_features)
+        global_features = (global_features - visual_min) / (visual_max - visual_min)
+        global_features = global_features.view(batch_size, visual_channels)
 
 
-        return features
+        return original_features, global_features, area_features
 
 # for attention
 class AttentionEncoderResnet50(nn.Module):

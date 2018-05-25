@@ -234,12 +234,12 @@ class AttentionDecoder2D(nn.Module):
         # self.attention = Attention2D(self.visual_channels, self.visual_flat)
 
 
-        self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, self.hidden_size)
-        # self.lstm_layer_1 = nn.LSTMCell(self.hidden_size + self.visual_channels, self.hidden_size)
+        # self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, self.hidden_size)
+        self.lstm_layer_1 = nn.LSTMCell(2 * self.hidden_size, self.hidden_size)
         # self.lstm_layer_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
         # output layer
         self.output_layer = nn.Sequential(
-            nn.Linear(self.visual_channels + self.hidden_size, self.proj_size),
+            nn.Linear(self.hidden_size, self.proj_size),
             nn.ReLU(),
             nn.Linear(self.proj_size, self.input_size)
         )
@@ -259,74 +259,34 @@ class AttentionDecoder2D(nn.Module):
 
         return states
 
-    def forward(self, visual_inputs, caption_inputs, states):
+    def forward(self, features, caption_inputs, states):
+        _, global_features, area_features = features
         # feed
         seq_length = caption_inputs.size(1)
-        batch_size = visual_inputs.size(0)
         decoder_outputs = []
         for step in range(seq_length):
-            features = visual_inputs.view(batch_size, self.visual_channels, -1)
-            # embed words
-            # caption_inputs = (batch_size)
-            # embedded = (batch_size, hidden_size)
             embedded = self.embedding(caption_inputs[:, step])
-            # get the attention weights
-            # attention_inputs = (batch_size, visual_channels, visual_size * visual_size)
-            # attention_weights = (batch_size, visual_size * visual_size)
-
-            attention_weights = self.attention(features, states)
-
-            # attention_weights = self.attend(visual_proj, states)
-            # attended = (batch_size, visual_channels)
-            attended = torch.sum(features * attention_weights.unsqueeze(1), 2)
-            # apply attention weights
-            # feed into AttentionLSTM
-            # outputs = (batch_size, hidden_size)
-            # inputs = torch.cat((embedded, attended), 1)
-            # states = self.lstm_layer_1(inputs, states)
-            states = self.lstm_layer_1(embedded, states, attended)
-            outputs = states[0]
-            # states[1] = self.lstm_layer_2(outputs, states[1])
-            # outputs = states[1][0]
-            # get predicted probabilities
-            # in = (batch_size, visual_channels + hidden_size)
-            # out = (batch_size, 1, hidden_size)
-            outputs = torch.cat((attended, outputs), dim=1)
+            lstm_input = torch.cat((embedded, global_features), dim=1)
+            states = self.lstm_layer_1(lstm_input, states)
+            lstm_outputs = states[0]
+            attention_weights = self.attention(area_features, states)
+            attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            outputs = attended + lstm_outputs
             outputs = self.output_layer(outputs).unsqueeze(1)
             decoder_outputs.append(outputs)
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
 
         return decoder_outputs 
 
-    def sample(self, visual_inputs, caption_inputs, states):
-        features = visual_inputs.view(visual_inputs.size(0), self.visual_channels, -1)
-        # feed
-        # embed words
-        # caption_inputs = (batch_size)
-        # embedded = (batch_size, hidden_size)
+    def sample(self, features, caption_inputs, states):
+        _, global_features, area_features = features
         embedded = self.embedding(caption_inputs)
-        # get the attention weights
-        # attention_weights = (batch_size, visual_size * visual_size)
-        # print("hidden", states[0][0].view(-1).min(0)[0].item(), states[0][0].view(-1).max(0)[0].item())
-
-        attention_weights = self.attention(features, states)
-
-        # attention_weights = self.attend(visual_proj, states)
-        # attended = (batch_size, visual_channels)
-        attended = torch.sum(features * attention_weights.unsqueeze(1), 2)
-        # apply attention weights
-        # feed into AttentionLSTM
-        # outputs = (batch_size, hidden_size)
-        # inputs = torch.cat((embedded, attended), 1)
-        # new_states = self.lstm_layer_1(inputs, states)
-        new_states = self.lstm_layer_1(embedded, states, attended)
-        outputs = new_states[0]
-        # states[1] = self.lstm_layer_2(outputs, states[1])
-        # outputs = states[1][0]
-        # get predicted probabilities
-        # in = (batch_size, visual_channels + hidden_size)
-        # out = (batch_size, 1, hidden_size)
-        outputs = torch.cat((attended, outputs), dim=1)
+        lstm_input = torch.cat((embedded, global_features), dim=1)
+        new_states = self.lstm_layer_1(lstm_input, states)
+        lstm_outputs = new_states[0]
+        attention_weights = self.attention(area_features, states)
+        attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+        outputs = attended + lstm_outputs
         outputs = self.output_layer(outputs).unsqueeze(1)
 
         return outputs, new_states, attention_weights
