@@ -505,6 +505,12 @@ class COCO(object):
                 caption = captions_list[i]
                 caption = re.sub(r'([.,!?()])', r' \1 ', caption)
                 caption = re.sub(r'\s{2,}', ' ', caption)
+                # truncate long captions
+                max_length = 18
+                caption = caption.split(" ")
+                if len(caption) > max_length:
+                    caption = caption[:max_length]
+                caption = " ".join(caption)
                 # add start symbol
                 caption = '<START> ' + caption
                 # add end symbol
