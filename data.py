@@ -409,18 +409,18 @@ class COCO(object):
         elif self.train_size == -1 and self.valid_size != -1:
             self.original_csv['train'] = train_csv
             valid_id = valid_csv.image_id.drop_duplicates().values.tolist()[:self.valid_size]
-            self.original_csv['valid'] = valid_csv.iloc[valid_csv.image_id.isin(valid_id)]
+            self.original_csv['valid'] = valid_csv.loc[valid_csv.image_id.isin(valid_id)]
         # selected training set and full validation set
         elif self.train_size != -1 and self.valid_size == -1:
             train_id = train_csv.image_id.drop_duplicates().values.tolist()[:self.train_size]
-            self.original_csv['train'] = train_csv.iloc[train_csv.image_id.isin(train_id)]
+            self.original_csv['train'] = train_csv.loc[train_csv.image_id.isin(train_id)]
             self.original_csv['valid'] = valid_csv
         # selected training set and selected validation set
         else:
             train_id = train_csv.image_id.drop_duplicates().values.tolist()[:self.train_size]
             valid_id = valid_csv.image_id.drop_duplicates().values.tolist()[:self.valid_size]
-            self.original_csv['train'] = train_csv.iloc[train_csv.image_id.isin(train_id)]
-            self.original_csv['valid'] = valid_csv.iloc[valid_csv.image_id.isin(valid_id)]
+            self.original_csv['train'] = train_csv.loc[train_csv.image_id.isin(train_id)]
+            self.original_csv['valid'] = valid_csv.loc[valid_csv.image_id.isin(valid_id)]
         self.original_csv = {
             'train': train_csv.iloc[:self.train_size],
             'valid': valid_csv.iloc[:self.valid_size]
