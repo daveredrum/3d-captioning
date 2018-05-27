@@ -211,13 +211,13 @@ def main(args):
             train_ds = COCOCaptionDataset(
                 root, 
                 train_captions, 
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224_new.hdf5"
             )
             valid_ds = COCOCaptionDataset(
                 root, 
                 valid_captions,
-                # database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224.hdf5"
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224.hdf5"
+                # database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224_new.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224_new.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             valid_dl = DataLoader(valid_ds, batch_size=batch_size)

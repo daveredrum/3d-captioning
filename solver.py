@@ -432,8 +432,7 @@ class EncoderDecoderSolver():
 
                             # save log
                             log['valid_loss'].append(loss.data[0])
-            print(references["valid"][sorted(list(references["valid"].keys()))[0]])
-            print(candidates["valid"][sorted(list(candidates["valid"].keys()))[0]])
+                            
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
             # log['valid_loss'] = np.mean(log['valid_loss'])
