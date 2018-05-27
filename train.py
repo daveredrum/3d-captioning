@@ -196,8 +196,8 @@ def main(args):
         print()
         coco = COCO(
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
+            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
             [train_size, valid_size]
         )
         # split data
@@ -216,8 +216,8 @@ def main(args):
             valid_ds = COCOCaptionDataset(
                 root, 
                 valid_captions,
-                # database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224_new.hdf5"
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224_new.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224_new.hdf5"
+                # database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224_new.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             valid_dl = DataLoader(valid_ds, batch_size=batch_size)
