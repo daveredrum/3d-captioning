@@ -6,19 +6,21 @@ import time
 import math
 import h5py
 import json
+import torchvision.transforms as transforms
 from PIL import Image
 
 def main(args):
     verbose = args.verbose
     coco_size = args.size
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
-    for phase in ["train", "val"]:
+    # for phase in ["train", "valid"]:
+    for phase in ["valid"]:
         print("phase: ", phase)
         # settings
         coco_dir = os.path.join(coco_root, "%s2014" % phase)
         coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
         coco_paths = None
-        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w")  
+        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d_new.hdf5" % (phase, coco_size)), "w")  
 
         # processing captions
         with open(coco_cap) as f:
@@ -41,16 +43,30 @@ def main(args):
 
         # processing images
         dataset = database.create_dataset("images", (len(coco_paths), 3 * coco_size * coco_size), dtype="float")
+        trans = transforms.Compose([
+            transforms.CenterCrop(coco_size),
+            transforms.ToTensor()
+        ])
+        norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         for i, path in enumerate(coco_paths):
             start_since = time.time()
-            image = np.array(Image.open(os.path.join(coco_dir, path)).resize((coco_size, coco_size)))
-            if len(image.shape) < 3:
-                temp = np.zeros((coco_size, coco_size, 3))
-                temp[:, :, 0] = temp[:, :, 1] = temp[:, :, 2] = image
-                image = np.reshape(temp, (-1))
+            # image = np.array(Image.open(os.path.join(coco_dir, path)).resize((coco_size, coco_size)))
+            # if len(image.shape) < 3:
+            #     temp = np.zeros((coco_size, coco_size, 3))
+            #     temp[:, :, 0] = temp[:, :, 1] = temp[:, :, 2] = image
+            #     image = np.reshape(temp, (-1))
+            # else:
+            #     image = np.reshape(image[:, :, :3], (-1))
+            # image = (image - np.min(image)) / (np.max(image) - np.min(image))
+            image = Image.open(os.path.join(coco_dir, path))
+            image = trans(image)
+            if image.size(0) < 3:
+                image = image.expand(3, image.size(1), image.size(2))
+                image = norm(image)
+                image = image.contiguous().view(-1).numpy()
             else:
-                image = np.reshape(image[:, :, :3], (-1))
-            image = (image - np.min(image)) / (np.max(image) - np.min(image))
+                image = norm(image)
+                image = image[:3, :, :].view(-1).numpy()
             dataset[i] = image
             exetime_s = time.time() - start_since
             eta_s = exetime_s * (len(coco_paths) - i)

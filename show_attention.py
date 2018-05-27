@@ -41,13 +41,13 @@ def main(args):
     print()
     model_name = encoder_path.split(".")[0]
     settings = model_name.split("_")
-    if settings[4] == "attention":
+    if settings[5] != "attention":
         print("invalid model, terminating...")
         return
     captions = COCO(
         pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
         pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"), 
-        [int(settings[6][2:]), math.floor(int(settings[6][2:]) / 10)]
+        [int(settings[6][3:]), int(settings[7][2:])]
     )
     # split data
     transformed_csv = captions.transformed_data[phase]

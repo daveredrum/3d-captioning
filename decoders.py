@@ -348,7 +348,7 @@ class AttentionEncoderDecoder():
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         sampled = []
-        states = self.decoder.init_hidden(visual_contexts)
+        states = self.decoder.init_hidden(visual_contexts[0])
         for i in range(max_length):
             outputs, states, _ = self.decoder.sample(visual_contexts, caption_inputs, states)
             # outputs = (1, 1, input_size)
@@ -360,17 +360,14 @@ class AttentionEncoderDecoder():
                 break
         sampled = torch.cat(sampled)
         # decoder indices to words
-        captions = []
-        for sequence in sampled.cpu().numpy():
-            caption = []
-            for index in sequence:
-                word = dict_idx2word[index]
-                caption.append(word)
-                if word == '<END>':
-                    break
-            captions.append(" ".join(caption))
+        caption = ['<START>']
+        for index in sampled.cpu().numpy():
+            word = dict_idx2word[index[0]]
+            caption.append(word)
+            if word == '<END>':
+                break
 
-        return captions
+        return caption
 
     # image_inputs = (1, visual_channels, visual_size, visual_size)
     # caption_inputs = (1)
@@ -379,7 +376,7 @@ class AttentionEncoderDecoder():
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         pairs = []
-        states = self.decoder.init_hidden(visual_contexts)
+        states = self.decoder.init_hidden(visual_contexts[0])
         for i in range(max_length):
             outputs, states, attention_weights = self.decoder.sample(visual_contexts, caption_inputs, states)
             # attentions = (visual_size, visual_size)
@@ -387,7 +384,7 @@ class AttentionEncoderDecoder():
             # predicted = (1, 1)
             caption_inputs = predicted.view(1)
             word = dict_idx2word[predicted.cpu().numpy()[0][0]]
-            up_weights = F.upsample_bilinear(attention_weights.view(1, 1, visual_contexts.size(2), visual_contexts.size(2)), size=(64, 64))
+            up_weights = F.upsample_bilinear(attention_weights.view(1, 1, visual_contexts[0].size(2), visual_contexts[0].size(2)), size=(64, 64))
             pairs.append((word, attention_weights.view(14, 14), up_weights.view(64, 64), states[0][0]))
             # pairs.append((word, attention_weights.view(14, 14), states[0][0]))
             if word == '<END>':

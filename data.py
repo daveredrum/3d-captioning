@@ -335,7 +335,7 @@ class Caption(object):
             # add start symbol
             caption = '<START> ' + caption
             # add end symbol
-            caption += ' <END>'
+            caption += '<END>'
             captions_list[i] = caption
             # filter out empty element
             caption = filter(None, caption)

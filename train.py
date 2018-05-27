@@ -196,7 +196,8 @@ def main(args):
         print()
         coco = COCO(
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
             [train_size, valid_size]
         )
         # split data
@@ -215,7 +216,8 @@ def main(args):
             valid_ds = COCOCaptionDataset(
                 root, 
                 valid_captions,
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224.hdf5"
+                # database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014_224.hdf5"
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014_224.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             valid_dl = DataLoader(valid_ds, batch_size=batch_size)
@@ -319,9 +321,9 @@ def main(args):
     print("start training....")
     print()
     if attention:
-        settings = "%s_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, valid_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
     else:
-        settings = "%s_%s_%s_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, valid_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
     encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention)
 

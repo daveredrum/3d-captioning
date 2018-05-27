@@ -3,6 +3,7 @@ import time
 import math
 from datetime import datetime
 import numpy as np
+from torch.optim.lr_scheduler import StepLR
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
@@ -195,10 +196,10 @@ class EncoderDecoderSolver():
             # get the indices for each predicted word
             _, indices = torch.max(sequence, 2)
             # chop the sequences according to their lengths
-            unpadded_sequence = [indices[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+            unpadded_sequence = [indices[i][:cap_lengths[i]-1].tolist() for i in range(cap_lengths.size(0))]
             # decode the indices
             for sequence in unpadded_sequence:
-                temp = []
+                temp = ['<START>']
                 for idx in sequence:
                     try:
                         temp.append(dictionary[idx])
@@ -207,7 +208,7 @@ class EncoderDecoderSolver():
                 decoded.append(" ".join(temp))
         elif phase == "valid":
             for i in range(len(sequence)):
-                temp = []
+                temp = ['<START>']
                 for j in range(len(sequence[i])):
                     try:
                         temp.append(dictionary[sequence[i][j]])
@@ -220,7 +221,9 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
+        # scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
         for epoch_id in range(epoch):
+            # scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
@@ -267,7 +270,7 @@ class EncoderDecoderSolver():
                     # inputs for decoder with attention
                     if attention: 
                         caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
-                        caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, 1:cap_lengths[0]]
+                        caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, 1:]
                         if self.cuda_flag:
                             visual_inputs = Variable(visuals).cuda()
                             caption_inputs = Variable(caption_inputs).cuda()
@@ -320,7 +323,7 @@ class EncoderDecoderSolver():
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
-                            log['train_perplexity'].append(np.exp(loss.data[0]))
+                            log['train_perplexity'].append(np.exp(loss.data[0]) - 1)
                         else:
                             # validate
                             valid_since = time.time()
@@ -328,7 +331,7 @@ class EncoderDecoderSolver():
                             # generate until <END> token
                             outputs = []
                             states = decoder.init_hidden(visual_contexts[0])
-                            max_length = 50
+                            max_length = cap_lengths[0].item() + 10
                             for idx in range(visual_contexts[0].size(0)):
                                 h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
                                 inputs = caption_inputs[idx, 0]
@@ -429,7 +432,8 @@ class EncoderDecoderSolver():
 
                             # save log
                             log['valid_loss'].append(loss.data[0])
-            
+            print(references["valid"][sorted(list(references["valid"].keys()))[0]])
+            print(candidates["valid"][sorted(list(candidates["valid"].keys()))[0]])
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
             # log['valid_loss'] = np.mean(log['valid_loss'])
