@@ -504,10 +504,13 @@ class COCO(object):
             # preprocess
             captions_list = self.preprocessed_data[phase].caption.values.tolist()
             for i in range(len(captions_list)):
-                # padding before all punctuations
+                # # padding before all punctuations
+                # caption = captions_list[i]
+                # caption = re.sub(r'([.,!?()])', r' \1 ', caption)
+                # caption = re.sub(r'\s{2,}', ' ', caption)
+                # remove all punctuations
                 caption = captions_list[i]
-                caption = re.sub(r'([.,!?()])', r' \1 ', caption)
-                caption = re.sub(r'\s{2,}', ' ', caption)
+                caption = re.sub(r'[^\w\s]', '', caption)
                 # truncate long captions
                 max_length = 18
                 caption = caption.split(" ")
