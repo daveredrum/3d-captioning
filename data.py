@@ -10,6 +10,7 @@ import math
 import h5py
 import pickle
 import random
+import string
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
@@ -507,6 +508,8 @@ class COCO(object):
                 caption = captions_list[i]
                 caption = re.sub(r'([.,!?()])', r' \1 ', caption)
                 caption = re.sub(r'\s{2,}', ' ', caption)
+                # strip punctuations
+                caption = caption.translate(None, string.punctuation)
                 # truncate long captions
                 max_length = 18
                 caption = caption.split(" ")
