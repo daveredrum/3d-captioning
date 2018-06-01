@@ -221,9 +221,9 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        # scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
+        scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
         for epoch_id in range(epoch):
-            # scheduler.step()
+            scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
