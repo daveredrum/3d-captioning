@@ -8,6 +8,8 @@ import copy
 import nrrd
 import math
 import h5py
+import pickle
+import random
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader

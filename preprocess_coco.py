@@ -11,18 +11,22 @@ from PIL import Image
 
 def main(args):
     verbose = args.verbose
+    phases = [args.phases]
+    if not phases:
+        phases = ["train", "valid"]
     coco_size = args.size
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
-    # for phase in ["train", "valid"]:
-    for phase in ["valid"]:
+    for phase in phases:
         print("phase: ", phase)
         # settings
         coco_dir = os.path.join(coco_root, "%s2014" % phase)
         coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
         coco_paths = None
-        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d_new.hdf5" % (phase, coco_size)), "w")  
+        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w")  
 
         # processing captions
+        print("creating preprocessed csv...")
+        print()
         with open(coco_cap) as f:
             cap_json = json.load(f)
             df_caption = {
@@ -40,34 +44,32 @@ def main(args):
             # shuffle the dataset
             coco_csv.to_csv(os.path.join(coco_root, "preprocessed", "coco_%s2014.caption.csv" % phase), index=False)
             coco_paths = coco_csv.file_name.values.tolist()
+            # create indices
+            print("creating indices for images...")
+            print()
+            index = {item:None for item in coco_csv.file_name.drop_duplicates().values.tolist()}
 
         # processing images
+        print("preprocessing the images...")
+        print()
         dataset = database.create_dataset("images", (len(coco_paths), 3 * coco_size * coco_size), dtype="float")
         trans = transforms.Compose([
+            transforms.Resize(coco_size),
             transforms.CenterCrop(coco_size),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-        norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         for i, path in enumerate(coco_paths):
             start_since = time.time()
-            # image = np.array(Image.open(os.path.join(coco_dir, path)).resize((coco_size, coco_size)))
-            # if len(image.shape) < 3:
-            #     temp = np.zeros((coco_size, coco_size, 3))
-            #     temp[:, :, 0] = temp[:, :, 1] = temp[:, :, 2] = image
-            #     image = np.reshape(temp, (-1))
-            # else:
-            #     image = np.reshape(image[:, :, :3], (-1))
-            # image = (image - np.min(image)) / (np.max(image) - np.min(image))
-            image = Image.open(os.path.join(coco_dir, path))
-            image = trans(image)
-            if image.size(0) < 3:
-                image = image.expand(3, image.size(1), image.size(2))
-                image = norm(image)
-                image = image.contiguous().view(-1).numpy()
+            if not index[path]:
+                image = Image.open(os.path.join(coco_dir, path)).convert('RGB')
+                image = trans(image)
+                image = image.view(-1).numpy()
+                dataset[i] = image
+                index[path] = i
             else:
-                image = norm(image)
-                image = image[:3, :, :].view(-1).numpy()
-            dataset[i] = image
+                image = dataset[index[path]]
+                dataset[i] = image
             exetime_s = time.time() - start_since
             eta_s = exetime_s * (len(coco_paths) - i)
             eta_m = math.floor(eta_s / 60)
@@ -78,6 +80,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", type=int, default=1, help="show report")
+    parser.add_argument("--phases", type=str, default=None, help="train/valid")
     parser.add_argument("--size", type=int, default=64, help="height/width of the images")
     args = parser.parse_args()
     print(args)

@@ -192,25 +192,6 @@ class AttentionEncoderVGG16(nn.Module):
         # (batch_size, 512)
         global_features = self.avg_pool(original_features).view(batch_size, 512)
         global_features = self.globle_mapping(global_features)
-        # # rescale original_features
-        # original_features = original_features.view(batch_size, -1)
-        # visual_min = original_features.min(1)[0].view(batch_size, 1).expand_as(original_features)
-        # visual_max = original_features.max(1)[0].view(batch_size, 1).expand_as(original_features)
-        # original_features = (original_features - visual_min) / (visual_max - visual_min)
-        # original_features = original_features.view(batch_size, visual_channels, visual_size, visual_size)
-        # # rescale area_features
-        # area_features = area_features.view(batch_size, -1)
-        # visual_min = area_features.min(1)[0].view(batch_size, 1).expand_as(area_features)
-        # visual_max = area_features.max(1)[0].view(batch_size, 1).expand_as(area_features)
-        # area_features = (area_features - visual_min) / (visual_max - visual_min)
-        # area_features = area_features.view(batch_size, visual_channels, visual_size * visual_size)
-        # # rescale global_features
-        # global_features = global_features.view(batch_size, -1)
-        # visual_min = global_features.min(1)[0].view(batch_size, 1).expand_as(global_features)
-        # visual_max = global_features.max(1)[0].view(batch_size, 1).expand_as(global_features)
-        # global_features = (global_features - visual_min) / (visual_max - visual_min)
-        # global_features = global_features.view(batch_size, visual_channels)
-
 
         return original_features, global_features, area_features
 
@@ -249,25 +230,6 @@ class AttentionEncoderVGG16BN(nn.Module):
         # (batch_size, 512)
         global_features = self.avg_pool(original_features).view(batch_size, 512)
         global_features = self.globle_mapping(global_features)
-        # rescale original_features
-        original_features = original_features.view(batch_size, -1)
-        visual_min = original_features.min(1)[0].view(batch_size, 1).expand_as(original_features)
-        visual_max = original_features.max(1)[0].view(batch_size, 1).expand_as(original_features)
-        original_features = (original_features - visual_min) / (visual_max - visual_min)
-        original_features = original_features.view(batch_size, visual_channels, visual_size, visual_size)
-        # rescale area_features
-        area_features = area_features.view(batch_size, -1)
-        visual_min = area_features.min(1)[0].view(batch_size, 1).expand_as(area_features)
-        visual_max = area_features.max(1)[0].view(batch_size, 1).expand_as(area_features)
-        area_features = (area_features - visual_min) / (visual_max - visual_min)
-        area_features = area_features.view(batch_size, visual_channels, visual_size * visual_size)
-        # rescale global_features
-        global_features = global_features.view(batch_size, -1)
-        visual_min = global_features.min(1)[0].view(batch_size, 1).expand_as(global_features)
-        visual_max = global_features.max(1)[0].view(batch_size, 1).expand_as(global_features)
-        global_features = (global_features - visual_min) / (visual_max - visual_min)
-        global_features = global_features.view(batch_size, visual_channels)
-
 
         return original_features, global_features, area_features
 

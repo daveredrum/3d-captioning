@@ -351,14 +351,14 @@ class EncoderDecoderSolver():
 
                             # decode the outputs
                             outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
-                            log['valid_time'].append(time.time() - valid_since)
-                            
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
                                     candidates[phase][model_id] = [output]
                                 else:
                                     candidates[phase][model_id].append(output)
+                            # save log
+                            log['valid_time'].append(time.time() - valid_since)
 
                     # decoder without attention
                     else:
