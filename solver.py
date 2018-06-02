@@ -4,7 +4,7 @@ import math
 import random
 from datetime import datetime
 import numpy as np
-import torch.nn as nn
+from torch.nn.utils import clip_grad_value_
 from torch.optim.lr_scheduler import StepLR
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
@@ -339,9 +339,9 @@ class EncoderDecoderSolver():
                             # back prop
                             loss.backward()
                             # clipping the gradient
-                            nn.utils.clip_grad_value_(encoder.global_mapping.parameters(), 5)
-                            nn.utils.clip_grad_value_(encoder.area_mapping.parameters(), 5)
-                            nn.utils.clip_grad_value_(decoder.parameters(), 5)
+                            clip_grad_value_(encoder.global_mapping.parameters(), 5)
+                            clip_grad_value_(encoder.area_mapping.parameters(), 5)
+                            clip_grad_value_(decoder.parameters(), 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
