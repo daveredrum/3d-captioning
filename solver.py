@@ -4,7 +4,6 @@ import math
 import random
 from datetime import datetime
 import numpy as np
-from torch.nn.utils import clip_grad_value_
 from torch.optim.lr_scheduler import StepLR
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
@@ -220,6 +219,14 @@ class EncoderDecoderSolver():
 
         return decoded
 
+    def _clip_grad_value_(self, params, clip_value):
+        '''
+        in-place gradient clipping
+        '''
+        clip_value = float(clip_value)
+        for p in params:
+            p.grad.data.clamp_(min=-clip_value, max=clip_value)
+
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
@@ -339,9 +346,9 @@ class EncoderDecoderSolver():
                             # back prop
                             loss.backward()
                             # clipping the gradient
-                            clip_grad_value_(encoder.global_mapping.parameters(), 5)
-                            clip_grad_value_(encoder.area_mapping.parameters(), 5)
-                            clip_grad_value_(decoder.parameters(), 5)
+                            self._clip_grad_value_(encoder.global_mapping.parameters(), 5)
+                            self._clip_grad_value_(encoder.area_mapping.parameters(), 5)
+                            self._clip_grad_value_(decoder.parameters(), 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
