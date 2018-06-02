@@ -309,6 +309,8 @@ class EncoderDecoderSolver():
                                     inputs = predicted.max(2)[1].view(visual_contexts.size(0))
                                 outputs.append(predicted)
                             outputs = torch.cat(outputs, dim=1)
+                            print(caption_targets.size())
+                            print(outputs.size())
                             # # no teacher forcing
                             # outputs = []
                             # inputs = caption_inputs[:, 0]
