@@ -1,8 +1,10 @@
 import torch
 import time
 import math
+import random
 from datetime import datetime
 import numpy as np
+import torch.nn as nn
 from torch.optim.lr_scheduler import StepLR
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
@@ -290,9 +292,23 @@ class EncoderDecoderSolver():
                             forward_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
-                            # teacher forcing
+                            # # teacher forcing
+                            # states = decoder.init_hidden(visual_contexts[0])
+                            # outputs = decoder(visual_contexts, caption_inputs, states)
+                            # schedule sampling
+                            inputs = caption_inputs[:, 0]
+                            outputs = []
                             states = decoder.init_hidden(visual_contexts[0])
-                            outputs = decoder(visual_contexts, caption_inputs, states)
+                            seq_length = caption_inputs.size(1)
+                            prob = 25 / (25 + np.exp((epoch_id + 1) / 25))
+                            for step in range(seq_length - 1):
+                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
+                                if random.random() < prob:
+                                    inputs = caption_inputs[:, step + 1]
+                                else:
+                                    inputs = predicted.max(2)[1].view(visual_contexts.size(0))
+                                outputs.append(predicted)
+                            outputs = torch.cat(outputs, dim=1)
                             # # no teacher forcing
                             # outputs = []
                             # inputs = caption_inputs[:, 0]
@@ -319,7 +335,13 @@ class EncoderDecoderSolver():
                             # backward pass
                             # save log
                             backward_since = time.time()
+                            # back prop
                             loss.backward()
+                            # clipping the gradient
+                            nn.utils.clip_grad_value_(encoder.global_mapping.parameters(), 5)
+                            nn.utils.clip_grad_value_(encoder.area_mapping.parameters(), 5)
+                            nn.utils.clip_grad_value_(decoder.parameters(), 5)
+                            # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])

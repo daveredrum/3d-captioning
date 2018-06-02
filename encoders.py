@@ -204,7 +204,7 @@ class AttentionEncoderVGG16BN(nn.Module):
             *list(vgg16.features.children())[:-1],
         )
         self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
-        self.globle_mapping = nn.Sequential(
+        self.global_mapping = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU()
         )
@@ -229,7 +229,7 @@ class AttentionEncoderVGG16BN(nn.Module):
         area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, visual_channels, -1)
         # (batch_size, 512)
         global_features = self.avg_pool(original_features).view(batch_size, 512)
-        global_features = self.globle_mapping(global_features)
+        global_features = self.global_mapping(global_features)
 
         return original_features, global_features, area_features
 
