@@ -307,7 +307,7 @@ class EncoderDecoderSolver():
                                     if random.random() < prob:
                                         inputs = caption_inputs[:, step + 1]
                                     else:
-                                        inputs = predicted.max(2)[1].view(visual_contexts.size(0))
+                                        inputs = predicted.max(2)[1].view(visual_contexts[0].size(0))
                                 outputs.append(predicted)
                             outputs = torch.cat(outputs, dim=1)
                             # # no teacher forcing
