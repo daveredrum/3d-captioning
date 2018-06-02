@@ -307,7 +307,8 @@ class EncoderDecoderSolver():
                             outputs = []
                             states = decoder.init_hidden(visual_contexts[0])
                             seq_length = caption_inputs.size(1)
-                            prob = 25 / (25 + np.exp((epoch_id + 1) / 25))
+                            convg = int(epoch * 0.75)
+                            prob = convg / (convg + np.exp((epoch_id + 1) / convg))
                             for step in range(seq_length):
                                 predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
                                 if step != seq_length - 1:
