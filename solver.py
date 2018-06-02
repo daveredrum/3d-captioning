@@ -347,8 +347,8 @@ class EncoderDecoderSolver():
                             # back prop
                             loss.backward()
                             # clipping the gradient
-                            self._clip_grad_value_(encoder.global_mapping.parameters(), 8)
-                            self._clip_grad_value_(encoder.area_mapping.parameters(), 8)
+                            # self._clip_grad_value_(encoder.global_mapping.parameters(), 8)
+                            # self._clip_grad_value_(encoder.area_mapping.parameters(), 8)
                             self._clip_grad_value_(decoder.parameters(), 8)
                             # optimize
                             self.optimizer.step()
