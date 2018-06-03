@@ -19,7 +19,10 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     print("\ninitializing model...")
     print()
-    model = encoders.AttentionVGG16BN().cuda()
+    if args.pretrained == "vgg16_bn":
+        model = encoders.AttentionVGG16BN().cuda()
+    elif args.pretrained == "resnet101":
+        model = encoders.AttentionResNet101().cuda()
     for phase in phases:
         print(phase)
         print()
@@ -31,8 +34,11 @@ def main(args):
         dataloader = DataLoader(dataset, batch_size=32)
         if not os.path.exists("data/"):
             os.mkdir("data/")
-        database = h5py.File("data/{}_feature_vgg16.hdf5".format(phase), "w", libver='latest')
-        storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
+        database = h5py.File("data/{}_feature_{}.hdf5".format(phase, args.pretrained), "w", libver='latest')
+        if args.pretrained == "vgg16_bn":
+            storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
+        elif args.pretrained == "resnet101":
+            storage = database.create_dataset("features", (len(dataset), 2048 * 7 * 7), dtype="float")
         offset = 0
         print("extracting...")
         print()
@@ -51,6 +57,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--pretrained", type=str, help="vgg16_bn/resnet101")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
     parser.add_argument("--phases", type=str, default=None, help="train/valid")
     args = parser.parse_args()

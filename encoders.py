@@ -196,6 +196,25 @@ class AttentionEncoderVGG16(nn.Module):
         return original_features, global_features, area_features
 
 # for attention
+class AttentionResNet101(nn.Module):
+    def __init__(self):
+        super(AttentionResNet101, self).__init__()
+        resnet = torchmodels.resnet101(pretrained=True)
+        self.resnet = nn.Sequential(
+            *list(resnet.children())[:-2],
+        )
+
+
+    def forward(self, inputs):
+        '''
+        original_features: (batch_size, 2048 * 7 * 7)
+        '''
+        original_features = self.vgg16(inputs)
+        original_features = original_features.view(original_features.size(0), -1)
+
+        return original_features
+
+# for attention
 class AttentionVGG16BN(nn.Module):
     def __init__(self):
         super(AttentionVGG16BN, self).__init__()
