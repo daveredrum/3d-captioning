@@ -209,7 +209,7 @@ class AttentionResNet101(nn.Module):
         '''
         original_features: (batch_size, 2048 * 7 * 7)
         '''
-        original_features = self.vgg16(inputs)
+        original_features = self.resnet(inputs)
         original_features = original_features.view(original_features.size(0), -1)
 
         return original_features
