@@ -18,7 +18,7 @@ def main():
         print()
         dataset = data.FeatureDataset(
             root="/mnt/raid/davech2y/COCO_2014/{}2014".format(phase),
-            csv_file="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014.caption.csv".format(phase)
+            csv_file=pd.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014.caption.csv".format(phase))
         )
         dataloader = DataLoader(dataset, batch_size=50)
         database = h5py.File("/mnt/raid/davech2y/COCO_2014/preprocessed/{}_feature_vgg16.hdf5".format(phase), "w")
