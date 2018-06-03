@@ -43,11 +43,18 @@ def main(args):
             coco_csv = coco_csv.sample(frac=1).reset_index(drop=True)
             # shuffle the dataset
             coco_csv.to_csv(os.path.join(coco_root, "preprocessed", "coco_%s2014.caption.csv" % phase), index=False)
-            coco_paths = coco_csv.file_name.values.tolist()
+            coco_paths = coco_csv.file_name.drop_duplicates().values.tolist()
             # create indices
             print("creating indices for images...")
             print()
-            index = {item:None for item in coco_csv.file_name.drop_duplicates().values.tolist()}
+            index = {coco_paths[i]: i for i in range(len(coco_paths))}
+            __all = coco_csv.file_name.values.tolist()
+            mapping = {i: index[__all[i]] for i in range(len(__all))}
+            print("saving indices...")
+            print()
+            with open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase)) as f:
+                json.dump(mapping, f)
+
 
         # processing images
         print("preprocessing the images...")
