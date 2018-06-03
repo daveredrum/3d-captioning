@@ -25,7 +25,7 @@ def main(args):
         coco_dir = os.path.join(coco_root, "%s2014" % phase)
         coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
         coco_paths = None
-        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w", libver='latest')  
+        database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w")  
 
         # processing captions
         print("creating preprocessed csv...")
