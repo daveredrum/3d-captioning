@@ -143,6 +143,27 @@ class COCOCaptionDataset(Dataset):
 
         return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
+class FeatureDataset(Dataset):
+    def __init__(self, root, csv_file):
+        self.root = root
+        self.names = csv_file.file_name.values.tolist()
+        self.trans = transforms.Compose([
+            transforms.Resize(224),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    def __len__(self):
+        return len(self.names)
+
+    def __getitem__(self, idx):
+        path = self.names[idx]
+        image = Image.open(os.path.join(self.root, path)).convert('RGB')
+        image = self.trans(image)
+
+        return image
+
 # pipeline dataset for the encoder-decoder of image-caption
 class ImageCaptionDataset(Dataset):
     def __init__(self, root_dir, csv_file, database):

@@ -196,13 +196,28 @@ class AttentionEncoderVGG16(nn.Module):
         return original_features, global_features, area_features
 
 # for attention
-class AttentionEncoderVGG16BN(nn.Module):
+class AttentionVGG16BN(nn.Module):
     def __init__(self):
-        super(AttentionEncoderVGG16BN, self).__init__()
+        super(AttentionVGG16BN, self).__init__()
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],
         )
+
+
+    def forward(self, inputs):
+        '''
+        original_features: (batch_size, 512 * 14 * 14)
+        '''
+        original_features = self.vgg16(inputs)
+        original_features = original_features.view(original_features.size(0), -1)
+
+        return original_features
+
+# for attention
+class AttentionEncoderVGG16BN(nn.Module):
+    def __init__(self):
+        super(AttentionEncoderVGG16BN, self).__init__()
         self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
         self.global_mapping = nn.Sequential(
             nn.Linear(512, 512),
@@ -220,13 +235,11 @@ class AttentionEncoderVGG16BN(nn.Module):
         global_features: (batch_size, 512)
         area_features: (batch_size, 512, 196)
         '''
-        # get sizes
-        # (batch_size, 512, 14, 14)
-        original_features = self.vgg16(inputs)
-        batch_size, visual_channels, visual_size, visual_size = original_features.size()
+        batch_size = inputs.size(0)
+        original_features = inputs.view(inputs.size(0), 512, 14, 14)
         # (batch_size, 512, 196)
-        area_features = original_features.view(batch_size, visual_channels, -1).transpose(2, 1).contiguous()
-        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, visual_channels, -1)
+        area_features = original_features.view(batch_size, 512, -1).transpose(2, 1).contiguous()
+        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, 512, -1)
         # (batch_size, 512)
         global_features = self.avg_pool(original_features).view(batch_size, 512)
         global_features = self.global_mapping(global_features)
