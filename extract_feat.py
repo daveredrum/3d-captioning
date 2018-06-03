@@ -29,7 +29,9 @@ def main(args):
             database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014_224.hdf5".format(phase)
         )
         dataloader = DataLoader(dataset, batch_size=32)
-        database = h5py.File("/mnt/raid/davech2y/COCO_2014/preprocessed/{}_feature_vgg16.hdf5".format(phase), "w", libver='latest')
+        if not os.path.exists("data/"):
+            os.mkdir("data/")
+        database = h5py.File("data/{}_feature_vgg16.hdf5".format(phase), "w", libver='latest')
         storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
         offset = 0
         print("extracting...")

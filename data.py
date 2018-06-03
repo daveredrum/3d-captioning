@@ -11,6 +11,7 @@ import h5py
 import pickle
 import random
 import string
+import json
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
@@ -103,7 +104,8 @@ class CaptionDataset(Dataset):
 
 # dataset for coco
 class COCOCaptionDataset(Dataset):
-    def __init__(self, root_dir, csv_file, database):
+    def __init__(self, index_path, csv_file, database):
+        self.index = json.load(open(index_path, "r"))
         self.model_ids = copy.deepcopy(csv_file.image_id.values.tolist())
         self.caption_lists = copy.deepcopy(csv_file.caption.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
@@ -114,7 +116,7 @@ class COCOCaptionDataset(Dataset):
         # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
             str(self.model_ids[i]),
-            i,
+            self.index[i],
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
@@ -132,14 +134,9 @@ class COCOCaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         # return (model_id, image_inputs, padded_caption, cap_length)
-        image = self.database["images"][self.data_pairs[idx][1]]
-        size = int(np.sqrt(image.shape[0] / 3))
-        image = np.reshape(image, (3, size, size))
+        image = self.database["features"][self.data_pairs[idx][1]]
+        image = np.reshape(image, (512, 14, 14))
         image = torch.FloatTensor(image)
-        # image = np.array(image)[:, :, :3]
-        # image = Image.fromarray(image)
-        # if self.transform:
-        #     image = self.transform(image)
 
         return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
 
