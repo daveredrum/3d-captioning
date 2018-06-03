@@ -53,8 +53,8 @@ def main(args):
             index = {coco_paths[i]: i for i in range(len(coco_paths))}
             __all = coco_csv.file_name.values.tolist()
             mapping = {i: index[__all[i]] for i in range(len(__all))}
-            print("images:", len(coco_paths))
-            print("pairs:", len(__all))
+            print("images:", len(index.keys()))
+            print("pairs:", len(mapping.keys()))
             print("\nsaving indices...")
             print()
             with open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase), "w") as f:
