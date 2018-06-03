@@ -53,7 +53,11 @@ def main(args):
     transformed_csv = captions.transformed_data[phase]
     dict_word2idx = captions.dict_word2idx
     dict_idx2word = captions.dict_idx2word
-    dataset = COCOCaptionDataset(None, transformed_csv, "/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014_224.hdf5".format(phase))
+    dataset = COCOCaptionDataset(
+        "/mnt/raid/davech2y/COCO_2014/preprocessed/{}_index.json".format(phase), 
+        transformed_csv, 
+        "data/{}_feature_vgg16.hdf5".format(phase)
+    )
     dataloader = DataLoader(dataset, batch_size=1)
 
     # testing
