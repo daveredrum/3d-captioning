@@ -73,15 +73,10 @@ def main(args):
         ])
         for i, path in enumerate(coco_paths):
             start_since = time.time()
-            if not index[path]:
-                image = Image.open(os.path.join(coco_dir, path)).convert('RGB')
-                image = trans(image)
-                image = image.view(-1).numpy()
-                dataset[i] = image
-                index[path] = i
-            else:
-                image = dataset[index[path]]
-                dataset[i] = image
+            image = Image.open(os.path.join(coco_dir, path)).convert('RGB')
+            image = trans(image)
+            image = image.view(-1).numpy()
+            dataset[i] = image
             exetime_s = time.time() - start_since
             eta_s = exetime_s * (len(coco_paths) - i)
             eta_m = math.floor(eta_s / 60)
