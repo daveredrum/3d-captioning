@@ -299,25 +299,25 @@ class EncoderDecoderSolver():
                             forward_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
-                            # # teacher forcing
-                            # states = decoder.init_hidden(visual_contexts[0])
-                            # outputs = decoder(visual_contexts, caption_inputs, states)
-                            # schedule sampling
-                            inputs = caption_inputs[:, 0]
-                            outputs = []
+                            # teacher forcing
                             states = decoder.init_hidden(visual_contexts[0])
-                            seq_length = caption_inputs.size(1)
-                            convg = int(epoch * 0.9)
-                            prob = convg / (convg + np.exp((epoch_id + 1) / convg))
-                            for step in range(seq_length):
-                                predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
-                                if step != seq_length - 1:
-                                    if random.random() < prob:
-                                        inputs = caption_inputs[:, step + 1]
-                                    else:
-                                        inputs = predicted.max(2)[1].view(visual_contexts[0].size(0))
-                                outputs.append(predicted)
-                            outputs = torch.cat(outputs, dim=1)
+                            outputs = decoder(visual_contexts, caption_inputs, states)
+                            # # schedule sampling
+                            # inputs = caption_inputs[:, 0]
+                            # outputs = []
+                            # states = decoder.init_hidden(visual_contexts[0])
+                            # seq_length = caption_inputs.size(1)
+                            # convg = int(epoch * 0.9)
+                            # prob = convg / (convg + np.exp((epoch_id + 1) / convg))
+                            # for step in range(seq_length):
+                            #     predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
+                            #     if step != seq_length - 1:
+                            #         if random.random() < prob:
+                            #             inputs = caption_inputs[:, step + 1]
+                            #         else:
+                            #             inputs = predicted.max(2)[1].view(visual_contexts[0].size(0))
+                            #     outputs.append(predicted)
+                            # outputs = torch.cat(outputs, dim=1)
                             # # no teacher forcing
                             # outputs = []
                             # inputs = caption_inputs[:, 0]
