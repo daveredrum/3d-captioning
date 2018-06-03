@@ -11,12 +11,16 @@ import argparse
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-def main():
+def main(args):
+    if not args.phases:
+        phases = ["train", "valid"]
+    else:
+        phases = [args.phases]
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
     print("\ninitializing model...")
     print()
     model = encoders.AttentionVGG16BN().cuda()
-    for phase in ["train", "valid"]:
+    for phase in phases:
         print(phase)
         print()
         print("preparing...")
@@ -44,4 +48,8 @@ def main():
             print("preprocessed and stored: %d, ETA: %dm %ds" % (offset, eta_m, eta_s - eta_m * 60))
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gpu", type=str, help="specify the graphic card")
+    parser.add_argument("--phases", type=str, default=None, help="train/valid")
+    args = parser.parse_args()
+    main(args)
