@@ -31,7 +31,7 @@ def main(args):
         dataset = data.FeatureDataset(
             database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014_224.hdf5".format(phase)
         )
-        dataloader = DataLoader(dataset, batch_size=32)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size)
         if not os.path.exists("data/"):
             os.mkdir("data/")
         database = h5py.File("data/{}_feature_{}.hdf5".format(phase, args.pretrained), "w", libver='latest')
@@ -58,6 +58,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pretrained", type=str, help="vgg16_bn/resnet101")
+    parser.add_argument("--batch_size", type=int)
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
     parser.add_argument("--phases", type=str, default=None, help="train/valid")
     args = parser.parse_args()
