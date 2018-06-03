@@ -211,13 +211,13 @@ def main(args):
             train_ds = COCOCaptionDataset(
                 "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
                 train_captions, 
-                database="data/train_feature_vgg16.hdf5"
+                database="data/train_feature_{}.hdf5".format(pretrained)
             )
             valid_ds = COCOCaptionDataset(
                 "/mnt/raid/davech2y/COCO_2014/preprocessed/valid_index.json", 
                 # "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
                 valid_captions,
-                database="data/valid_feature_vgg16.hdf5"
+                database="data/valid_feature_{}.hdf5".format(pretrained)
                 # database="data/train_feature_vgg16.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
