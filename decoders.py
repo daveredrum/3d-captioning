@@ -132,7 +132,7 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.comp_visual = nn.Linear(visual_channels, hidden_size, bias=False)
+        self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
         self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
         self.output_layer = nn.Linear(hidden_size, 1, bias=False)
         # initialize weights
