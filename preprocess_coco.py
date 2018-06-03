@@ -55,7 +55,7 @@ def main(args):
             mapping = {i: index[__all[i]] for i in range(len(__all))}
             print("saving indices...")
             print()
-            with open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase)) as f:
+            with open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase), "w") as f:
                 json.dump(mapping, f)
 
 
