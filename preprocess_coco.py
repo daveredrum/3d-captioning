@@ -77,9 +77,9 @@ def main(args):
             image = trans(image)
             if image.size(0) < 3:
                 image = image.expand(3, image.size(1), image.size(2))
-                image = norm(image)
             else:
                 image = image[:3]
+            image = norm(image)
             image = image.view(-1).numpy()
             dataset[i] = image
             exetime_s = time.time() - start_since
