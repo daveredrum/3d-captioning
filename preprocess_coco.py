@@ -69,12 +69,17 @@ def main(args):
             transforms.Resize(coco_size),
             transforms.CenterCrop(coco_size),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+        norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         for i, path in enumerate(coco_paths):
             start_since = time.time()
-            image = Image.open(os.path.join(coco_dir, path)).convert('RGB')
+            image = Image.open(os.path.join(coco_dir, path))
             image = trans(image)
+            if image.size(0) < 3:
+                image = image.expand(3, image.size(1), image.size(2))
+                image = norm(image)
+            else:
+                image = image[:3]
             image = image.view(-1).numpy()
             dataset[i] = image
             exetime_s = time.time() - start_since
