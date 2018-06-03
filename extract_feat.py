@@ -6,10 +6,15 @@ import encoders
 import data
 import time
 import math
+import os
 import argparse
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 def main():
+    os.environ["CUDA_VISIBLE_DEVICES"] = 2
+    print("initializing model...")
+    print()
     model = encoders.AttentionVGG16BN().cuda()
     for phase in ["train", "valid"]:
         print(phase)
@@ -28,6 +33,7 @@ def main():
         print()
         for images in dataloader:
             start_since = time.time()
+            images = Variable(images).cuda()
             features = model(images)
             batch_size = features.size(0)
             for idx in range(batch_size):
