@@ -80,7 +80,7 @@ def main(args):
             else:
                 image = image[:3]
             image = norm(image)
-            image = image.view(-1).numpy()
+            image = image.contiguous().view(-1).numpy()
             dataset[i] = image
             exetime_s = time.time() - start_since
             eta_s = exetime_s * (len(coco_paths) - i)
