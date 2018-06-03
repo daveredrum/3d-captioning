@@ -12,7 +12,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 def main():
-    os.environ["CUDA_VISIBLE_DEVICES"] = 2
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
     print("initializing model...")
     print()
     model = encoders.AttentionVGG16BN().cuda()
