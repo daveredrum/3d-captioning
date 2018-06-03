@@ -12,6 +12,9 @@ from torch.utils.data import DataLoader
 def main():
     model = encoders.AttentionVGG16BN().cuda()
     for phase in ["train", "valid"]:
+        print(phase)
+        print()
+        print("preparing...")
         print()
         dataset = data.FeatureDataset(
             root="/mnt/raid/davech2y/COCO_2014/{}2014".format(phase),
@@ -21,6 +24,8 @@ def main():
         database = h5py.File("/mnt/raid/davech2y/COCO_2014/preprocessed/{}_feature_vgg16.hdf5".format(phase), "w")
         storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
         offset = 0
+        print("extracting...")
+        print()
         for images in dataloader:
             start_since = time.time()
             features = model(images)
