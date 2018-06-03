@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-    print("initializing model...")
+    print("\ninitializing model...")
     print()
     model = encoders.AttentionVGG16BN().cuda()
     for phase in ["train", "valid"]:
