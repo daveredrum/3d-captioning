@@ -18,7 +18,10 @@ def main(args):
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
     for phase in phases:
         print("phase: ", phase)
+        print()
         # settings
+        print("creating database...")
+        print()
         coco_dir = os.path.join(coco_root, "%s2014" % phase)
         coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
         coco_paths = None
