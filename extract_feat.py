@@ -16,7 +16,7 @@ def main(args):
         phases = ["train", "valid"]
     else:
         phases = [args.phases]
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     print("\ninitializing model...")
     print()
     model = encoders.AttentionVGG16BN().cuda()
