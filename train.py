@@ -233,7 +233,7 @@ def main(args):
                     print()
                     encoder = AttentionEncoderResNet101().cuda()
                 else:
-                    print("initializing encoder: resnet50....")
+                    print("initializing encoder: resnet101....")
                     print()
                     encoder = EncoderResNet101().cuda()
             elif pretrained == "vgg16_bn":
