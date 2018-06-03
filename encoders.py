@@ -64,10 +64,10 @@ class Encoder2D(nn.Module):
         
         return outputs
 
-class EncoderResnet50(nn.Module):
+class EncoderResNet101(nn.Module):
     def __init__(self):
-        super(EncoderResnet50, self).__init__()
-        resnet = torchmodels.resnet50(pretrained=True)
+        super(EncoderResNet101, self).__init__()
+        resnet = torchmodels.resnet101(pretrained=True)
         modules = list(resnet.children())[:-1]
         self.resnet = nn.Sequential(*modules)
         self.fc_layer = nn.Sequential(
@@ -158,44 +158,6 @@ class EncoderVGG16BN(nn.Module):
         return outputs
 
 # for attention
-class AttentionEncoderVGG16(nn.Module):
-    def __init__(self):
-        super(AttentionEncoderVGG16, self).__init__()
-        vgg16 = torchmodels.vgg16(pretrained=True)
-        self.vgg16 = nn.Sequential(
-            *list(vgg16.features.children())[:-1],
-        )
-        self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
-        self.globle_mapping = nn.Sequential(
-            nn.Linear(512, 512),
-            nn.ReLU()
-        )
-        self.area_mapping = nn.Sequential(
-            nn.Linear(512, 512),
-            nn.ReLU()
-        )
-
-
-    def forward(self, inputs):
-        '''
-        original_features: (batch_size, 512, 14, 14)
-        global_features: (batch_size, 512)
-        area_features: (batch_size, 512, 196)
-        '''
-        # get sizes
-        # (batch_size, 512, 14, 14)
-        original_features = self.vgg16(inputs)
-        batch_size, visual_channels, visual_size, visual_size = original_features.size()
-        # (batch_size, 512, 196)
-        area_features = original_features.view(batch_size, visual_channels, -1).transpose(2, 1).contiguous()
-        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, visual_channels, -1)
-        # (batch_size, 512)
-        global_features = self.avg_pool(original_features).view(batch_size, 512)
-        global_features = self.globle_mapping(global_features)
-
-        return original_features, global_features, area_features
-
-# for attention
 class AttentionResNet101(nn.Module):
     def __init__(self):
         super(AttentionResNet101, self).__init__()
@@ -213,6 +175,38 @@ class AttentionResNet101(nn.Module):
         original_features = original_features.view(original_features.size(0), -1)
 
         return original_features
+
+# for attention
+class AttentionEncoderResNet101(nn.Module):
+    def __init__(self):
+        super(AttentionEncoderResNet101, self).__init__()
+        self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=7)
+        self.global_mapping = nn.Sequential(
+            nn.Linear(2048, 512),
+            nn.ReLU()
+        )
+        self.area_mapping = nn.Sequential(
+            nn.Linear(2048, 512),
+            nn.ReLU()
+        )
+
+
+    def forward(self, inputs):
+        '''
+        original_features: (batch_size, 2048, 7, 7)
+        global_features: (batch_size, 512)
+        area_features: (batch_size, 512, 49)
+        '''
+        batch_size = inputs.size(0)
+        original_features = inputs.view(inputs.size(0), 2048, 7, 7)
+        # (batch_size, 512, 196)
+        area_features = original_features.view(batch_size, 2048, -1).transpose(2, 1).contiguous()
+        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, 2048, -1)
+        # (batch_size, 512)
+        global_features = self.avg_pool(original_features).view(batch_size, 2048)
+        global_features = self.global_mapping(global_features)
+
+        return original_features, global_features, area_features
 
 # for attention
 class AttentionVGG16BN(nn.Module):
@@ -264,22 +258,6 @@ class AttentionEncoderVGG16BN(nn.Module):
         global_features = self.global_mapping(global_features)
 
         return original_features, global_features, area_features
-
-# for attention
-class AttentionEncoderResnet50(nn.Module):
-    def __init__(self):
-        super(AttentionEncoderResnet50, self).__init__()
-        resnet = torchmodels.resnet50(pretrained=True)
-        self.resnet = nn.Sequential(
-            *list(resnet.children())[:-2],
-            # (2048, 7, 7)
-        )
-        
-    
-    def forward(self, inputs):
-        outputs = self.resnet(inputs)
-        
-        return outputs
 
 
 class Encoder3D(nn.Module):

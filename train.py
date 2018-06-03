@@ -227,24 +227,15 @@ def main(args):
                 'valid': valid_dl
             }
             # initialize the encoder
-            if pretrained == "resnet50":
+            if pretrained == "resnet101":
                 if attention:
-                    print("initializing encoder: resnet50 with attention....")
+                    print("initializing encoder: resnet101 with attention....")
                     print()
-                    encoder = AttentionEncoderResnet50().cuda()
+                    encoder = AttentionEncoderResNet101().cuda()
                 else:
                     print("initializing encoder: resnet50....")
                     print()
-                    encoder = EncoderResnet50().cuda()
-            elif pretrained == "vgg16":
-                if attention:
-                    print("initializing encoder: vgg16 with attention....")
-                    print()
-                    encoder = AttentionEncoderVGG16().cuda()
-                else:
-                    print("initializing encoder: vgg16....")
-                    print()
-                    encoder = EncoderVGG16().cuda()
+                    encoder = EncoderResNet101().cuda()
             elif pretrained == "vgg16_bn":
                 if attention:
                     print("initializing encoder: vgg16_bn with attention....")
