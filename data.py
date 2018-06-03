@@ -116,7 +116,7 @@ class COCOCaptionDataset(Dataset):
         # initialize data pairs: (model_id, image_path, caption, cap_length)
         data_pairs = [(
             str(self.model_ids[i]),
-            self.index[i],
+            self.index[str(i)],
             self.caption_lists[i],
             len(self.caption_lists[i])
         ) for i in range(self.__len__())]
