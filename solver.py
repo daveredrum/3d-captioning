@@ -627,8 +627,8 @@ class EncoderDecoderSolver():
             self.log[epoch_id] = log
             
             # save model
-            torch.save(encoder, "models/encoder_checkpoint_%s.pth" % self.model_type)
-            torch.save(decoder, "models/decoder_checkpoint_%s.pth" % self.model_type)
+            torch.save(encoder, "models/encoder_%s.pth" % self.settings)
+            torch.save(decoder, "models/decoder_%s.pth" % self.settings)
 
         # export scalar data to JSON for external processing
         writer.export_scalars_to_json("logs/all_scalars.json")
