@@ -22,10 +22,9 @@ def main():
         print("preparing...")
         print()
         dataset = data.FeatureDataset(
-            root="/mnt/raid/davech2y/COCO_2014/{}2014".format(phase),
-            csv_file=pd.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014.caption.csv".format(phase))
+            database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014_224.hdf5".format(phase)
         )
-        dataloader = DataLoader(dataset, batch_size=200)
+        dataloader = DataLoader(dataset, batch_size=50)
         database = h5py.File("/mnt/raid/davech2y/COCO_2014/preprocessed/{}_feature_vgg16.hdf5".format(phase), "w")
         storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
         offset = 0
