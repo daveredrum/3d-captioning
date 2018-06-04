@@ -345,8 +345,8 @@ class EncoderDecoderSolver():
                             backward_since = time.time()
                             # back prop
                             loss.backward()
-                            # # clipping the gradient
-                            # self._clip_grad_value_(self.optimizer, 5)
+                            # clipping the gradient
+                            self._clip_grad_value_(self.optimizer, 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
