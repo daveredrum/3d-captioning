@@ -37,7 +37,7 @@ class Decoder(nn.Module):
         # feed
         seq_length = caption_inputs.size(1)
         decoder_outputs = []
-        for step in range(seq_length):
+        for step in range(seq_length + 1):
             if step == 0:
                 embedded = features
             else:
