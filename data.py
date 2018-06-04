@@ -537,8 +537,6 @@ class COCO(object):
             # replace with the new column
             new_captions = pandas.DataFrame({'caption': captions_list})
             self.preprocessed_data[phase].caption = new_captions.caption
-            # sort the csv file by the lengths of descriptions
-            self.preprocessed_data[phase] = self.preprocessed_data[phase].iloc[(-self.preprocessed_data[phase].caption.str.len()).argsort()].reset_index(drop=True)
 
         # build dict
         self._make_dict()
