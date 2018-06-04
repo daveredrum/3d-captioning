@@ -277,7 +277,7 @@ def main(args):
         return
 
     # define the decoder
-    input_size = dict_word2idx.__len__() + 1
+    input_size = dict_word2idx.__len__()
     hidden_size = 512
     num_layer = 1
     if attention:

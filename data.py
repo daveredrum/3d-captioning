@@ -473,7 +473,7 @@ class COCO(object):
         for text in captions_list:
             try:
                 for word in re.split("[ ]", text):
-                    if word:
+                    if word and word != "<START>" and word != "<END>":
                         # set the maximum size of vocabulary
                         if word in word_list.keys():
                             word_list[word] += 1
@@ -482,12 +482,17 @@ class COCO(object):
             except Exception:
                 pass
         # max dict_size = 10000
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:9999]
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:10000]
         # indexing starts at 1
-        self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
-        self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
+        self.dict_word2idx = {word_list[i][0]: i+3 for i in range(len(word_list))}
+        self.dict_idx2word = {i+3: word_list[i][0] for i in range(len(word_list))}
+        # add special tokens
         self.dict_word2idx["<UNK>"] = 0
         self.dict_idx2word[0] = "<UNK>"
+        self.dict_word2idx["<START>"] = 1
+        self.dict_idx2word[1] = "<START>"
+        self.dict_word2idx["<END>"] = 2
+        self.dict_idx2word[2] = "<END>"
         # dictionary size
         assert self.dict_idx2word.__len__() == self.dict_word2idx.__len__()
         self.dict_size = self.dict_idx2word.__len__()
