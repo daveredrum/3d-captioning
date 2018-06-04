@@ -41,7 +41,7 @@ class Decoder(nn.Module):
             if step == 0:
                 embedded = features
             else:
-                embedded = self.embedding(caption_inputs[:, step])
+                embedded = self.embedding(caption_inputs[:, step - 1])
             states = self.lstm_layer(embedded, states)
             lstm_outputs = states[0]
             outputs = self.output_layer(lstm_outputs).unsqueeze(1)
