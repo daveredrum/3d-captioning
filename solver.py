@@ -413,8 +413,8 @@ class EncoderDecoderSolver():
                             outputs = decoder(visual_contexts, caption_inputs, states)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
-                            outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
-                            targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
+                            targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
                             loss = self.criterion(outputs_packed, targets)
                             
                             # decode outputs
