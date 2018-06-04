@@ -482,7 +482,7 @@ class COCO(object):
             except Exception:
                 pass
         # max dict_size = 10000
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:10000]
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:9999]
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
         self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
