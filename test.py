@@ -23,10 +23,10 @@ def main(args):
     mode = args.mode
     database = args.database
     train_size = args.train_size
-    valid_size = args.valid_size
+    val_size = args.val_size
     test_size = args.test_size
     train_csv = pandas.read_csv(args.train_csv)
-    valid_csv = pandas.read_csv(args.valid_csv)
+    val_csv = pandas.read_csv(args.val_csv)
     outname = args.outname
     encoder_path = args.encoder
     decoder_path = args.decoder
@@ -35,7 +35,7 @@ def main(args):
         # preprocessing
         print("preparing data....")
         print()
-        captions = Caption(train_csv, [train_size, valid_size, test_size])
+        captions = Caption(train_csv, [train_size, val_size, test_size])
         # split data
         transformed_csv = captions.transformed_data[phase]
         dictionary = captions.dict_idx2word
@@ -46,7 +46,7 @@ def main(args):
         # preprocessing
         print("preparing data....")
         print()
-        captions = Caption(train_csv, [train_size, valid_size, test_size])
+        captions = Caption(train_csv, [train_size, val_size, test_size])
         # split data
         transformed_csv = captions.transformed_data[phase]
         dictionary = captions.dict_idx2word
@@ -57,7 +57,7 @@ def main(args):
         # preprocessing
         print("preparing data....")
         print()
-        captions = COCO(train_csv, valid_csv, [train_size, valid_size])
+        captions = COCO(train_csv, val_csv, [train_size, val_size])
         # split data
         transformed_csv = captions.transformed_data[phase]
         dictionary = captions.dict_idx2word
@@ -133,15 +133,13 @@ if __name__ == "__main__":
     parser.add_argument("--phase", type=str, help="train or val")
     parser.add_argument("--database", type=str, default=None, help="path to the preprocessed data")
     parser.add_argument("--train_csv", type=str, default=None, help="csv file for the training captions")
-    parser.add_argument("--valid_csv", type=str, default=None, help="csv file for the validation captions")
+    parser.add_argument("--val_csv", type=str, default=None, help="csv file for the valation captions")
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
-    parser.add_argument("--valid_size", type=int, default=100, help="valid size for input captions")
+    parser.add_argument("--val_size", type=int, default=100, help="val size for input captions")
     parser.add_argument("--test_size", type=int, default=100, help="test size for input captions")
     parser.add_argument("--encoder", type=str, default=None, help="path to the encoder")
     parser.add_argument("--decoder", type=str, default=None, help="path to the decoder")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
     parser.add_argument("--outname", type=str, help="output name for the results")
     args = parser.parse_args()
-    print(args)
-    print()
     main(args)

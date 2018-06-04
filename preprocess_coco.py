@@ -13,7 +13,7 @@ def main(args):
     verbose = args.verbose
     phases = [args.phases]
     if not phases:
-        phases = ["train", "valid"]
+        phases = ["train", "val", "test"]
     coco_size = args.size
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
     for phase in phases:
@@ -22,43 +22,49 @@ def main(args):
         # settings
         print("creating database...")
         print()
-        coco_dir = os.path.join(coco_root, "%s2014" % phase)
-        coco_cap = os.path.join(coco_root, "annotations", "captions_%s2014.json" % phase)
+        if phase == "train":
+            coco_dir = os.path.join(coco_root, "%s2014" % "train")
+        else:
+            coco_dir = os.path.join(coco_root, "%s2014" % "val")
+        coco_split = "data/dataset_coco.json"
         coco_paths = None
         database = h5py.File(os.path.join(coco_root, "preprocessed", "coco_%s2014_%d.hdf5" % (phase, coco_size)), "w", libver='latest')  
 
         # processing captions
         print("creating preprocessed csv...")
         print()
-        with open(coco_cap) as f:
-            cap_json = json.load(f)
-            df_caption = {
-                'image_id': [item["image_id"] for item in cap_json["annotations"]],
-                'caption': [item["caption"] for item in cap_json["annotations"]]
-            }
-            df_caption = pandas.DataFrame(df_caption, columns=['image_id', 'caption'])
-            df_filename = {
-                'image_id': [item["id"] for item in cap_json["images"]],
-                'file_name': [item["file_name"] for item in cap_json["images"]]
-            }
-            df_filename = pandas.DataFrame(df_filename, columns=['image_id', 'file_name'])
-            coco_csv = df_caption.merge(df_filename, how="inner", left_on="image_id", right_on="image_id")
-            coco_csv = coco_csv.sample(frac=1).reset_index(drop=True)
-            # shuffle the dataset
-            coco_csv.to_csv(os.path.join(coco_root, "preprocessed", "coco_%s2014.caption.csv" % phase), index=False)
-            coco_paths = coco_csv.file_name.drop_duplicates().values.tolist()
-            # create indices
-            print("creating indices for images...")
-            print()
-            index = {coco_paths[i]: i for i in range(len(coco_paths))}
-            __all = coco_csv.file_name.values.tolist()
-            mapping = {i: index[__all[i]] for i in range(len(__all))}
-            print("images:", len(index.keys()))
-            print("pairs:", len(mapping.keys()))
-            print("\nsaving indices...")
-            print()
-            with open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase), "w") as f:
-                json.dump(mapping, f)
+        coco_split = json.load(open(coco_split))
+        coco_split = [item for item in coco_split["images"] if item['split'] == phase]
+        df_caption = {
+            'image_id': [],
+            'caption': []
+        }
+        for item in coco_split:
+            for sub in item["sentences"]:
+                df_caption["image_id"].append(sub["imgid"])
+                df_caption["caption"].append(" ".join(sub["tokens"]))
+        df_caption = pandas.DataFrame(df_caption, columns=['image_id', 'caption'])
+        df_filename = {
+            'image_id': [item['imgid'] for item in coco_split],
+            'file_name': [item['filename'] for item in coco_split]
+        }
+        df_filename = pandas.DataFrame(df_filename, columns=['image_id', 'file_name'])
+        coco_csv = df_caption.merge(df_filename, how="inner", left_on="image_id", right_on="image_id")
+        coco_csv = coco_csv.sample(frac=1).reset_index(drop=True)
+        # shuffle the dataset
+        coco_csv.to_csv(os.path.join(coco_root, "preprocessed", "coco_%s2014.caption.csv" % phase), index=False)
+        coco_paths = coco_csv.file_name.drop_duplicates().values.tolist()
+        # create indices
+        print("creating indices for images...")
+        print()
+        index = {coco_paths[i]: i for i in range(len(coco_paths))}
+        __all = coco_csv.file_name.values.tolist()
+        mapping = {i: index[__all[i]] for i in range(len(__all))}
+        print("images:", len(index.keys()))
+        print("pairs:", len(mapping.keys()))
+        print("\nsaving indices...")
+        print()
+        json.dump(mapping, open(os.path.join(coco_root, "preprocessed", "%s_index.json" % phase), "w"))
 
 
         # processing images
@@ -66,8 +72,8 @@ def main(args):
         print()
         dataset = database.create_dataset("images", (len(coco_paths), 3 * coco_size * coco_size), dtype="float")
         trans = transforms.Compose([
-            transforms.Resize(coco_size),
-            transforms.CenterCrop(coco_size),
+            transforms.Resize((coco_size, coco_size)),
+            # transforms.CenterCrop(coco_size),
             transforms.ToTensor(),
         ])
         norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -92,7 +98,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", type=int, default=1, help="show report")
-    parser.add_argument("--phases", type=str, default=None, help="train/valid")
+    parser.add_argument("--phases", type=str, default=None, help="train/val/test")
     parser.add_argument("--size", type=int, default=64, help="height/width of the images")
     args = parser.parse_args()
     print(args)

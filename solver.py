@@ -28,12 +28,12 @@ class EncoderSolver():
             log = {
                 'train_loss': [],
                 'train_acc': [],
-                'valid_loss': [],
-                'valid_acc': []    
+                'val_loss': [],
+                'val_acc': []    
             }
             start = time.time()
-            for phase in ['train', 'valid']:
-                if phase == "valid":
+            for phase in ['train', 'val']:
+                if phase == "val":
                     model.eval()
                 else:
                     model.train()
@@ -63,20 +63,20 @@ class EncoderSolver():
                         log['train_acc'].append(acc)
                         # print("train", log['train_loss'][-1], log['train_acc'][-1])
                     else:
-                        log['valid_loss'].append(loss.data[0])
-                        log['valid_acc'].append(acc)
-                        # print("valid", log['valid_loss'][-1], log['valid_acc'][-1])
+                        log['val_loss'].append(loss.data[0])
+                        log['val_acc'].append(acc)
+                        # print("val", log['val_loss'][-1], log['val_acc'][-1])
             # show report
             if epoch_id % verbose == (verbose - 1):
                 exetime_s = time.time() - start
                 eta_s = exetime_s * (epoch - (epoch_id + 1))
                 eta_m = math.floor(eta_s / 60)
-                print("[epoch %d]: train_loss: %f, train_acc: %f, valid_loss: %f, valid_acc: %f, ETA: %dm %ds" % (
+                print("[epoch %d]: train_loss: %f, train_acc: %f, val_loss: %f, val_acc: %f, ETA: %dm %ds" % (
                     epoch_id + 1, 
                     np.mean(log['train_loss']), 
                     np.mean(log['train_acc']),
-                    np.mean(log['valid_loss']), 
-                    np.mean(log['valid_acc']),
+                    np.mean(log['val_loss']), 
+                    np.mean(log['val_acc']),
                     eta_m,
                     eta_s - eta_m * 60
 
@@ -84,8 +84,8 @@ class EncoderSolver():
             # save log
             log['train_loss'] = np.mean(log['train_loss'])
             log['train_acc'] = np.mean(log['train_acc'])
-            log['valid_loss'] = np.mean(log['valid_loss'])
-            log['valid_acc'] = np.mean(log['valid_acc'])
+            log['val_loss'] = np.mean(log['val_loss'])
+            log['val_acc'] = np.mean(log['val_acc'])
             self.log[epoch_id] = log
             # save model
             torch.save(model, "models/encoder.pth")
@@ -105,10 +105,10 @@ class DecoderSolver():
         for epoch_id in range(epoch):
             log = {
                 'train_loss': [],
-                'valid_loss': []   
+                'val_loss': []   
             }
             start = time.time()
-            for phase in ["train", "valid"]:
+            for phase in ["train", "val"]:
                 for visuals, captions, cap_lengths in dataloader[phase]:
                     caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                     caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
@@ -132,23 +132,23 @@ class DecoderSolver():
                         self.optimizer.step()
                         log['train_loss'].append(loss.data[0])
                     else:
-                        log['valid_loss'].append(loss.data[0])
+                        log['val_loss'].append(loss.data[0])
             # show report
             if epoch_id % verbose == (verbose - 1):
                 exetime_s = time.time() - start
                 eta_s = exetime_s * (epoch - (epoch_id + 1))
                 eta_m = math.floor(eta_s / 60)
-                print("[epoch %d/%d] train_loss: %f, valid_loss: %f, ETA: %dm %ds" % (
+                print("[epoch %d/%d] train_loss: %f, val_loss: %f, ETA: %dm %ds" % (
                     epoch_id + 1,
                     epoch, 
                     np.mean(log['train_loss']), 
-                    np.mean(log['valid_loss']),
+                    np.mean(log['val_loss']),
                     eta_m,
                     eta_s - eta_m * 60
                     ))
             # save log
             log['train_loss'] = np.mean(log['train_loss'])
-            log['valid_loss'] = np.mean(log['valid_loss'])
+            log['val_loss'] = np.mean(log['val_loss'])
             self.log[epoch_id] = log
             # save model
             torch.save(model, "models/decoder.pth")
@@ -207,7 +207,7 @@ class EncoderDecoderSolver():
                     except Exception:
                         pass
                 decoded.append(" ".join(temp))
-        elif phase == "valid":
+        elif phase == "val":
             for i in range(len(sequence)):
                 temp = ['<START>']
                 for j in range(len(sequence[i])):
@@ -219,13 +219,14 @@ class EncoderDecoderSolver():
 
         return decoded
 
-    def _clip_grad_value_(self, params, clip_value):
+    def _clip_grad_value_(self, optimizer, clip_value):
         '''
         in-place gradient clipping
         '''
         clip_value = float(clip_value)
-        for p in params:
-            p.grad.data.clamp_(min=-clip_value, max=clip_value)
+        for group in optimizer.param_groups:
+            for param in group['params']:
+                param.grad.data.clamp_(-clip_value, clip_value)
 
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
@@ -240,30 +241,30 @@ class EncoderDecoderSolver():
                 'train_blue_2': [],
                 'train_blue_3': [],
                 'train_blue_4': [],
-                'valid_loss': [],
-                'valid_blue_1': [],
-                'valid_blue_2': [],
-                'valid_blue_3': [],
-                'valid_blue_4': [],
+                'val_loss': [],
+                'val_blue_1': [],
+                'val_blue_2': [],
+                'val_blue_3': [],
+                'val_blue_4': [],
                 'train_cider': [],
-                'valid_cider': [],
+                'val_cider': [],
                 # 'train_meteor': [],
-                # 'valid_meteor': [],
+                # 'val_meteor': [],
                 'train_rouge': [],
-                'valid_rouge': [],
+                'val_rouge': [],
                 'forward': [],
                 'backward': [],
-                'valid_time': [],
+                'val_time': [],
                 'eval_time': [],
                 'epoch_time': []
             }
             candidates = {
                 'train': {},
-                'valid': {}
+                'val': {}
             }
             start = time.time()
-            for phase in ["train", "valid"]:
-                if phase == "valid":
+            for phase in ["train", "val"]:
+                if phase == "val":
                     encoder.eval()
                 else:
                     encoder.train()
@@ -292,8 +293,6 @@ class EncoderDecoderSolver():
                             cap_lengths = Variable(cap_lengths)
                         
                         if phase == "train":
-                            encoder.zero_grad()
-                            decoder.zero_grad()
                             self.optimizer.zero_grad()
                             # forward pass
                             forward_since = time.time()
@@ -307,7 +306,7 @@ class EncoderDecoderSolver():
                             # outputs = []
                             # states = decoder.init_hidden(visual_contexts[0])
                             # seq_length = caption_inputs.size(1)
-                            # convg = int(epoch * 0.9)
+                            # convg = 50
                             # prob = convg / (convg + np.exp((epoch_id + 1) / convg))
                             # for step in range(seq_length):
                             #     predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
@@ -330,7 +329,6 @@ class EncoderDecoderSolver():
                             outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
                             targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
                             loss = self.criterion(outputs_packed, targets)
-                            log['forward'].append(time.time() - forward_since)
                             
                             # decode outputs
                             outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
@@ -341,23 +339,22 @@ class EncoderDecoderSolver():
                                 else:
                                     candidates[phase][model_id].append(output)
 
+                            log['forward'].append(time.time() - forward_since)
                             # backward pass
                             # save log
                             backward_since = time.time()
                             # back prop
                             loss.backward()
-                            # clipping the gradient
-                            self._clip_grad_value_(encoder.global_mapping.parameters(), 8)
-                            self._clip_grad_value_(encoder.area_mapping.parameters(), 8)
-                            self._clip_grad_value_(decoder.parameters(), 8)
+                            # # clipping the gradient
+                            # self._clip_grad_value_(self.optimizer, 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
                             log['train_perplexity'].append(np.exp(loss.data[0]) - 1)
                         else:
-                            # validate
-                            valid_since = time.time()
+                            # valate
+                            val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # generate until <END> token
                             outputs = []
@@ -389,7 +386,7 @@ class EncoderDecoderSolver():
                                 else:
                                     candidates[phase][model_id].append(output)
                             # save log
-                            log['valid_time'].append(time.time() - valid_since)
+                            log['val_time'].append(time.time() - val_since)
 
                     # decoder without attention
                     else:
@@ -399,61 +396,76 @@ class EncoderDecoderSolver():
                             visual_inputs = Variable(visuals).cuda()
                             caption_inputs = Variable(caption_inputs).cuda()
                             caption_targets = Variable(caption_targets).cuda()
-                            caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
                             cap_lengths = Variable(cap_lengths).cuda()
                         else:
                             visual_inputs = Variable(visuals)
                             caption_inputs = Variable(caption_inputs)
                             caption_targets = Variable(caption_targets)
-                            caption_targets, pack_info = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)
                             cap_lengths = Variable(cap_lengths)
                         
                         if phase == "train":
+                            self.optimizer.zero_grad()
                             # forward pass
                             forward_since = time.time()
-                            visual_contexts = encoder.extract(visual_inputs)
+                            visual_contexts = encoder(visual_inputs)
                             # teacher forcing
-                            outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                            states = decoder.init_hidden(visual_contexts)
+                            outputs = decoder(visual_contexts, caption_inputs, states)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
-                            loss = self.criterion(outputs, caption_targets)
-                            log['forward'].append(time.time() - forward_since)
+                            outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            loss = self.criterion(outputs_packed, targets)
                             
                             # decode outputs
-                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dict_idx2word)
+                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
                                     candidates[phase][model_id] = [output]
                                 else:
                                     candidates[phase][model_id].append(output)
+                            log['forward'].append(time.time() - forward_since)
 
                             # backward pass
                             # save log
-                            if epoch_id != 0:
-                                encoder.zero_grad()
-                                decoder.zero_grad()
-                                self.optimizer.zero_grad()
-                                backward_since = time.time()
-                                loss.backward()
-                                self.optimizer.step()
-                                log['backward'].append(time.time() - backward_since)
-                            else:
-                                log['backward'].append(0)
+                            backward_since = time.time()
+                            loss.backward()
+                            # clipping the gradient
+                            self._clip_grad_value_(self.optimizer, 5)
+                            self.optimizer.step()
+                            log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
+                            log['train_perplexity'].append(np.exp(loss.data[0]) - 1)
                         else:
-                            # validate
-                            valid_since = time.time()
-                            visual_contexts = encoder.extract(visual_inputs)
-                            # teacher forcing
-                            outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
-                            # # no teacher forcing
-                            # outputs = decoder.sample(visual_contexts, cap_lengths)
-                            loss = self.criterion(outputs, caption_targets)
-                            log['valid_time'].append(time.time() - valid_since)
+                            # valate
+                            val_since = time.time()
+                            visual_contexts = encoder(visual_inputs)
+                            # # teacher forcing
+                            # outputs, _ = decoder(visual_contexts, caption_inputs, cap_lengths)
+                            # no teacher forcing
+                            # generate until <END> token
+                            outputs = []
+                            states = decoder.init_hidden(visual_contexts)
+                            max_length = cap_lengths[0].item() + 10
+                            for idx in range(visual_contexts.size(0)):
+                                h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                                inputs = caption_inputs[idx, 0]
+                                temp = []
+                                for i in range(max_length):
+                                    if i == 0:
+                                        embedded = visual_contexts[idx].unsqueeze(0)
+                                    else:
+                                        embedded = decoder.embedding(inputs)
+                                    predicted, (h, c) = decoder.sample(embedded, (h, c))
+                                    inputs = predicted.max(2)[1].view(1)
+                                    temp.append(inputs[0].item())
+                                    if inputs[0].item() == dict_word2idx['<END>']:
+                                        break
+                                outputs.append(temp)
                             
                             # decode outputs
-                            outputs = self._decode_outputs(outputs.max(1)[1], pack_info, cap_lengths, dict_idx2word)
+                            outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -462,29 +474,29 @@ class EncoderDecoderSolver():
                                     candidates[phase][model_id].append(output)
 
                             # save log
-                            log['valid_loss'].append(loss.data[0])
+                            log['val_time'].append(time.time() - val_since)
 
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
-            # log['valid_loss'] = np.mean(log['valid_loss'])
+            # log['val_loss'] = np.mean(log['val_loss'])
             log['train_perplexity'] = np.mean(log['train_perplexity'])
             # evaluate bleu
             eval_since = time.time()
             train_bleu, _ = capbleu.Bleu(4).compute_score(references["train"], candidates["train"])
-            valid_bleu, _ = capbleu.Bleu(4).compute_score(references["valid"], candidates["valid"])
+            val_bleu, _ = capbleu.Bleu(4).compute_score(references["val"], candidates["val"])
             # evaluate cider
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
-            valid_cider, _ = capcider.Cider().compute_score(references["valid"], candidates["valid"])
+            val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
             # # evaluate meteor
             # try:
             #     train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
-            #     valid_meteor, _ = capmeteor.Meteor().compute_score(references["valid"], candidates["valid"])
+            #     val_meteor, _ = capmeteor.Meteor().compute_score(references["val"], candidates["val"])
             # except Exception:
             #     train_meteor = 0
-            #     valid_meteor = 0
+            #     val_meteor = 0
             # evaluate rouge
             train_rouge, _ = caprouge.Rouge().compute_score(references["train"], candidates["train"])
-            valid_rouge, _ = caprouge.Rouge().compute_score(references["valid"], candidates["valid"])
+            val_rouge, _ = caprouge.Rouge().compute_score(references["val"], candidates["val"])
             log['eval_time'] = time.time() - eval_since
             
             # log
@@ -492,23 +504,23 @@ class EncoderDecoderSolver():
             log['train_bleu_2'] = train_bleu[1]
             log['train_bleu_3'] = train_bleu[2]
             log['train_bleu_4'] = train_bleu[3]
-            log['valid_bleu_1'] = valid_bleu[0]
-            log['valid_bleu_2'] = valid_bleu[1]
-            log['valid_bleu_3'] = valid_bleu[2]
-            log['valid_bleu_4'] = valid_bleu[3]
+            log['val_bleu_1'] = val_bleu[0]
+            log['val_bleu_2'] = val_bleu[1]
+            log['val_bleu_3'] = val_bleu[2]
+            log['val_bleu_4'] = val_bleu[3]
             log['train_cider'] = train_cider
-            log['valid_cider'] = valid_cider
+            log['val_cider'] = val_cider
             # log['train_meteor'] = train_meteor
-            # log['valid_meteor'] = valid_meteor
+            # log['val_meteor'] = val_meteor
             log['train_rouge'] = train_rouge
-            log['valid_rouge'] = valid_rouge
+            log['val_rouge'] = val_rouge
 
             # update report on tensorboard after every epoch
             writer.add_scalars(
                 "Loss", 
                 {
                     "train_loss": log['train_loss'], 
-                    # "valid_loss": log['valid_loss']
+                    # "val_loss": log['val_loss']
                     # "train_perplexity": log['train_perplexity']
                 }, 
                 epoch_id
@@ -517,7 +529,7 @@ class EncoderDecoderSolver():
                 "BLEU/BLEU-1", 
                 {
                     "train_bleu_1": log['train_bleu_1'], 
-                    "valid_bleu_1": log['valid_bleu_1'],
+                    "val_bleu_1": log['val_bleu_1'],
                 }, 
                 epoch_id
             )
@@ -525,7 +537,7 @@ class EncoderDecoderSolver():
                 "BLEU/BLEU-2", 
                 {
                     "train_bleu_2": log['train_bleu_2'], 
-                    "valid_bleu_2": log['valid_bleu_2'],
+                    "val_bleu_2": log['val_bleu_2'],
                 }, 
                 epoch_id
             )
@@ -533,7 +545,7 @@ class EncoderDecoderSolver():
                 "BLEU/BLEU-3", 
                 {
                     "train_bleu_3": log['train_bleu_3'], 
-                    "valid_bleu_3": log['valid_bleu_3'],
+                    "val_bleu_3": log['val_bleu_3'],
                 }, 
                 epoch_id
             )
@@ -541,7 +553,7 @@ class EncoderDecoderSolver():
                 "BLEU/BLEU-4", 
                 {
                     "train_bleu_4": log['train_bleu_4'], 
-                    "valid_bleu_4": log['valid_bleu_4'],
+                    "val_bleu_4": log['val_bleu_4'],
                 }, 
                 epoch_id
             )
@@ -549,7 +561,7 @@ class EncoderDecoderSolver():
                 "CIDEr", 
                 {
                     "train_cider": log['train_cider'], 
-                    "valid_cider": log['valid_cider']
+                    "val_cider": log['val_cider']
                 }, 
                 epoch_id
             )
@@ -557,7 +569,7 @@ class EncoderDecoderSolver():
             #     "METEOR", 
             #     {
             #         "train_meteor": log['train_meteor'], 
-            #         "valid_meteor": log['valid_meteor']
+            #         "val_meteor": log['val_meteor']
             #     }, 
             #     epoch_id
             # )
@@ -565,7 +577,7 @@ class EncoderDecoderSolver():
                 "ROUGE-L", 
                 {
                     "train_rouge": log['train_rouge'], 
-                    "valid_rouge": log['valid_rouge']
+                    "val_rouge": log['val_rouge']
                 }, 
                 epoch_id
             )
@@ -581,38 +593,38 @@ class EncoderDecoderSolver():
                     log['train_loss'], 
                     log['train_perplexity'])
                 )
-                print("[BLEU-1] train_bleu: %f, valid_bleu: %f" % (
+                print("[BLEU-1] train_bleu: %f, val_bleu: %f" % (
                     log['train_bleu_1'],
-                    log['valid_bleu_1'])
+                    log['val_bleu_1'])
                 )
-                print("[BLEU-2] train_bleu: %f, valid_bleu: %f" % (
+                print("[BLEU-2] train_bleu: %f, val_bleu: %f" % (
                     log['train_bleu_2'],
-                    log['valid_bleu_2'])
+                    log['val_bleu_2'])
                 )
-                print("[BLEU-3] train_bleu: %f, valid_bleu: %f" % (
+                print("[BLEU-3] train_bleu: %f, val_bleu: %f" % (
                     log['train_bleu_3'],
-                    log['valid_bleu_3'])
+                    log['val_bleu_3'])
                 )
-                print("[BLEU-4] train_bleu: %f, valid_bleu: %f" % (
+                print("[BLEU-4] train_bleu: %f, val_bleu: %f" % (
                     log['train_bleu_4'],
-                    log['valid_bleu_4'])
+                    log['val_bleu_4'])
                 )
-                print("[CIDEr] train_cider: %f, valid_cider: %f" % (
+                print("[CIDEr] train_cider: %f, val_cider: %f" % (
                     log['train_cider'],
-                    log['valid_cider'])
+                    log['val_cider'])
                 )
-                # print("[METEOR] train_meteor: %f, valid_meteor: %f" % (
+                # print("[METEOR] train_meteor: %f, val_meteor: %f" % (
                 #     log['train_meteor'],
-                #     log['valid_meteor'])
+                #     log['val_meteor'])
                 # )
-                print("[ROUGE_L] train_rouge: %f, valid_rouge: %f" % (
+                print("[ROUGE_L] train_rouge: %f, val_rouge: %f" % (
                     log['train_rouge'],
-                    log['valid_rouge'])
+                    log['val_rouge'])
                 )
-                print("[Info]  forward_per_epoch: %fs\n[Info]  backward_per_epoch: %fs\n[Info]  valid_per_epoch: %fs" % (
+                print("[Info]  forward_per_epoch: %fs\n[Info]  backward_per_epoch: %fs\n[Info]  val_per_epoch: %fs" % (
                     np.sum(log['forward']), 
                     np.sum(log['backward']),
-                    np.sum(log['valid_time']))
+                    np.sum(log['val_time']))
                 )
                 print("[Info]  eval_time: %fs" % ( 
                     np.mean(log['eval_time']))

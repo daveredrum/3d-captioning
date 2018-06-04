@@ -18,42 +18,46 @@ class Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.embedding = nn.Embedding(input_size, hidden_size)
-        self.lstm_layer = nn.LSTM(hidden_size, hidden_size, num_layers=num_layers, batch_first=True)
+        self.lstm_layer = nn.LSTMCell(self.hidden_size, self.hidden_size)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
-            # omitted softmax layer if using cross entropy loss
-            # nn.LogSoftmax() # if using NLLLoss (softmax layer + NLLLoss = CrossEntropyLoss)
+            nn.Dropout(p=0.2)
         )
         self.cuda_flag = cuda_flag
 
-    def forward(self, visual_inputs, caption_inputs, length_list):
-        embedded = self.embedding(caption_inputs)
-        # concatenate the visual input with embedded vectors
-        embedded = torch.cat((visual_inputs.unsqueeze(1), embedded), 1)
-        # pack captions of different length
-        packed = pack_padded_sequence(embedded, length_list, batch_first=True)
-        # hiddens = (outputs, states)
-        hiddens, _ = self.lstm_layer(packed, None)
-        outputs = self.output_layer(hiddens[0])
+    def init_hidden(self, visual_inputs):
+        states = (
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda(),
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda()
+        )
 
-        return outputs, hiddens[1]
+        return states
 
-    def sample(self, visual_inputs, length_list):
-        batch_size = visual_inputs.size(0)
-        states = None
-        # sample text indices via greedy search
-        sampled = []
-        for batch in range(batch_size):
-            inputs = visual_inputs[batch].view(1, 1, -1)
-            for i in range(length_list[batch]):
-                outputs, states = self.lstm_layer(inputs, states)
-                outputs = self.output_layer(outputs)
-                predicted = outputs.max(2)[1]
-                sampled.append(outputs.view(1, -1))
-                inputs = self.embedding(predicted)
-        sampled = torch.cat(sampled, 0)
+    def forward(self, features, caption_inputs, states):
+        # feed
+        seq_length = caption_inputs.size(1)
+        decoder_outputs = []
+        for step in range(seq_length):
+            if step == 0:
+                embedded = features
+            else:
+                embedded = self.embedding(caption_inputs[:, step])
+            states = self.lstm_layer(embedded, states)
+            lstm_outputs = states[0]
+            outputs = self.output_layer(lstm_outputs).unsqueeze(1)
+            decoder_outputs.append(outputs)
 
-        return sampled
+        decoder_outputs = torch.cat(decoder_outputs, dim=1)
+
+        return decoder_outputs
+
+
+    def sample(self, embedded, states):
+        new_states = self.lstm_layer(embedded, states)
+        lstm_outputs = new_states[0]
+        outputs = self.output_layer(lstm_outputs).unsqueeze(1)
+
+        return outputs, new_states
 
 # # attention module
 # class Attention2D(nn.Module):
@@ -132,9 +136,18 @@ class Attention2D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
+        self.comp_visual = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size, bias=False),
+            nn.Dropout(p=0.2)
+        )
+        self.comp_hidden = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size, bias=False),
+            nn.Dropout(p=0.2)
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(hidden_size, 1, bias=False),
+            nn.Dropout(p=0.2)
+        )
         # initialize weights
         self.reset_parameters()
 
@@ -224,8 +237,14 @@ class AttentionDecoder2D(nn.Module):
         self.cuda_flag = cuda_flag
         # layer settings
         # initialize hidden states
-        self.init_h = nn.Linear(self.visual_channels, hidden_size)
-        self.init_c = nn.Linear(self.visual_channels, hidden_size)
+        self.init_h = nn.Sequential(
+            nn.Linear(self.visual_channels, hidden_size),
+            nn.Dropout(p=0.2)
+        )
+        self.init_c = nn.Sequential(
+            nn.Linear(self.visual_channels, hidden_size),
+            nn.Dropout(p=0.2)
+        )
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
 
@@ -239,9 +258,8 @@ class AttentionDecoder2D(nn.Module):
         # self.lstm_layer_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
         # output layer
         self.output_layer = nn.Sequential(
-            nn.Linear(self.hidden_size, self.proj_size),
-            nn.ReLU(),
-            nn.Linear(self.proj_size, self.input_size)
+            nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
+            nn.Dropout(p=0.2)
         )
 
 
@@ -265,28 +283,46 @@ class AttentionDecoder2D(nn.Module):
         seq_length = caption_inputs.size(1)
         decoder_outputs = []
         for step in range(seq_length):
+            # embedded = self.embedding(caption_inputs[:, step])
+            # lstm_input = torch.cat((embedded, global_features), dim=1)
+            # states = self.lstm_layer_1(lstm_input, states)
+            # lstm_outputs = states[0]
+            # attention_weights = self.attention(area_features, states)
+            # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            # outputs = torch.cat((attended, lstm_outputs), dim=1)
+            # outputs = self.output_layer(outputs).unsqueeze(1)
+            # decoder_outputs.append(outputs)
             embedded = self.embedding(caption_inputs[:, step])
             lstm_input = torch.cat((embedded, global_features), dim=1)
-            states = self.lstm_layer_1(lstm_input, states)
-            lstm_outputs = states[0]
             attention_weights = self.attention(area_features, states)
             attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
-            outputs = attended + lstm_outputs
+            states = self.lstm_layer_1(lstm_input, states)
+            lstm_outputs = states[0]
+            outputs = torch.cat((attended, lstm_outputs), dim=1)
             outputs = self.output_layer(outputs).unsqueeze(1)
             decoder_outputs.append(outputs)
+
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
 
         return decoder_outputs 
 
     def sample(self, features, caption_inputs, states):
         _, global_features, area_features = features
+        # embedded = self.embedding(caption_inputs)
+        # lstm_input = torch.cat((embedded, global_features), dim=1)
+        # new_states = self.lstm_layer_1(lstm_input, states)
+        # lstm_outputs = new_states[0]
+        # attention_weights = self.attention(area_features, states)
+        # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+        # outputs = attended + lstm_outputs
+        # outputs = self.output_layer(outputs).unsqueeze(1)
         embedded = self.embedding(caption_inputs)
         lstm_input = torch.cat((embedded, global_features), dim=1)
-        new_states = self.lstm_layer_1(lstm_input, states)
-        lstm_outputs = new_states[0]
         attention_weights = self.attention(area_features, states)
         attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
-        outputs = attended + lstm_outputs
+        new_states = self.lstm_layer_1(lstm_input, states)
+        lstm_outputs = new_states[0]
+        outputs = torch.cat((attended, lstm_outputs), dim=1)
         outputs = self.output_layer(outputs).unsqueeze(1)
 
         return outputs, new_states, attention_weights

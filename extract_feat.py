@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 def main(args):
     if not args.phases:
-        phases = ["train", "valid"]
+        phases = ["train", "val", "test"]
     else:
         phases = [args.phases]
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -60,6 +60,6 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained", type=str, help="vgg16_bn/resnet101")
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
-    parser.add_argument("--phases", type=str, default=None, help="train/valid")
+    parser.add_argument("--phases", type=str, default=None, help="train/val/test")
     args = parser.parse_args()
     main(args)

@@ -256,7 +256,7 @@ class Caption(object):
         # size settings
         self.total_size = np.sum(size_split)
         self.train_size = size_split[0]
-        self.valid_size = size_split[1]
+        self.val_size = size_split[1]
         self.test_size = size_split[2]
         # select data by the given total size
         self.original_csv = csv_file.iloc[:self.total_size]
@@ -273,19 +273,19 @@ class Caption(object):
         # e.g. 'e702f89ce87a0b6579368d1198f406e7': [['<START> a gray coloured round four legged steel table <END>']]
         self.corpus = {
             'train': {},
-            'valid': {},
+            'val': {},
             'test': {}
         }
         # split the preprocessed data
         self.preprocessed_data = {
             'train': None,
-            'valid': None,
+            'val': None,
             'test': None
         }
         # split the transformed data
         self.transformed_data = {
             'train': None,
-            'valid': None,
+            'val': None,
             'test': None
         }
         
@@ -311,7 +311,7 @@ class Caption(object):
             except Exception:
                 pass
         # filter out all words that appear less than 5 times
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:5000]
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:10000]
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
         self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
@@ -323,7 +323,7 @@ class Caption(object):
     # return the dictionary of modelId and corresponding captions
     # input must be the preprocessed csv！
     def _make_corpus(self):
-        for phase in ['train', 'valid', 'test']:
+        for phase in ['train', 'val', 'test']:
             for _, item in self.preprocessed_data[phase].iterrows():
                 if item.modelId in self.corpus[phase].keys():
                     self.corpus[phase][item.modelId].append(item.description)
@@ -360,8 +360,8 @@ class Caption(object):
 
         # split the data
         self.preprocessed_data['train'] = self.preprocessed_csv.iloc[:self.train_size]
-        self.preprocessed_data['valid'] = self.preprocessed_csv.iloc[self.train_size:self.train_size + self.valid_size]
-        self.preprocessed_data['test'] = self.preprocessed_csv.iloc[self.train_size + self.valid_size:]
+        self.preprocessed_data['val'] = self.preprocessed_csv.iloc[self.train_size:self.train_size + self.val_size]
+        self.preprocessed_data['test'] = self.preprocessed_csv.iloc[self.train_size + self.val_size:]
 
         # build dict
         self._make_dict()
@@ -385,8 +385,8 @@ class Caption(object):
 
         # split the data
         self.transformed_data['train'] = self.transformed_csv.iloc[:self.train_size]
-        self.transformed_data['valid'] = self.transformed_csv.iloc[self.train_size:self.train_size + self.valid_size]
-        self.transformed_data['test'] = self.transformed_csv.iloc[self.train_size + self.valid_size:]
+        self.transformed_data['val'] = self.transformed_csv.iloc[self.train_size:self.train_size + self.val_size]
+        self.transformed_data['test'] = self.transformed_csv.iloc[self.train_size + self.val_size:]
 
     # check if the transformation is reversable
     def sanity_check(self):
@@ -404,60 +404,57 @@ class Caption(object):
 
 # process coco csv file
 class COCO(object):
-    def __init__(self, train_csv, valid_csv, size_split):
+    def __init__(self, train_csv, val_csv, test_csv, size_split):
         # size settings
         self.total_size = np.sum(size_split)
-        self.train_size, self.valid_size = size_split
+        self.train_size, self.val_size, self.test_size = size_split
         # select data by the given total size
         self.original_csv = {
             'train': None,
-            'valid': None
+            'val': None,
+            'test': None
         }
         # use image_id to select data
-        # full training set and full validation set
-        if self.train_size == -1 and self.valid_size == -1:
+        # training set
+        if self.train_size == -1:
             self.original_csv['train'] = train_csv
-            self.original_csv['valid'] = valid_csv
-        # full training set and selected validation set
-        elif self.train_size == -1 and self.valid_size != -1:
-            self.original_csv['train'] = train_csv
-            valid_id = valid_csv.image_id.drop_duplicates().values.tolist()[:self.valid_size]
-            self.original_csv['valid'] = valid_csv.loc[valid_csv.image_id.isin(valid_id)]
-        # selected training set and full validation set
-        elif self.train_size != -1 and self.valid_size == -1:
-            train_id = train_csv.image_id.drop_duplicates().values.tolist()[:self.train_size]
-            self.original_csv['train'] = train_csv.loc[train_csv.image_id.isin(train_id)]
-            self.original_csv['valid'] = valid_csv
-        # selected training set and selected validation set
         else:
             train_id = train_csv.image_id.drop_duplicates().values.tolist()[:self.train_size]
-            valid_id = valid_csv.image_id.drop_duplicates().values.tolist()[:self.valid_size]
             self.original_csv['train'] = train_csv.loc[train_csv.image_id.isin(train_id)]
-            self.original_csv['valid'] = valid_csv.loc[valid_csv.image_id.isin(valid_id)]
-        self.original_csv = {
-            'train': train_csv.iloc[:self.train_size],
-            'valid': valid_csv.iloc[:self.valid_size]
-        }
+        # valation set
+        if self.val_size == -1:
+            self.original_csv['val'] = val_csv
+        else:
+            val_id = val_csv.image_id.drop_duplicates().values.tolist()[:self.val_size]
+            self.original_csv['val'] = val_csv.loc[val_csv.image_id.isin(val_id)]
+        # testing set
+        if self.test_size == -1:
+            self.original_csv['test'] = test_csv
+        else:
+            test_id = test_csv.image_id.drop_duplicates().values.tolist()[:self.test_size]
+            self.original_csv['test'] = test_csv.loc[test_csv.image_id.isin(test_id)]
         # dictionaries
         self.dict_word2idx = None
         self.dict_idx2word = None
         self.dict_size = None
         # ground truth captions grouped by image_id
         # for calculating BLEU score
-        # e.g. 'e702f89ce87a0b6579368d1198f406e7': [['<START> a gray coloured round four legged steel table <END>']]
         self.corpus = {
             'train': {},
-            'valid': {},
+            'val': {},
+            'test': {}
         }
         # split the preprocessed data
         self.preprocessed_data = {
             'train': None,
-            'valid': None,
+            'val': None,
+            'test': None
         }
         # split the transformed data
         self.transformed_data = {
             'train': None,
-            'valid': None,
+            'val': None,
+            'test': None
         }
         
         # preprcess and transform
@@ -469,7 +466,9 @@ class COCO(object):
     # output the dictionary of captions
     # indices of words are the rank of frequencies
     def _make_dict(self):
-        captions_list = self.preprocessed_data["train"].caption.values.tolist() + self.preprocessed_data["valid"].caption.values.tolist()
+        captions_list = self.preprocessed_data["train"].caption.values.tolist()
+        captions_list += self.preprocessed_data["val"].caption.values.tolist() 
+        captions_list += self.preprocessed_data["test"].caption.values.tolist()
         word_list = {}
         for text in captions_list:
             try:
@@ -482,11 +481,13 @@ class COCO(object):
                             word_list[word] = 1
             except Exception:
                 pass
-        # max dict_size = 5000
-        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:5000]
+        # max dict_size = 10000
+        word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:10000]
         # indexing starts at 1
         self.dict_word2idx = {word_list[i][0]: i+1 for i in range(len(word_list))}
         self.dict_idx2word = {i+1: word_list[i][0] for i in range(len(word_list))}
+        self.dict_word2idx["<UNK>"] = 0
+        self.dict_idx2word[0] = "<UNK>"
         # dictionary size
         assert self.dict_idx2word.__len__() == self.dict_word2idx.__len__()
         self.dict_size = self.dict_idx2word.__len__()
@@ -495,9 +496,9 @@ class COCO(object):
     # return the dictionary of image_id and corresponding captions
     # input must be the preprocessed csv！
     def _make_corpus(self):
-        for phase in ["train", "valid"]:
+        for phase in ["train", "val", "test"]:
             for _, item in self.preprocessed_data[phase].iterrows():
-                if item.image_id in self.corpus[phase].keys():
+                if str(item.image_id) in self.corpus[phase].keys():
                     self.corpus[phase][str(item.image_id)].append(item.caption)
                 else:
                     self.corpus[phase][str(item.image_id)] = [item.caption]
@@ -506,7 +507,7 @@ class COCO(object):
     def _preprocess(self):
         # suppress all warnings
         warnings.simplefilter('ignore')
-        for phase in ["train", "valid"]:
+        for phase in ["train", "val", "test"]:
             # drop items without captions
             self.preprocessed_data[phase] = copy.deepcopy(self.original_csv[phase].loc[self.original_csv[phase].caption.notnull()].reset_index(drop=True))
             # convert to lowercase
@@ -514,13 +515,7 @@ class COCO(object):
             # preprocess
             captions_list = self.preprocessed_data[phase].caption.values.tolist()
             for i in range(len(captions_list)):
-                # # padding before all punctuations
-                # caption = captions_list[i]
-                # caption = re.sub(r'([.,!?()])', r' \1 ', caption)
-                # caption = re.sub(r'\s{2,}', ' ', caption)
-                # remove all punctuations
                 caption = captions_list[i]
-                caption = re.sub(r'[^\w\s]', '', caption)
                 # truncate long captions
                 max_length = 18
                 caption = caption.split(" ")
@@ -545,7 +540,7 @@ class COCO(object):
 
     # transform all words to their indices in the dictionary
     def _tranform(self):
-        for phase in ["train", "valid"]:
+        for phase in ["train", "val", "test"]:
             self.transformed_data[phase] = copy.deepcopy(self.preprocessed_data[phase])
             captions_list = self.transformed_data[phase].caption.values.tolist()
             for i in range(len(captions_list)):
@@ -554,23 +549,11 @@ class COCO(object):
                     # filter out empty element
                     if text and text in self.dict_word2idx.keys():
                         temp_list.append(self.dict_word2idx[text])
+                    elif text and text not in self.dict_word2idx.keys():
+                        temp_list.append(self.dict_word2idx["<UNK>"])
                     captions_list[i] = temp_list
             # replace with the new column
             transformed_captions = pandas.DataFrame({'caption': captions_list})
             self.transformed_data[phase].caption = transformed_captions.caption
             # # sort the csv file by the lengths of descriptions
             # self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.caption.str.len()).argsort()].reset_index(drop=True)
-
-    # check if the transformation is reversable
-    def sanity_check(self, phase="train"):
-        captions_list = self.preprocessed_data[phase].caption.values.tolist()
-        reverse_list = self.transformed_data[phase].caption.values.tolist()
-        for i in range(len(reverse_list)):
-            temp_string = ""
-            for index in reverse_list[i]:
-                temp_string += self.dict_idx2word[index]
-                if index != reverse_list[i][-1]:
-                    temp_string += " "
-            reverse_list[i] = temp_string
-        
-        return reverse_list.sort() == captions_list.sort()

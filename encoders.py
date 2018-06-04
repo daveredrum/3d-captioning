@@ -130,31 +130,28 @@ class EncoderVGG16BN(nn.Module):
     def __init__(self):
         super(EncoderVGG16BN, self).__init__()
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
-        self.vgg16 = vgg16.features
+        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.fc_layer = nn.Sequential(
-            *list(vgg16.classifier.children())[:-1],
-            nn.Linear(vgg16.classifier[6].in_features, 512),
-            nn.ReLU(),
-            nn.BatchNorm1d(512),
+            *list(vgg16.classifier.children())[:-1]
         )
         self.output_layer = nn.Sequential(
-            nn.Linear(512, 2),
-            nn.Sigmoid()
+            nn.Linear(4096, 512),
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
         )
         
     
     def forward(self, inputs):
-        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
+        '''
+        original_features: (batch_size, 512, 14, 14)
+        outputs: (batch_size, 512)
+        '''
+        batch_size = inputs.size(0)
+        original_features = inputs.view(inputs.size(0), 512, 14, 14)
+        outputs = self.max_pool(original_features).view(batch_size, -1)
         outputs = self.fc_layer(outputs)
         outputs = self.output_layer(outputs)
-        
-        return outputs
 
-    # chop the last output layer
-    def extract(self, inputs):
-        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
-        outputs = self.fc_layer(outputs)
-        
         return outputs
 
 # for attention
@@ -183,11 +180,13 @@ class AttentionEncoderResNet101(nn.Module):
         self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=7)
         self.global_mapping = nn.Sequential(
             nn.Linear(2048, 512),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(2048, 512),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
         )
 
 
@@ -234,11 +233,13 @@ class AttentionEncoderVGG16BN(nn.Module):
         self.avg_pool = nn.AvgPool2d(kernel_size=14, stride=14)
         self.global_mapping = nn.Sequential(
             nn.Linear(512, 512),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(512, 512),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
         )
 
 

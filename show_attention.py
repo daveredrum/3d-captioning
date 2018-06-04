@@ -42,11 +42,11 @@ def main(args):
     model_name = encoder_path.split(".")[0]
     settings = model_name.split("_")
     if settings[5] != "attention":
-        print("invalid model, terminating...")
+        print("inval model, terminating...")
         return
     captions = COCO(
         pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"), 
+        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"), 
         [int(settings[6][3:]), int(settings[7][2:])]
     )
     # split data
@@ -114,7 +114,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="coco", help="source and type of the input data")
-    parser.add_argument("--phase", type=str, help="train/valid")
+    parser.add_argument("--phase", type=str, help="train/val")
     parser.add_argument("--index", type=int, default=0, help="index of the testing image")
     parser.add_argument("--encoder", type=str, default=None, help="path to the encoder")
     parser.add_argument("--decoder", type=str, default=None, help="path to the decoder")

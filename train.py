@@ -24,7 +24,7 @@ def main(args):
     root = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid/"
     captions = pandas.read_csv("captions.tablechair.csv")
     train_size = args.train_size
-    valid_size = args.valid_size
+    val_size = args.val_size
     test_size = args.test_size
     epoch = args.epoch
     verbose = args.verbose
@@ -49,7 +49,7 @@ def main(args):
     print("pretrained:", args.pretrained)
     print("attention:", args.attention)
     print("train_size:", args.train_size)
-    print("valid_size:", args.valid_size)
+    print("val_size:", args.val_size)
     print("test_size:", args.test_size)
     print("epoch:", args.epoch)
     print("verbose:", args.verbose)
@@ -71,10 +71,10 @@ def main(args):
         # preprocessing
         print("preparing data....")
         print()
-        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
+        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, val_size, test_size])
         # split data
         train_captions = captions.transformed_data['train']
-        valid_captions = captions.transformed_data['valid']
+        val_captions = captions.transformed_data['val']
         test_captions = captions.transformed_data['test']
         dictionary = captions.dict_idx2word
         corpus = captions.corpus
@@ -86,12 +86,12 @@ def main(args):
                 "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png224.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
-            valid_ds = ImageCaptionDataset(
+            val_ds = ImageCaptionDataset(
                 root, 
-                valid_captions, 
+                val_captions, 
                 "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png224.hdf5"
             )
-            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            val_dl = DataLoader(val_ds, batch_size=batch_size)
             test_ds = ImageCaptionDataset(
                 root, 
                 test_captions, 
@@ -100,7 +100,7 @@ def main(args):
             test_dl = DataLoader(test_ds, batch_size=1)
             dataloader = {
                 'train': train_dl,
-                'valid': valid_dl,
+                'val': val_dl,
                 'test': test_dl
             }
 
@@ -119,12 +119,12 @@ def main(args):
                 "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
-            valid_ds = ImageCaptionDataset(
+            val_ds = ImageCaptionDataset(
                 root, 
-                valid_captions, 
+                val_captions, 
                 "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.png.hdf5"
             )
-            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            val_dl = DataLoader(val_ds, batch_size=batch_size)
             test_ds = ImageCaptionDataset(
                 root, 
                 test_captions, 
@@ -133,7 +133,7 @@ def main(args):
             test_dl = DataLoader(test_ds, batch_size=1)
             dataloader = {
                 'train': train_dl,
-                'valid': valid_dl,
+                'val': val_dl,
                 'test': test_dl
             }
 
@@ -150,10 +150,10 @@ def main(args):
         # preprocessing
         print("preparing data....")
         print()
-        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, valid_size, test_size])
+        captions = Caption(pandas.read_csv("captions.tablechair.csv"), [train_size, val_size, test_size])
         # split data
         train_captions = captions.transformed_data['train']
-        valid_captions = captions.transformed_data['valid']
+        val_captions = captions.transformed_data['val']
         test_captions = captions.transformed_data['test']
         dictionary = captions.dict_idx2word
         corpus = captions.corpus
@@ -164,13 +164,13 @@ def main(args):
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
         train_dl = DataLoader(train_ds, batch_size=batch_size)
-        # valid_ds = ShapeCaptionDataset(root, valid_captions)
-        valid_ds = ShapeCaptionDataset(
+        # val_ds = ShapeCaptionDataset(root, val_captions)
+        val_ds = ShapeCaptionDataset(
             root, 
-            valid_captions,
+            val_captions,
             database="/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid.hdf5"
         )
-        valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+        val_dl = DataLoader(val_ds, batch_size=batch_size)
         test_ds = ShapeCaptionDataset(
             root, 
             test_captions,
@@ -179,7 +179,7 @@ def main(args):
         test_dl = DataLoader(test_ds, batch_size=1)
         dataloader = {
             'train': train_dl,
-            'valid': valid_dl,
+            'val': val_dl,
             'test': test_dl
         }
 
@@ -197,12 +197,13 @@ def main(args):
         coco = COCO(
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
             # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.caption.csv"),
-            [train_size, valid_size]
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
+            [train_size, val_size, test_size]
         )
         # split data
         train_captions = coco.transformed_data['train']
-        valid_captions = coco.transformed_data['valid']
+        val_captions = coco.transformed_data['val']
         dict_idx2word = coco.dict_idx2word
         dict_word2idx = coco.dict_word2idx
         corpus = coco.corpus
@@ -213,18 +214,18 @@ def main(args):
                 train_captions, 
                 database="data/train_feature_{}.hdf5".format(pretrained)
             )
-            valid_ds = COCOCaptionDataset(
-                "/mnt/raid/davech2y/COCO_2014/preprocessed/valid_index.json", 
+            val_ds = COCOCaptionDataset(
+                "/mnt/raid/davech2y/COCO_2014/preprocessed/val_index.json", 
                 # "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
-                valid_captions,
-                database="data/valid_feature_{}.hdf5".format(pretrained)
-                # database="data/train_feature_vgg16.hdf5"
+                val_captions,
+                database="data/val_feature_{}.hdf5".format(pretrained)
+                # database="data/train_feature_{}.hdf5".format(pretrained)
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
-            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            val_dl = DataLoader(val_ds, batch_size=batch_size)
             dataloader = {
                 'train': train_dl,
-                'valid': valid_dl
+                'val': val_dl
             }
             # initialize the encoder
             if pretrained == "resnet101":
@@ -246,7 +247,7 @@ def main(args):
                     print()
                     encoder = EncoderVGG16BN().cuda()
             else:
-                print("invalid model name, terminating...")
+                print("inval model name, terminating...")
                 return
         else:
             train_ds = COCOCaptionDataset(
@@ -254,16 +255,16 @@ def main(args):
                 train_captions, 
                 database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.hdf5"
             )
-            valid_ds = COCOCaptionDataset(
+            val_ds = COCOCaptionDataset(
                 root, 
-                valid_captions,
-                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_valid2014.hdf5"
+                val_captions,
+                database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
-            valid_dl = DataLoader(valid_ds, batch_size=batch_size)
+            val_dl = DataLoader(val_ds, batch_size=batch_size)
             dataloader = {
                 'train': train_dl,
-                'valid': valid_dl
+                'val': val_dl
             }
             # initialize the encoder
             print("initializing encoder....")
@@ -272,7 +273,7 @@ def main(args):
         
 
     else:
-        print("invalid model type, terminating.....")
+        print("inval model type, terminating.....")
         return
 
     # define the decoder
@@ -301,11 +302,11 @@ def main(args):
         if attention:
             params = list(decoder.parameters()) + list(encoder.global_mapping.parameters()) + list(encoder.area_mapping.parameters())
         else:
-            params = list(decoder.parameters()) + list(encoder.fc_layer.parameters())
+            params = list(decoder.parameters()) + list(encoder.output_layer.parameters())
     else:
         params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
     optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
-    criterion = nn.CrossEntropyLoss(ignore_index=0)
+    criterion = nn.CrossEntropyLoss()
     epoch = epoch
     verbose = verbose
 
@@ -313,9 +314,9 @@ def main(args):
     print("start training....")
     print()
     if attention:
-        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, valid_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
     else:
-        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, valid_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
     encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention)
 
@@ -327,22 +328,22 @@ def main(args):
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
-    # valid_losses = [encoder_decoder_solver.log[i]["valid_loss"] for i in range(epochs)]train_perplexity
+    # val_losses = [encoder_decoder_solver.log[i]["val_loss"] for i in range(epochs)]train_perplexity
     train_perplexity = [encoder_decoder_solver.log[i]["train_perplexity"] for i in range(epochs)]
     train_blues_1 = [encoder_decoder_solver.log[i]["train_bleu_1"] for i in range(epochs)]
     train_blues_2 = [encoder_decoder_solver.log[i]["train_bleu_2"] for i in range(epochs)]
     train_blues_3 = [encoder_decoder_solver.log[i]["train_bleu_3"] for i in range(epochs)]
     train_blues_4 = [encoder_decoder_solver.log[i]["train_bleu_4"] for i in range(epochs)]
-    valid_blues_1 = [encoder_decoder_solver.log[i]["valid_bleu_1"] for i in range(epochs)]
-    valid_blues_2 = [encoder_decoder_solver.log[i]["valid_bleu_2"] for i in range(epochs)]
-    valid_blues_3 = [encoder_decoder_solver.log[i]["valid_bleu_3"] for i in range(epochs)]
-    valid_blues_4 = [encoder_decoder_solver.log[i]["valid_bleu_4"] for i in range(epochs)]
+    val_blues_1 = [encoder_decoder_solver.log[i]["val_bleu_1"] for i in range(epochs)]
+    val_blues_2 = [encoder_decoder_solver.log[i]["val_bleu_2"] for i in range(epochs)]
+    val_blues_3 = [encoder_decoder_solver.log[i]["val_bleu_3"] for i in range(epochs)]
+    val_blues_4 = [encoder_decoder_solver.log[i]["val_bleu_4"] for i in range(epochs)]
     train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epochs)]
-    valid_cider = [encoder_decoder_solver.log[i]["valid_cider"] for i in range(epochs)]
+    val_cider = [encoder_decoder_solver.log[i]["val_cider"] for i in range(epochs)]
     # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epochs)]
-    # valid_meteor = [encoder_decoder_solver.log[i]["valid_meteor"] for i in range(epochs)]
+    # val_meteor = [encoder_decoder_solver.log[i]["val_meteor"] for i in range(epochs)]
     train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epochs)]
-    valid_rouge = [encoder_decoder_solver.log[i]["valid_rouge"] for i in range(epochs)]
+    val_rouge = [encoder_decoder_solver.log[i]["val_rouge"] for i in range(epochs)]
 
     # plot training curve
     print("plot training curves...")
@@ -350,7 +351,7 @@ def main(args):
     fig = plt.gcf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_losses, label="train_loss")
-    # plt.plot(range(epochs), valid_losses, label="valid_loss")
+    # plt.plot(range(epochs), val_losses, label="val_loss")
     # plt.plot(range(epochs), train_perplexity, label="train_perplexity")
     plt.xlabel('epoch')
     plt.ylabel('loss')
@@ -362,28 +363,28 @@ def main(args):
     fig.set_size_inches(16,32)
     plt.subplot(4, 1, 1)
     plt.plot(range(epochs), train_blues_1, "C3", label="train_bleu")
-    plt.plot(range(epochs), valid_blues_1, "C4", label="valid_bleu")
+    plt.plot(range(epochs), val_blues_1, "C4", label="val_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-1')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 2)
     plt.plot(range(epochs), train_blues_2, "C3", label="train_bleu")
-    plt.plot(range(epochs), valid_blues_2, "C4", label="valid_bleu")
+    plt.plot(range(epochs), val_blues_2, "C4", label="val_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-2')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 3)
     plt.plot(range(epochs), train_blues_3, "C3", label="train_bleu")
-    plt.plot(range(epochs), valid_blues_3, "C4", label="valid_bleu")
+    plt.plot(range(epochs), val_blues_3, "C4", label="val_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-3')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
     plt.legend()
     plt.subplot(4, 1, 4)
     plt.plot(range(epochs), train_blues_4, "C3", label="train_bleu")
-    plt.plot(range(epochs), valid_blues_4, "C4", label="valid_bleu")
+    plt.plot(range(epochs), val_blues_4, "C4", label="val_bleu")
     plt.xlabel('epoch')
     plt.ylabel('BLEU-4')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
@@ -393,7 +394,7 @@ def main(args):
     fig.clf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_cider, label="train_cider")
-    plt.plot(range(epochs), valid_cider, label="valid_cider")
+    plt.plot(range(epochs), val_cider, label="val_cider")
     plt.xlabel('epoch')
     plt.ylabel('CIDEr')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
@@ -403,7 +404,7 @@ def main(args):
     # fig.clf()
     # fig.set_size_inches(16,8)
     # plt.plot(range(epochs), train_meteor, label="train_meteor")
-    # plt.plot(range(epochs), valid_meteor, label="valid_meteor")
+    # plt.plot(range(epochs), val_meteor, label="val_meteor")
     # plt.xlabel('epoch')
     # plt.ylabel('METEOR')
     # plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
@@ -413,7 +414,7 @@ def main(args):
     fig.clf()
     fig.set_size_inches(16,8)
     plt.plot(range(epochs), train_rouge, label="train_rouge")
-    plt.plot(range(epochs), valid_rouge, label="valid_rouge")
+    plt.plot(range(epochs), val_rouge, label="val_rouge")
     plt.xlabel('epoch')
     plt.ylabel('ROUGE_L')
     plt.xticks(range(1, epochs + 1,  math.floor(epoch / 10)))
@@ -424,7 +425,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
-    parser.add_argument("--valid_size", type=int, default=100, help="valid size for input captions")
+    parser.add_argument("--val_size", type=int, default=100, help="val size for input captions")
     parser.add_argument("--test_size", type=int, default=100, help="test size for input captions")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
