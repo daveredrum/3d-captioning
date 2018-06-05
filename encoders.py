@@ -91,11 +91,8 @@ class EncoderVGG16BN(nn.Module):
         super(EncoderVGG16BN, self).__init__()
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc_layer = nn.Sequential(
-            *list(vgg16.classifier.children())[:-1]
-        )
         self.output_layer = nn.Sequential(
-            nn.Linear(4096, 512),
+            nn.Linear(25088, 512),
             nn.ReLU(),
             # nn.Dropout(p=0.5)
         )
@@ -109,7 +106,6 @@ class EncoderVGG16BN(nn.Module):
         batch_size = inputs.size(0)
         original_features = inputs.view(inputs.size(0), 512, 14, 14)
         outputs = self.max_pool(original_features).view(batch_size, -1)
-        outputs = self.fc_layer(outputs)
         outputs = self.output_layer(outputs)
 
         return outputs
