@@ -658,8 +658,8 @@ class EncoderDecoderSolver():
                 ))
                 print("[Debug] val_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n\n".format(
                     list(references["val"].keys())[0],
-                    references["val"][list(references["val"].keys())[0]][0],
-                    candidates["val"][list(references["val"].keys())[0]][0]
+                    references["val"][list(references["val"].keys())[0]],
+                    candidates["val"][list(references["val"].keys())[0]]
                 ))
             
             # save log
