@@ -67,9 +67,8 @@ class Encoder2D(nn.Module):
 class EncoderResNet101(nn.Module):
     def __init__(self):
         super(EncoderResNet101, self).__init__()
-        self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=7)
         self.output_layer = nn.Sequential(
-            nn.Linear(2048, 512),
+            nn.Linear(25088 * 4, 512),
             nn.ReLU()
         )
         
