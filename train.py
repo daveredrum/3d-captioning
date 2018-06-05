@@ -196,8 +196,8 @@ def main(args):
         print()
         coco = COCO(
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
             [train_size, val_size, test_size]
         )
@@ -215,11 +215,11 @@ def main(args):
                 database="data/train_feature_{}.hdf5".format(pretrained)
             )
             val_ds = COCOCaptionDataset(
-                "/mnt/raid/davech2y/COCO_2014/preprocessed/val_index.json", 
-                # "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
+                # "/mnt/raid/davech2y/COCO_2014/preprocessed/val_index.json", 
+                "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
                 val_captions,
-                database="data/val_feature_{}.hdf5".format(pretrained)
-                # database="data/train_feature_{}.hdf5".format(pretrained)
+                # database="data/val_feature_{}.hdf5".format(pretrained)
+                database="data/train_feature_{}.hdf5".format(pretrained)
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size)
             val_dl = DataLoader(val_ds, batch_size=batch_size)
