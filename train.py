@@ -307,8 +307,6 @@ def main(args):
         params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
     optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
     criterion = nn.CrossEntropyLoss()
-    epoch = epoch
-    verbose = verbose
 
     # training
     print("start training....")
