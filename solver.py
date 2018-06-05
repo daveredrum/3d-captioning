@@ -346,7 +346,7 @@ class EncoderDecoderSolver():
                             # back prop
                             loss.backward()
                             # clipping the gradient
-                            self._clip_grad_value_(self.optimizer, 5)
+                            # self._clip_grad_value_(self.optimizer, 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
@@ -432,7 +432,7 @@ class EncoderDecoderSolver():
                             backward_since = time.time()
                             loss.backward()
                             # clipping the gradient
-                            self._clip_grad_value_(self.optimizer, 5)
+                            # self._clip_grad_value_(self.optimizer, 5)
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
