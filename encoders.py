@@ -80,7 +80,7 @@ class EncoderResNet101(nn.Module):
         '''
         batch_size = inputs.size(0)
         original_features = inputs.view(inputs.size(0), 2048, 7, 7)
-        outputs = self.output_layer(outputs.view(batch_size, -1))
+        outputs = self.output_layer(original_features.view(batch_size, -1))
         
         return outputs
 
