@@ -67,31 +67,23 @@ class Encoder2D(nn.Module):
 class EncoderResNet101(nn.Module):
     def __init__(self):
         super(EncoderResNet101, self).__init__()
-        resnet = torchmodels.resnet101(pretrained=True)
-        modules = list(resnet.children())[:-1]
-        self.resnet = nn.Sequential(*modules)
-        self.fc_layer = nn.Sequential(
-            nn.Linear(resnet.fc.in_features, 512),
-            nn.ReLU(),
-            nn.BatchNorm1d(512),
-        )
+        self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=7)
         self.output_layer = nn.Sequential(
-            nn.Linear(512, 2),
-            nn.Sigmoid()
+            nn.Linear(2048, 512),
+            nn.ReLU()
         )
         
     
     def forward(self, inputs):
-        outputs = self.resnet(inputs).view(inputs.size(0), -1)
-        outputs = self.fc_layer(outputs)
+        '''
+        original_features: (batch_size, 2048, 7, 7)
+        outputs: (batch_size, 512)
+        '''
+        batch_size = inputs.size(0)
+        original_features = inputs.view(inputs.size(0), 2048, 7, 7)
+        outputs = self.avg_pool(original_features)
+        outputs = self.fc_layer(outputs.view(batch_size, -1))
         outputs = self.output_layer(outputs)
-        
-        return outputs
-
-    # chop the last output layer
-    def extract(self, inputs):
-        outputs = self.resnet(inputs).view(inputs.size(0), -1)
-        outputs = self.fc_layer(outputs)
         
         return outputs
 
