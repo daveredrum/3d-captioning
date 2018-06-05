@@ -67,7 +67,7 @@ class Encoder2D(nn.Module):
 class EncoderResNet101(nn.Module):
     def __init__(self):
         super(EncoderResNet101, self).__init__()
-        self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=7)
+        self.max_pool = nn.MaxPool2d(kernel_size=7, stride=7)
         self.output_layer = nn.Sequential(
             nn.Linear(2048, 2048),
             nn.ReLU(),
