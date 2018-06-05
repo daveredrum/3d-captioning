@@ -651,6 +651,11 @@ class EncoderDecoderSolver():
                     eta_m,
                     eta_s - eta_m * 60)
                 )
+                print("[Debug] image_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n".format(
+                    list(references["val"].keys())[0],
+                    references["val"][list(references["val"].keys())[0]],
+                    candidates["val"][list(references["val"].keys())[0]]
+                ))
             
             # save log
             self.log[epoch_id] = log
