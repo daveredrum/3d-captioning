@@ -69,10 +69,6 @@ class EncoderResNet101(nn.Module):
         super(EncoderResNet101, self).__init__()
         self.max_pool = nn.MaxPool2d(kernel_size=7, stride=7)
         self.output_layer = nn.Sequential(
-            nn.Linear(2048, 2048),
-            nn.ReLU(),
-            nn.Linear(2048, 2048),
-            nn.ReLU(),
             nn.Linear(2048, 512),
             nn.ReLU()
         )
@@ -93,7 +89,6 @@ class EncoderResNet101(nn.Module):
 class EncoderVGG16BN(nn.Module):
     def __init__(self):
         super(EncoderVGG16BN, self).__init__()
-        vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.output_layer = nn.Sequential(
             nn.Linear(25088, 512),
