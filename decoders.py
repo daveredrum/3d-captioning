@@ -21,23 +21,23 @@ class Decoder(nn.Module):
         self.lstm_layer = nn.LSTMCell(self.hidden_size, self.hidden_size)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         self.cuda_flag = cuda_flag
 
     def init_hidden(self, visual_inputs):
         states = (
-            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda(),
-            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda()
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size), requires_grad=False).cuda(),
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size), requires_grad=False).cuda()
         )
 
         return states
 
     def forward(self, features, caption_inputs, states):
         # feed
-        seq_length = caption_inputs.size(1)
+        seq_length = caption_inputs.size(1) + 1
         decoder_outputs = []
-        for step in range(seq_length + 1):
+        for step in range(seq_length):
             if step == 0:
                 embedded = features
             else:
@@ -138,15 +138,15 @@ class Attention2D(nn.Module):
         # MLP
         self.comp_visual = nn.Sequential(
             nn.Linear(hidden_size, hidden_size, bias=False),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         self.comp_hidden = nn.Sequential(
             nn.Linear(hidden_size, hidden_size, bias=False),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, 1, bias=False),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         # initialize weights
         self.reset_parameters()
@@ -239,11 +239,11 @@ class AttentionDecoder2D(nn.Module):
         # initialize hidden states
         self.init_h = nn.Sequential(
             nn.Linear(self.visual_channels, hidden_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         self.init_c = nn.Sequential(
             nn.Linear(self.visual_channels, hidden_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
@@ -259,7 +259,7 @@ class AttentionDecoder2D(nn.Module):
         # output layer
         self.output_layer = nn.Sequential(
             nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
 
 

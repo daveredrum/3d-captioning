@@ -172,22 +172,33 @@ class EncoderDecoderSolver():
     #     return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
 
     # for model without attention
-    def _decode_outputs(self, sequence, pack_info, cap_lengths, dictionary):
-        # unpack the sequence
-        unpacked_sequence = pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
-        # unpad the sequence by removing the zeros
-        unpadded_sequence = [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
-        # decode the indices
+    # for model with attention
+    def _decode_outputs(self, sequence, cap_lengths, dictionary, phase):
         decoded = []
-        for sequence in unpadded_sequence:
-            temp = []
-            for idx in sequence:
-                try:
-                    temp.append(dictionary[idx])
-                except Exception:
-                    pass
-            decoded.append(" ".join(temp))
-        
+        if phase == "train":
+            # get the indices for each predicted word
+            _, indices = torch.max(sequence, 2)
+            # chop the sequences according to their lengths
+            unpadded_sequence = [indices[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
+            # decode the indices
+            for sequence in unpadded_sequence:
+                temp = []
+                for idx in sequence:
+                    try:
+                        temp.append(dictionary[idx])
+                    except Exception:
+                        pass
+                decoded.append(" ".join(temp))
+        elif phase == "val":
+            for i in range(len(sequence)):
+                temp = []
+                for j in range(len(sequence[i])):
+                    try:
+                        temp.append(dictionary[sequence[i][j]])
+                    except Exception:
+                        pass
+                decoded.append(" ".join(temp))
+
         return decoded
     
     # for model with attention
@@ -231,9 +242,9 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
+        # scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
         for epoch_id in range(epoch):
-            scheduler.step()
+            # scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
@@ -282,15 +293,15 @@ class EncoderDecoderSolver():
                         caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                         caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, 1:]
                         if self.cuda_flag:
-                            visual_inputs = Variable(visuals).cuda()
-                            caption_inputs = Variable(caption_inputs).cuda()
-                            caption_targets = Variable(caption_targets).cuda()
-                            cap_lengths = Variable(cap_lengths).cuda()
+                            visual_inputs = Variable(visuals, requires_grad=False).cuda()
+                            caption_inputs = Variable(caption_inputs, requires_grad=False).cuda()
+                            caption_targets = Variable(caption_targets, requires_grad=False).cuda()
+                            cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
                         else:
-                            visual_inputs = Variable(visuals)
-                            caption_inputs = Variable(caption_inputs)
-                            caption_targets = Variable(caption_targets)
-                            cap_lengths = Variable(cap_lengths)
+                            visual_inputs = Variable(visuals, requires_grad=False)
+                            caption_inputs = Variable(caption_inputs, requires_grad=False)
+                            caption_targets = Variable(caption_targets, requires_grad=False)
+                            cap_lengths = Variable(cap_lengths, requires_grad=False)
                         
                         if phase == "train":
                             self.optimizer.zero_grad()
@@ -393,15 +404,15 @@ class EncoderDecoderSolver():
                         caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
                         caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
                         if self.cuda_flag:
-                            visual_inputs = Variable(visuals).cuda()
-                            caption_inputs = Variable(caption_inputs).cuda()
-                            caption_targets = Variable(caption_targets).cuda()
-                            cap_lengths = Variable(cap_lengths).cuda()
+                            visual_inputs = Variable(visuals, requires_grad=False).cuda()
+                            caption_inputs = Variable(caption_inputs, requires_grad=False).cuda()
+                            caption_targets = Variable(caption_targets, requires_grad=False).cuda()
+                            cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
                         else:
-                            visual_inputs = Variable(visuals)
-                            caption_inputs = Variable(caption_inputs)
-                            caption_targets = Variable(caption_targets)
-                            cap_lengths = Variable(cap_lengths)
+                            visual_inputs = Variable(visuals, requires_grad=False)
+                            caption_inputs = Variable(caption_inputs, requires_grad=False)
+                            caption_targets = Variable(caption_targets, requires_grad=False)
+                            cap_lengths = Variable(cap_lengths, requires_grad=False)
                         
                         if phase == "train":
                             self.optimizer.zero_grad()
@@ -413,12 +424,16 @@ class EncoderDecoderSolver():
                             outputs = decoder(visual_contexts, caption_inputs, states)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            # print(caption_inputs[0].data.cpu().numpy())
+                            # print(caption_targets[0].data.cpu().numpy())
+                            # print(outputs[0].max(1)[1].data.cpu().numpy())
+                            # print()
                             outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
                             targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
                             loss = self.criterion(outputs_packed, targets)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                            outputs = self._decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -450,22 +465,24 @@ class EncoderDecoderSolver():
                             max_length = cap_lengths[0].item() + 10
                             for idx in range(visual_contexts.size(0)):
                                 h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                                inputs = caption_inputs[idx, 0]
                                 temp = []
                                 for i in range(max_length):
                                     if i == 0:
                                         embedded = visual_contexts[idx].unsqueeze(0)
+                                        predicted, (h, c) = decoder.sample(embedded, (h, c))
+                                        inputs = caption_inputs[idx, 0].view(1)
+                                        temp.append(inputs[0].item())
                                     else:
                                         embedded = decoder.embedding(inputs)
-                                    predicted, (h, c) = decoder.sample(embedded, (h, c))
-                                    inputs = predicted.max(2)[1].view(1)
-                                    temp.append(inputs[0].item())
+                                        predicted, (h, c) = decoder.sample(embedded, (h, c))
+                                        inputs = predicted.max(2)[1].view(1)
+                                        temp.append(inputs[0].item())
                                     if inputs[0].item() == dict_word2idx['<END>']:
                                         break
                                 outputs.append(temp)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
+                            outputs = self._decode_outputs(outputs, None, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():

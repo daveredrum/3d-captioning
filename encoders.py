@@ -137,7 +137,7 @@ class EncoderVGG16BN(nn.Module):
         self.output_layer = nn.Sequential(
             nn.Linear(4096, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5)
         )
         
     
@@ -234,12 +234,12 @@ class AttentionEncoderVGG16BN(nn.Module):
         self.global_mapping = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5)
         )
 
 
