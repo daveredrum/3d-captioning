@@ -424,10 +424,6 @@ class EncoderDecoderSolver():
                             outputs = decoder(visual_contexts, caption_inputs, states)
                             # # no teacher forcing
                             # outputs = decoder.sample(visual_contexts, cap_lengths)
-                            # print(caption_inputs[0].data.cpu().numpy())
-                            # print(caption_targets[0].data.cpu().numpy())
-                            # print(outputs[0].max(1)[1].data.cpu().numpy())
-                            # print()
                             outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
                             targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
                             loss = self.criterion(outputs_packed, targets)
@@ -447,7 +443,7 @@ class EncoderDecoderSolver():
                             backward_since = time.time()
                             loss.backward()
                             # clipping the gradient
-                            # self._clip_grad_value_(self.optimizer, 5)
+                            self._clip_grad_value_(self.optimizer, 5)
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
