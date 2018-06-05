@@ -467,8 +467,8 @@ class COCO(object):
     # indices of words are the rank of frequencies
     def _make_dict(self):
         captions_list = self.preprocessed_data["train"].caption.values.tolist()
-        captions_list += self.preprocessed_data["val"].caption.values.tolist() 
-        captions_list += self.preprocessed_data["test"].caption.values.tolist()
+        # captions_list += self.preprocessed_data["val"].caption.values.tolist() 
+        # captions_list += self.preprocessed_data["test"].caption.values.tolist()
         word_list = {}
         for text in captions_list:
             try:

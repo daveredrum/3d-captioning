@@ -181,12 +181,12 @@ class AttentionEncoderResNet101(nn.Module):
         self.global_mapping = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5)
         )
 
 
