@@ -81,40 +81,8 @@ class EncoderResNet101(nn.Module):
         '''
         batch_size = inputs.size(0)
         original_features = inputs.view(inputs.size(0), 2048, 7, 7)
-        outputs = self.avg_pool(original_features)
-        outputs = self.fc_layer(outputs.view(batch_size, -1))
+        outputs = self.avg_pool(original_features).view(batch_size, -1)
         outputs = self.output_layer(outputs)
-        
-        return outputs
-
-class EncoderVGG16(nn.Module):
-    def __init__(self):
-        super(EncoderVGG16, self).__init__()
-        vgg16 = torchmodels.vgg16(pretrained=True)
-        self.vgg16 = vgg16.features
-        self.fc_layer = nn.Sequential(
-            *list(vgg16.classifier.children())[:-1],
-            nn.Linear(vgg16.classifier[6].in_features, 512),
-            nn.ReLU(),
-            nn.BatchNorm1d(512),
-        )
-        self.output_layer = nn.Sequential(
-            nn.Linear(512, 2),
-            nn.Sigmoid()
-        )
-        
-    
-    def forward(self, inputs):
-        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
-        outputs = self.fc_layer(outputs)
-        outputs = self.output_layer(outputs)
-        
-        return outputs
-
-    # chop the last output layer
-    def extract(self, inputs):
-        outputs = self.vgg16(inputs).view(inputs.size(0), -1)
-        outputs = self.fc_layer(outputs)
         
         return outputs
 
