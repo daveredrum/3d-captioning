@@ -24,6 +24,10 @@ def main(args):
     mode = args.mode
     phase = args.phase
     index = args.index
+    train_size = args.train_size
+    val_size = args.val_size
+    test_size = args.test_size
+    pretrained = args.pretrained
     outname = "{}_{}".format(args.outname, args.index)
     encoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.encoder)
     decoder_path = "/home/davech2y/3d_captioning/models/{}".format(args.decoder)
@@ -41,13 +45,12 @@ def main(args):
     print()
     model_name = encoder_path.split(".")[0]
     settings = model_name.split("_")
-    if settings[5] != "attention":
-        print("inval model, terminating...")
-        return
     captions = COCO(
         pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+        # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
         pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"), 
-        [int(settings[6][3:]), int(settings[7][2:])]
+        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
+        [train_size, val_size, test_size]
     )
     # split data
     transformed_csv = captions.transformed_data[phase]
@@ -56,7 +59,7 @@ def main(args):
     dataset = COCOCaptionDataset(
         "/mnt/raid/davech2y/COCO_2014/preprocessed/{}_index.json".format(phase), 
         transformed_csv, 
-        "data/{}_feature_vgg16.hdf5".format(phase)
+        "data/{}_feature_{}.hdf5".format(phase, pretrained)
     )
     dataloader = DataLoader(dataset, batch_size=1)
 
@@ -114,7 +117,12 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="coco", help="source and type of the input data")
-    parser.add_argument("--phase", type=str, help="train/val")
+    parser.add_argument("--phase", type=str, help="train/val/test")
+    parser.add_argument("--pretrained", type=str, help="vgg16_bn/resnet101")
+    parser.add_argument("--train_size", type=int)
+    parser.add_argument("--val_size", type=int)
+    parser.add_argument("--test_size", type=int)
+
     parser.add_argument("--index", type=int, default=0, help="index of the testing image")
     parser.add_argument("--encoder", type=str, default=None, help="path to the encoder")
     parser.add_argument("--decoder", type=str, default=None, help="path to the decoder")
