@@ -646,15 +646,15 @@ class EncoderDecoderSolver():
                 print("[Info]  eval_time: %fs" % ( 
                     np.mean(log['eval_time']))
                 )
-                print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds \n" % ( 
+                print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds" % ( 
                     np.mean(log['epoch_time']),
                     eta_m,
                     eta_s - eta_m * 60)
                 )
                 print("[Debug] image_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n".format(
                     list(references["val"].keys())[0],
-                    references["val"][list(references["val"].keys())[0]],
-                    candidates["val"][list(references["val"].keys())[0]]
+                    references["val"][list(references["val"].keys())[0]][0],
+                    candidates["val"][list(references["val"].keys())[0]][0]
                 ))
             
             # save log
