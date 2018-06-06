@@ -11,9 +11,11 @@ from PIL import Image
 
 def main(args):
     verbose = args.verbose
-    phases = [args.phases]
+    phases = args.phases
     if not phases:
         phases = ["train", "val", "test"]
+    else:
+        phases = [args.phases]
     coco_size = args.size
     coco_root = "/mnt/raid/davech2y/COCO_2014/"
     for phase in phases:
@@ -72,8 +74,8 @@ def main(args):
         print()
         dataset = database.create_dataset("images", (len(coco_paths), 3 * coco_size * coco_size), dtype="float")
         trans = transforms.Compose([
-            transforms.Resize((coco_size, coco_size)),
-            # transforms.CenterCrop(coco_size),
+            transforms.Resize(coco_size),
+            transforms.CenterCrop(coco_size),
             transforms.ToTensor(),
         ])
         norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])

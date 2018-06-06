@@ -9,6 +9,7 @@ import torchvision.models as torchmodels
 import torch.nn.functional as F
 from torch.nn import Parameter
 
+
 # decoder without attention
 class Decoder(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, cuda_flag=True):

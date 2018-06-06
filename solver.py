@@ -279,7 +279,8 @@ class EncoderDecoderSolver():
                     encoder.eval()
                 else:
                     encoder.train()
-                for model_ids, visuals, captions, cap_lengths in dataloader[phase]:
+                total_iter = len(dataloader[phase])
+                for iter_id, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader[phase]):
                     # visuals must be tensor
                     if model_type == "2d":
                         visuals = visuals
@@ -447,7 +448,7 @@ class EncoderDecoderSolver():
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
-                            log['train_perplexity'].append(np.exp(loss.data[0]) - 1)
+                            log['train_perplexity'].append(np.exp(loss.data[0]))
                         else:
                             # valate
                             val_since = time.time()
@@ -488,6 +489,16 @@ class EncoderDecoderSolver():
 
                             # save log
                             log['val_time'].append(time.time() - val_since)
+                        
+                    if (iter_id+1) % verbose == 0:
+                        print("Epoch:[{}/{}] Iter: [{}/{}] train_loss: {} perplexity: {}".format(
+                            epoch_id+1, 
+                            epoch, 
+                            iter_id+1, 
+                            total_iter, 
+                            log['train_loss'][-1], 
+                            log['train_perplexity'][-1]
+                        ))
 
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])

@@ -70,7 +70,7 @@ class EncoderResNet101(nn.Module):
         self.max_pool = nn.MaxPool2d(kernel_size=7, stride=7)
         self.output_layer = nn.Sequential(
             nn.Linear(2048, 512),
-            nn.ReLU()
+            nn.BatchNorm1d(512, momentum=0.01)
         )
         
     
@@ -92,8 +92,8 @@ class EncoderVGG16BN(nn.Module):
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.output_layer = nn.Sequential(
             nn.Linear(25088, 512),
-            nn.ReLU(),
-            # nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5),
+            nn.BatchNorm1d(512, momentum=0.01)
         )
         
     
@@ -136,12 +136,14 @@ class AttentionEncoderResNet101(nn.Module):
         self.global_mapping = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(),
-            # nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5),
+            nn.BatchNorm2d(512, momentum=0.01)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(),
-            # nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5),
+            nn.BatchNorm1d(512, momentum=0.01)
         )
 
 
@@ -154,8 +156,8 @@ class AttentionEncoderResNet101(nn.Module):
         batch_size = inputs.size(0)
         original_features = inputs.view(inputs.size(0), 2048, 7, 7)
         # (batch_size, 512, 49)
-        area_features = original_features.view(batch_size, 2048, -1).transpose(2, 1).contiguous()
-        area_features = self.area_mapping(area_features).transpose(2, 1).contiguous().view(batch_size, 512, -1)
+        area_features = original_features.permute(0, 2, 3, 1).contiguous()
+        area_features = self.area_mapping(area_features).permute(0, 3, 1, 2 ).contiguous().view(batch_size, 512, -1)
         # (batch_size, 512)
         global_features = self.avg_pool(original_features).view(batch_size, 2048)
         global_features = self.global_mapping(global_features)
@@ -189,12 +191,14 @@ class AttentionEncoderVGG16BN(nn.Module):
         self.global_mapping = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(),
-            # nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5),
+            nn.BatchNorm2d(512, momentum=0.01)
         )
         self.area_mapping = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(),
-            # nn.Dropout(p=0.5)
+            # nn.Dropout(p=0.5),
+            nn.BatchNorm2d(512, momentum=0.01)
         )
 
 
