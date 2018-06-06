@@ -260,8 +260,8 @@ def main(args):
                 val_captions,
                 database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
             )
-            train_dl = DataLoader(train_ds, batch_size=batch_size)
-            val_dl = DataLoader(val_ds, batch_size=batch_size)
+            train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+            val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True)
             dataloader = {
                 'train': train_dl,
                 'val': val_dl
@@ -300,7 +300,7 @@ def main(args):
     # prepare the training parameters
     if pretrained:
         if attention:
-            params = list(decoder.parameters()) + list(encoder.global_mapping.parameters()) + list(encoder.area_mapping.parameters())
+            params = list(decoder.parameters()) + list(encoder.global_mapping.parameters()) + list(encoder.area_mapping.parameters()) + list(encoder.area_bn.parameters())
         else:
             params = list(decoder.parameters()) + list(encoder.output_layer.parameters())
     else:

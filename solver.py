@@ -364,6 +364,17 @@ class EncoderDecoderSolver():
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
                             log['train_perplexity'].append(np.exp(loss.data[0]) - 1)
+
+                            # report
+                            if (iter_id+1) % verbose == 0:
+                                print("Epoch:[{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1, 
+                                    epoch, 
+                                    iter_id+1, 
+                                    total_iter, 
+                                    log['train_loss'][-1], 
+                                    log['train_perplexity'][-1]
+                                ))
                         else:
                             # valate
                             val_since = time.time()
@@ -449,6 +460,17 @@ class EncoderDecoderSolver():
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
                             log['train_perplexity'].append(np.exp(loss.data[0]))
+
+                            # report
+                            if (iter_id+1) % verbose == 0:
+                                print("Epoch:[{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1, 
+                                    epoch, 
+                                    iter_id+1, 
+                                    total_iter, 
+                                    log['train_loss'][-1], 
+                                    log['train_perplexity'][-1]
+                                ))
                         else:
                             # valate
                             val_since = time.time()
@@ -490,15 +512,6 @@ class EncoderDecoderSolver():
                             # save log
                             log['val_time'].append(time.time() - val_since)
                         
-                    if (iter_id+1) % verbose == 0:
-                        print("Epoch:[{}/{}] Iter: [{}/{}] train_loss: {} perplexity: {}".format(
-                            epoch_id+1, 
-                            epoch, 
-                            iter_id+1, 
-                            total_iter, 
-                            log['train_loss'][-1], 
-                            log['train_perplexity'][-1]
-                        ))
 
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
@@ -653,21 +666,21 @@ class EncoderDecoderSolver():
                 print("[Info]  eval_time: %fs" % ( 
                     np.mean(log['eval_time']))
                 )
-                print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds\n" % ( 
+                print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds\n\n" % ( 
                     np.mean(log['epoch_time']),
                     eta_m,
                     eta_s - eta_m * 60)
                 )
-                print("[Debug] train_id: {}\n[Debug] train_ref: {}\n[Debug] train_can: {}\n".format(
-                    list(references["train"].keys())[0],
-                    references["train"][list(references["train"].keys())[0]],
-                    candidates["train"][list(references["train"].keys())[0]]
-                ))
-                print("[Debug] val_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n\n".format(
-                    list(references["val"].keys())[0],
-                    references["val"][list(references["val"].keys())[0]],
-                    candidates["val"][list(references["val"].keys())[0]]
-                ))
+                # print("[Debug] train_id: {}\n[Debug] train_ref: {}\n[Debug] train_can: {}\n".format(
+                #     list(references["train"].keys())[0],
+                #     references["train"][list(references["train"].keys())[0]],
+                #     candidates["train"][list(references["train"].keys())[0]]
+                # ))
+                # print("[Debug] val_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n\n".format(
+                #     list(references["val"].keys())[0],
+                #     references["val"][list(references["val"].keys())[0]],
+                #     candidates["val"][list(references["val"].keys())[0]]
+                # ))
             
             # save log
             self.log[epoch_id] = log
