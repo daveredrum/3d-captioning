@@ -92,8 +92,8 @@ class EncoderVGG16BN(nn.Module):
         super(EncoderVGG16BN, self).__init__()
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.output_layer = nn.Sequential(
-            nn.Linear(25088, 512),
-            nn.ReLU(),
+            *list(torchmodels.vgg16_bn(pretrained=True).classifier.children())[:-1],
+            nn.Linear(4096, 512),
             # nn.Dropout(p=0.5),
             nn.BatchNorm1d(512, momentum=0.01)
         )
@@ -112,9 +112,9 @@ class EncoderVGG16BN(nn.Module):
         return outputs
 
 # for attention
-class AttentionResNet101(nn.Module):
+class ResNet101(nn.Module):
     def __init__(self):
-        super(AttentionResNet101, self).__init__()
+        super(ResNet101, self).__init__()
         resnet = torchmodels.resnet101(pretrained=True)
         self.resnet = nn.Sequential(
             *list(resnet.children())[:-2],
@@ -168,9 +168,9 @@ class AttentionEncoderResNet101(nn.Module):
         return original_features, global_features, area_features
 
 # for attention
-class AttentionVGG16BN(nn.Module):
+class VGG16BN(nn.Module):
     def __init__(self):
-        super(AttentionVGG16BN, self).__init__()
+        super(VGG16BN, self).__init__()
         vgg16 = torchmodels.vgg16_bn(pretrained=True)
         self.vgg16 = nn.Sequential(
             *list(vgg16.features.children())[:-1],

@@ -20,9 +20,9 @@ def main(args):
     print("\ninitializing model...")
     print()
     if args.pretrained == "vgg16_bn":
-        model = encoders.AttentionVGG16BN().cuda()
+        model = encoders.VGG16BN().cuda()
     elif args.pretrained == "resnet101":
-        model = encoders.AttentionResNet101().cuda()
+        model = encoders.ResNet101().cuda()
     for phase in phases:
         print(phase)
         print()

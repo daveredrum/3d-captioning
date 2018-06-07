@@ -60,6 +60,40 @@ class Decoder(nn.Module):
 
         return outputs, new_states
 
+    def beam_search(self, features, beam_size, max_length):
+        batch_size = features.size(0)
+        outputs = []
+        for feat_id in range(batch_size):
+            feature = features[feat_id].unsqueeze(0)
+            states = self.init_hidden(feature)
+            start, states = self.sample(feature, states)
+            start = -F.log_softmax(start, dim=2)
+            # a list containing all searched words and their log_prob
+            searched = [([start.max(2)[1].view(1)], start.max(2)[0].view(1))]
+            for i in range(beam_size * max_length):
+                temp = []
+                for candidate in searched:
+                    prev_word, prev_prob = candidate
+                    if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
+                        embedded = self.embedding(prev_word[-1])
+                        preds, states = self.sample(embedded, states)
+                        preds = F.log_softmax(preds, dim=2)
+                        top_scores, top_words = -F.log_softmax(preds.topk(beam_size, dim=2)[0]).squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
+                        for i in range(beam_size):
+                            next_word, next_prob = prev_word, prev_prob
+                            next_word.append(top_words[i].view(1))
+                            next_prob += top_scores[i].view(1)
+                            temp.append((next_word, next_prob))
+                if not temp:
+                    break
+                searched = sorted(temp, reverse=True, key=lambda s: s[1])[:beam_size]
+            
+            best = [word[0].item() for word in searched[0][0]]
+            outputs.append(best)
+        
+        return outputs
+                        
+
 # # attention module
 # class Attention2D(nn.Module):
 #     def __init__(self, visual_channels, visual_flat):

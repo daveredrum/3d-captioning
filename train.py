@@ -221,8 +221,8 @@ def main(args):
                 database="data/val_feature_{}.hdf5".format(pretrained)
                 # database="data/train_feature_{}.hdf5".format(pretrained)
             )
-            train_dl = DataLoader(train_ds, batch_size=batch_size)
-            val_dl = DataLoader(val_ds, batch_size=batch_size)
+            train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+            val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             dataloader = {
                 'train': train_dl,
                 'val': val_dl
@@ -260,8 +260,8 @@ def main(args):
                 val_captions,
                 database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.hdf5"
             )
-            train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-            val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True)
+            train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+            val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             dataloader = {
                 'train': train_dl,
                 'val': val_dl
@@ -306,7 +306,7 @@ def main(args):
     else:
         params = list(decoder.parameters()) + list(encoder.conv_layer.parameters()) + list(encoder.fc_layer.parameters())
     optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=0)
 
     # training
     print("start training....")
@@ -327,7 +327,6 @@ def main(args):
     epochs = len(encoder_decoder_solver.log.keys())
     train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
     # val_losses = [encoder_decoder_solver.log[i]["val_loss"] for i in range(epochs)]train_perplexity
-    train_perplexity = [encoder_decoder_solver.log[i]["train_perplexity"] for i in range(epochs)]
     train_blues_1 = [encoder_decoder_solver.log[i]["train_bleu_1"] for i in range(epochs)]
     train_blues_2 = [encoder_decoder_solver.log[i]["train_bleu_2"] for i in range(epochs)]
     train_blues_3 = [encoder_decoder_solver.log[i]["train_bleu_3"] for i in range(epochs)]

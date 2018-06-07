@@ -109,36 +109,63 @@ class COCOCaptionDataset(Dataset):
         self.model_ids = copy.deepcopy(csv_file.image_id.values.tolist())
         self.caption_lists = copy.deepcopy(csv_file.caption.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
-        self.data_pairs = self._build_data_pairs()
+        # self.data_pairs = self._build_data_pairs()
         self.database = h5py.File(database, "r")
 
-    def _build_data_pairs(self):
-        # initialize data pairs: (model_id, image_path, caption, cap_length)
-        data_pairs = [(
-            str(self.model_ids[i]),
-            self.index[str(i)],
-            self.caption_lists[i],
-            len(self.caption_lists[i])
-        ) for i in range(self.__len__())]
-        # sort data pairs according to cap_length in descending order
-        data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
-        # pad caption with 0 if it's length is not maximum
-        for index in range(1, len(data_pairs)):
-            for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
-                data_pairs[index][2].append(0)
+    # def _build_data_pairs(self):
+    #     # initialize data pairs: (model_id, image_path, caption, cap_length)
+    #     data_pairs = [(
+    #         str(self.model_ids[i]),
+    #         self.index[str(i)],
+    #         self.caption_lists[i],
+    #         len(self.caption_lists[i])
+    #     ) for i in range(self.__len__())]
+    #     # sort data pairs according to cap_length in descending order
+    #     data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
+    #     # pad caption with 0 if it's length is not maximum
+    #     for index in range(1, len(data_pairs)):
+    #         for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
+    #             data_pairs[index][2].append(0)
         
-        return data_pairs
+    #     return data_pairs
 
     def __len__(self):
         return self.csv_file.image_id.count()
 
     def __getitem__(self, idx):
         # return (model_id, image_inputs, padded_caption, cap_length)
-        image = self.database["features"][self.data_pairs[idx][1]]
+        # image = self.database["features"][self.data_pairs[idx][1]]
+        # image = np.reshape(image, (512, 14, 14))
+        # image = torch.FloatTensor(image)
+
+        # return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
+
+        image = self.database["features"][self.index[str(idx)]]
         image = np.reshape(image, (512, 14, 14))
         image = torch.FloatTensor(image)
 
-        return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
+        return str(self.model_ids[idx]), image, self.caption_lists[idx], len(self.caption_lists[idx])
+
+def collate_fn(data):
+    '''
+    new method to merge data into mini-batches
+    callable while initializing dataloader by collate_fn=collate_fn
+    '''
+    # Sort a data list by caption length (descending order)
+    data.sort(key=lambda x: x[3], reverse=True)
+    model_ids, images, captions, lengths = zip(*data)
+
+    # Merge images (from tuple of 3D tensor to 4D tensor)
+    images = torch.stack(images, 0)
+
+    # Merge captions (from tuple of 1D tensor to 2D tensor).
+    targets = torch.zeros(len(captions), max(lengths)).long()
+    for i, cap in enumerate(captions):
+        end = lengths[i]
+        targets[i, :end] = torch.Tensor(cap[:end])
+
+
+    return model_ids, images, targets, torch.Tensor([l for l in lengths])
 
 class FeatureDataset(Dataset):
     def __init__(self, database):
@@ -484,15 +511,17 @@ class COCO(object):
         # max dict_size = 10000
         word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)[:10000]
         # indexing starts at 1
-        self.dict_word2idx = {word_list[i][0]: i+3 for i in range(len(word_list))}
-        self.dict_idx2word = {i+3: word_list[i][0] for i in range(len(word_list))}
+        self.dict_word2idx = {word_list[i][0]: i+4 for i in range(len(word_list))}
+        self.dict_idx2word = {i+4: word_list[i][0] for i in range(len(word_list))}
         # add special tokens
-        self.dict_word2idx["<UNK>"] = 0
-        self.dict_idx2word[0] = "<UNK>"
-        self.dict_word2idx["<START>"] = 1
-        self.dict_idx2word[1] = "<START>"
-        self.dict_word2idx["<END>"] = 2
-        self.dict_idx2word[2] = "<END>"
+        self.dict_word2idx["<PAD>"] = 0
+        self.dict_idx2word[0] = "<PAD>"
+        self.dict_word2idx["<UNK>"] = 1
+        self.dict_idx2word[1] = "<UNK>"
+        self.dict_word2idx["<START>"] = 2
+        self.dict_idx2word[2] = "<START>"
+        self.dict_word2idx["<END>"] = 3
+        self.dict_idx2word[3] = "<END>"
         # dictionary size
         assert self.dict_idx2word.__len__() == self.dict_word2idx.__len__()
         self.dict_size = self.dict_idx2word.__len__()
@@ -558,5 +587,3 @@ class COCO(object):
             # replace with the new column
             transformed_captions = pandas.DataFrame({'caption': captions_list})
             self.transformed_data[phase].caption = transformed_captions.caption
-            # # sort the csv file by the lengths of descriptions
-            # self.tranformed_csv = self.tranformed_csv.iloc[(-self.tranformed_csv.caption.str.len()).argsort()].reset_index(drop=True)
