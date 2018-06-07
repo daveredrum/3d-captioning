@@ -516,7 +516,7 @@ class EncoderDecoderSolver():
                             #             break
                             #     outputs.append(temp)
                             max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, 3, max_length)
+                            outputs = decoder.beam_search(visual_contexts, 5, max_length)
                             
                             # decode outputs
                             outputs = self._decode_outputs(outputs, None, dict_idx2word, phase)
