@@ -86,7 +86,7 @@ class Decoder(nn.Module):
                         searched.append((next_word, next_prob))
                 else:
                     searched.append((prev_word, prev_prob))
-                searched = sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size]
+                searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
             best = [word[0].item() for word in searched[0][0]]
             outputs.append(best)
