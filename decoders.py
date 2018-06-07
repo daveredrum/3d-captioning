@@ -81,7 +81,7 @@ class Decoder(nn.Module):
                     preds = F.log_softmax(preds, dim=2)
                     top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
                     for i in range(beam_size):
-                        next_word, next_prob = prev_word, prev_prob
+                        next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
                         next_prob += top_scores[i].view(1)
                         searched.append((next_word, next_prob))
