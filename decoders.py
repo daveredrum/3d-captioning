@@ -83,7 +83,7 @@ class Decoder(nn.Module):
                     for i in range(beam_size):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
-                        next_prob += top_scores[i].view(1)
+                        next_prob *= top_scores[i].view(1)
                         searched.append((next_word, next_prob))
                 else:
                     done.append((prev_word, prev_prob))
