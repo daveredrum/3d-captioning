@@ -3,6 +3,7 @@ import torch
 import copy
 import numpy as np
 import torch.nn as nn
+from collections import deque
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 import torchvision.models as torchmodels
@@ -67,26 +68,25 @@ class Decoder(nn.Module):
             feature = features[feat_id].unsqueeze(0)
             states = self.init_hidden(feature)
             start, states = self.sample(feature, states)
-            start = -F.log_softmax(start, dim=2)
-            # a list containing all searched words and their log_prob
-            searched = [([start.max(2)[1].view(1)], start.max(2)[0].view(1))]
+            start = F.log_softmax(start, dim=2)
+            # a queue containing all searched words and their log_prob
+            searched = deque([([start.max(2)[1].view(1)], start.max(2)[0].view(1))])
             for i in range(beam_size * max_length):
-                temp = []
-                for candidate in searched:
-                    prev_word, prev_prob = candidate
-                    if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
-                        embedded = self.embedding(prev_word[-1])
-                        preds, states = self.sample(embedded, states)
-                        preds = F.log_softmax(preds, dim=2)
-                        top_scores, top_words = -F.log_softmax(preds.topk(beam_size, dim=2)[0]).squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
-                        for i in range(beam_size):
-                            next_word, next_prob = prev_word, prev_prob
-                            next_word.append(top_words[i].view(1))
-                            next_prob += top_scores[i].view(1)
-                            temp.append((next_word, next_prob))
-                if not temp:
-                    break
-                searched = sorted(temp, reverse=True, key=lambda s: s[1])[:beam_size]
+                candidate = searched.popleft()
+                prev_word, prev_prob = candidate
+                if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
+                    embedded = self.embedding(prev_word[-1])
+                    preds, states = self.sample(embedded, states)
+                    preds = F.log_softmax(preds, dim=2)
+                    top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
+                    for i in range(beam_size):
+                        next_word, next_prob = prev_word, prev_prob
+                        next_word.append(top_words[i].view(1))
+                        next_prob += top_scores[i].view(1)
+                        searched.append((next_word, next_prob))
+                else:
+                    searched.append((prev_word, prev_prob))
+                searched = sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size]
             
             best = [word[0].item() for word in searched[0][0]]
             outputs.append(best)
