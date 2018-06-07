@@ -74,7 +74,7 @@ class Decoder(nn.Module):
             for i in range(beam_size * max_length):
                 candidate = searched.popleft()
                 prev_word, prev_prob = candidate
-                print(prev_word.tolist())
+                print([data[0].item() for data in prev_word])
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     embedded = self.embedding(prev_word[-1])
                     preds, states = self.sample(embedded, states)
