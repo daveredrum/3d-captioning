@@ -71,10 +71,10 @@ class Decoder(nn.Module):
             start = F.log_softmax(start, dim=2)
             # a queue containing all searched words and their log_prob
             searched = deque([([start.max(2)[1].view(1)], start.max(2)[0].view(1))])
+            done = []
             for i in range(beam_size * max_length):
                 candidate = searched.popleft()
                 prev_word, prev_prob = candidate
-                print([data[0].item() for data in prev_word])
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     embedded = self.embedding(prev_word[-1])
                     preds, states = self.sample(embedded, states)
@@ -86,10 +86,13 @@ class Decoder(nn.Module):
                         next_prob += top_scores[i].view(1)
                         searched.append((next_word, next_prob))
                 else:
-                    searched.append((prev_word, prev_prob))
-                searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
+                    done.append((prev_word, prev_prob))
+                if not searched:
+                    break
+                else:
+                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
-            best = [word[0].item() for word in searched[0][0]]
+            best = [word[0].item() for word in done[0][0]]
             outputs.append(best)
         
         return outputs
