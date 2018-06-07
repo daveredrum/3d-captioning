@@ -68,7 +68,7 @@ class Decoder(nn.Module):
             feature = features[feat_id].unsqueeze(0)
             states = self.init_hidden(feature)
             start, states = self.sample(feature, states)
-            start = F.softmax(start, dim=2)
+            start = F.log_softmax(start, dim=2)
             # a queue containing all searched words and their log_prob
             searched = deque([([start.max(2)[1].view(1)], start.max(2)[0].view(1))])
             done = []
@@ -78,12 +78,12 @@ class Decoder(nn.Module):
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     embedded = self.embedding(prev_word[-1])
                     preds, states = self.sample(embedded, states)
-                    preds = F.softmax(preds, dim=2)
+                    preds = F.log_softmax(preds, dim=2)
                     top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
                     for i in range(beam_size):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
-                        next_prob *= top_scores[i].view(1)
+                        next_prob += top_scores[i].view(1)
                         searched.append((next_word, next_prob))
                 else:
                     done.append((prev_word, prev_prob))
