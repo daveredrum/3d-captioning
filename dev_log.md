@@ -13,8 +13,8 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
-|ResNet101 + LSTM <br/>(beam_size=1)|0.567|0.356|0.207|0.133|0.241|
-|ResNet101 + Attention + LSTM <br/>(beam_size=1)|0.57|0.363|0.212|0.134|0.259|
+|__ResNet101 + LSTM <br/>(beam_size=1)__|__0.567__|__0.356__|__0.207__|__0.133__|__0.241__|
+|__ResNet101 + Attention + LSTM <br/>(beam_size=1)__|__0.57__|__0.363__|__0.212__|__0.134__|__0.259__|
 |NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
 |Show and Tell|0.666|0.461|0.329|0.27|-|
 |Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
