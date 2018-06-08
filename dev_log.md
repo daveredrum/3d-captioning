@@ -1,5 +1,26 @@
 # Development Log
 
+## Jun. 8
+
+> __milestone:__ beam search is now available
+
+__progress:__
+- offline feature extraction for boosting the training
+- constrained the pretrained encoder as vgg16_bn and resnet101
+- enabled beam search
+- performance evaluation:
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
+|ResNet101 + LSTM <br/>(beam_size=1)|0.567|0.356|0.207|0.133|0.241|
+|ResNet101 + Attention + LSTM <br/>(beam_size=1)|0.57|0.363|0.212|0.134|0.259|
+
+
+__TODOs:__
+- search for the best hyperparameters
+- evaluation with different beam search sizes
+
 ## May.25
 
 __progress:__
