@@ -15,6 +15,9 @@ __progress:__
 |Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
 |ResNet101 + LSTM <br/>(beam_size=1)|0.567|0.356|0.207|0.133|0.241|
 |ResNet101 + Attention + LSTM <br/>(beam_size=1)|0.57|0.363|0.212|0.134|0.259|
+|NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
+|Show and Tell|0.666|0.461|0.329|0.27|-|
+|Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
 
 
 __TODOs:__
