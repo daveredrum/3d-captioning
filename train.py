@@ -241,7 +241,7 @@ def main(args):
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-            test = DataLoader(test_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+            test_dl = DataLoader(test_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             dataloader = {
                 'train': train_dl,
                 'val': val_dl,
