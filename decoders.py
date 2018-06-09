@@ -94,7 +94,6 @@ class Decoder(nn.Module):
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
             done = sorted(done, reverse=True, key=lambda s: s[1])
-            print(len(done))
             best = [word[0].item() for word in done[0][0]]
             outputs.append(best)
         
