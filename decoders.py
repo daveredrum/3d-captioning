@@ -98,6 +98,7 @@ class Decoder(nn.Module):
             
             if not done:
                 done = sorted(done, reverse=True, key=lambda s: s[1])
+                print(done)
                 best = [word[0].item() for word in done[0][0]]
                 outputs.append(best)
             else:
