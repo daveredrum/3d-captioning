@@ -34,19 +34,18 @@ def main(args):
     model_type = args.model_type
     weight_decay = args.weight_decay
     if args.attention == "true":
-        args.attention = True
+        attention = True
     elif args.attention == "false":
-        args.attention = False
-    attention = args.attention
+        attention = False
     pretrained = args.pretrained
     if pretrained:
         model_name = pretrained
     else:
         model_name = "shallow"
     if args.evaluation == "true":
-        args.evaluation = True
+        evaluation = True
     elif args.evaluation == "false":
-        args.evaluation = False
+        evaluation = False
 
     print("\n[settings]")
     print("GPU:", args.gpu)
