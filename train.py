@@ -43,12 +43,14 @@ def main(args):
         model_name = pretrained
     else:
         model_name = "shallow"
+    evaluation = args.evaluation
 
     print("\n[settings]")
     print("GPU:", args.gpu)
     print("model_type:", args.model_type)
     print("pretrained:", args.pretrained)
     print("attention:", args.attention)
+    print("evaluation:", args.evaluation)
     print("train_size:", args.train_size)
     print("val_size:", args.val_size)
     print("test_size:", args.test_size)
@@ -211,6 +213,7 @@ def main(args):
         # split data
         train_captions = coco.transformed_data['train']
         val_captions = coco.transformed_data['val']
+        test_captions = coco.transformed_data['test']
         dict_idx2word = coco.dict_idx2word
         dict_word2idx = coco.dict_word2idx
         corpus = coco.corpus
@@ -231,11 +234,18 @@ def main(args):
                 val_captions,
                 database="data/train_feature_{}.hdf5".format(pretrained)
             )
+            test_ds = COCOCaptionDataset(
+                "/mnt/raid/davech2y/COCO_2014/preprocessed/test_index.json", 
+                test_captions, 
+                database="data/test_feature_{}.hdf5".format(pretrained)
+            )
             train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+            test = DataLoader(test_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             dataloader = {
                 'train': train_dl,
-                'val': val_dl
+                'val': val_dl,
+                'test': test_dl
             }
             # initialize the encoder
             if pretrained == "resnet101":
@@ -424,6 +434,55 @@ def main(args):
     plt.savefig("figs/rouge_curve_%s.png" % settings, bbox_inches="tight")
 
 
+    ###################################################################
+    #                                                                 #
+    #                                                                 #
+    #                             evaluation                          #
+    #                                                                 #
+    #                                                                 #
+    ###################################################################
+    if evaluation:
+        encoder.eval()
+        decoder.eval()
+        candidates = {}
+        outputs = {}
+        bleu = {}
+        cider = {}
+        rouge = {}
+        for _, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader["test"]):
+            visual_inputs = Variable(visuals, requires_grad=False).cuda()
+            caption_inputs = Variable(captions[:, :-1], requires_grad=False).cuda()
+            cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
+            visual_contexts = encoder(visual_inputs)
+            max_length = int(cap_lengths[0].item()) + 10
+            for bs in [3, 5, 7]:
+                if attention:
+                    outputs[bs] = decoder.beam_search(visual_contexts, caption_inputs, bs, max_length)
+                    outputs[bs] = encoder_decoder_solver._decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
+                else:
+                    outputs[bs] = decoder.beam_search(visual_contexts, beam_size, max_length)
+                    outputs[bs] = encoder_decoder_solver._decode_outputs(outputs, None, dict_idx2word, "val")
+                for model_id, output in zip(model_ids, outputs[bs]):
+                    if model_id not in candidates[bs].keys():
+                        candidates[bs][model_id] = [output]
+                    else:
+                        candidates[bs][model_id].append(output)
+        
+        for bs in beam_size:
+            bleu[bs] = capbleu.Bleu(4).compute_score(corpus["test"], candidates[bs])
+            cider[bs] = capcider.Cider().compute_score(corpus["val"], candidates[bs])
+            rouge[bs] = caprouge.Rouge().compute_score(corpus["val"], candidates[bs])
+        print("----------------------evaluation-----------------------")
+        print("Beam size: 3, 5, 7")
+        print("[BLEU-1]: {:.4f}, {:.4f}, {:.4f}".format(bleu[3][0], bleu[5][0], bleu[7][0]))
+        print("[BLEU-2]: {:.4f}, {:.4f}, {:.4f}".format(bleu[3][1], bleu[5][1], bleu[7][1]))
+        print("[BLEU-3]: {:.4f}, {:.4f}, {:.4f}".format(bleu[3][2], bleu[5][2], bleu[7][2]))
+        print("[BLEU-4]: {:.4f}, {:.4f}, {:.4f}".format(bleu[3][3], bleu[5][3], bleu[7][3]))
+        print("[CIDEr]: {:.4f}, {:.4f}, {:.4f}".format(cider[3], cider[5], cider[7]))
+        print("[ROUGE-L]: {:.4f}, {:.4f}, {:.4f}".format(rouge[3], rouge[5], rouge[7]))
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
@@ -439,5 +498,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_type", type=str, default="2d", help="type of model to train")
     parser.add_argument("--pretrained", type=str, default=None, help="vgg16/vgg16_bn/resnet50")
     parser.add_argument("--attention", type=str, default="false", help="true/false")
+    parser.add_argument("--evaluation", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)
