@@ -72,8 +72,6 @@ class Decoder(nn.Module):
             start_scores, start_words = start.topk(beam_size, dim=2)[0].squeeze(), start.topk(beam_size, dim=2)[1].squeeze()
             # a queue containing all searched words and their log_prob
             searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
-            for i in range(beam_size):
-                print(searched[i][0]) 
             done = []
             for i in range(beam_size * (max_length - 1)):
                 candidate = searched.popleft()
@@ -87,7 +85,7 @@ class Decoder(nn.Module):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
                         next_prob += top_scores[i].view(1)
-                        if top_words[i].view(1).item() != 3:
+                        if top_words[i].view(1)[0].item() != 3:
                             searched.append((next_word, next_prob, new_states))
                         else:
                             done.append((next_word, next_prob, new_states))
