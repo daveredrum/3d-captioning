@@ -445,11 +445,11 @@ def main(args):
         encoder.eval()
         decoder.eval()
         beam_size = [3, 5, 7]
-        candidates = {i:None for i in beam_size}
-        outputs = {i:None for i in beam_size}
-        bleu = {i:None for i in beam_size}
-        cider = {i:None for i in beam_size}
-        rouge = {i:None for i in beam_size}
+        candidates = {i:{} for i in beam_size}
+        outputs = {i:{} for i in beam_size}
+        bleu = {i:{} for i in beam_size}
+        cider = {i:{} for i in beam_size}
+        rouge = {i:{} for i in beam_size}
         for _, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader["test"]):
             visual_inputs = Variable(visuals, requires_grad=False).cuda()
             caption_inputs = Variable(captions[:, :-1], requires_grad=False).cuda()
