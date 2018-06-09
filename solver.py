@@ -243,7 +243,7 @@ class EncoderDecoderSolver():
             for param in group['params']:
                 param.grad.data.clamp_(-clip_value, clip_value)
 
-    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention):
+    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention, beam_size=3):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
         # scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
@@ -293,10 +293,6 @@ class EncoderDecoderSolver():
             }
             start = time.time()
             for phase in ["train", "val"]:
-                if phase == "val":
-                    encoder.eval()
-                else:
-                    encoder.train()
                 total_iter = len(dataloader[phase])
                 for iter_id, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader[phase]):
                     # visuals must be tensor
@@ -306,11 +302,8 @@ class EncoderDecoderSolver():
                         visuals = visuals[1]
                     elif model_type == "coco":
                         visuals = visuals
-
                     # inputs for decoder with attention
                     if attention: 
-                        # caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
-                        # caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, 1:cap_lengths[0]]
                         caption_inputs = captions[:, :-1]
                         caption_targets = captions[:, 1:]
                         if self.cuda_flag:
@@ -325,6 +318,8 @@ class EncoderDecoderSolver():
                             cap_lengths = Variable(cap_lengths, requires_grad=False)
                         
                         if phase == "train":
+                            encoder.train()
+                            decoder.train()
                             self.optimizer.zero_grad()
                             # forward pass
                             forward_since = time.time()
@@ -387,36 +382,43 @@ class EncoderDecoderSolver():
 
                             # report
                             if (iter_id+1) % verbose == 0:
-                                print("Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1,
+                                    epoch,
                                     iter_id+1, 
                                     total_iter, 
                                     log['train_loss'][-1], 
                                     log['train_perplexity'][-1]
                                 ))
                         else:
-                            # valate
+                            # validate
+                            encoder.eval()
+                            decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            # generate until <END> token
-                            outputs = []
-                            states = decoder.init_hidden(visual_contexts[0])
+                            # # generate until <END> token
+                            # outputs = []
+                            # states = decoder.init_hidden(visual_contexts[0])
+                            # max_length = int(cap_lengths[0].item()) + 10
+                            # for idx in range(visual_contexts[0].size(0)):
+                            #     h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                            #     inputs = caption_inputs[idx, 0]
+                            #     temp = []
+                            #     for i in range(max_length):
+                            #         features = (
+                            #             visual_contexts[0][idx].unsqueeze(0), 
+                            #             visual_contexts[1][idx].unsqueeze(0), 
+                            #             visual_contexts[2][idx].unsqueeze(0)
+                            #         )
+                            #         predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
+                            #         inputs = predicted.max(2)[1].view(1)
+                            #         temp.append(inputs[0].item())
+                            #         if inputs[0].item() == dict_word2idx['<END>']:
+                            #             break
+                            #     outputs.append(temp)
+                            # beam search
                             max_length = int(cap_lengths[0].item()) + 10
-                            for idx in range(visual_contexts[0].size(0)):
-                                h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                                inputs = caption_inputs[idx, 0]
-                                temp = []
-                                for i in range(max_length):
-                                    features = (
-                                        visual_contexts[0][idx].unsqueeze(0), 
-                                        visual_contexts[1][idx].unsqueeze(0), 
-                                        visual_contexts[2][idx].unsqueeze(0)
-                                    )
-                                    predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
-                                    inputs = predicted.max(2)[1].view(1)
-                                    temp.append(inputs[0].item())
-                                    if inputs[0].item() == dict_word2idx['<END>']:
-                                        break
-                                outputs.append(temp)
+                            outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
 
                             # decode the outputs
                             outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
@@ -431,8 +433,6 @@ class EncoderDecoderSolver():
 
                     # decoder without attention
                     else:
-                        # caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
-                        # caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
                         caption_inputs = captions[:, :-1]
                         caption_targets = captions
                         if self.cuda_flag:
@@ -447,6 +447,8 @@ class EncoderDecoderSolver():
                             cap_lengths = Variable(cap_lengths, requires_grad=False)
                         
                         if phase == "train":
+                            encoder.train()
+                            decoder.train()
                             self.optimizer.zero_grad()
                             # forward pass
                             forward_since = time.time()
@@ -483,14 +485,18 @@ class EncoderDecoderSolver():
 
                             # report
                             if (iter_id+1) % verbose == 0:
-                                print("Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format( 
+                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1,
+                                    epoch,
                                     iter_id+1, 
                                     total_iter, 
                                     log['train_loss'][-1], 
                                     log['train_perplexity'][-1]
                                 ))
                         else:
-                            # valate
+                            # validate
+                            encoder.eval()
+                            decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
                             # # greedy search
@@ -516,7 +522,7 @@ class EncoderDecoderSolver():
                             #             break
                             #     outputs.append(temp)
                             max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, 5, max_length)
+                            outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
                             
                             # decode outputs
                             outputs = self._decode_outputs(outputs, None, dict_idx2word, phase)
@@ -715,6 +721,7 @@ class EncoderDecoderSolver():
                 best_models['decoder'] = decoder
 
                 # save model
+                print("saving the best models...\n")
                 torch.save(best_models['encoder'], "models/encoder_%s.pth" % self.settings)
                 torch.save(best_models['encoder'], "models/decoder_%s.pth" % self.settings)
 

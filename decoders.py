@@ -23,7 +23,7 @@ class Decoder(nn.Module):
         self.lstm_layer = nn.LSTMCell(self.hidden_size, self.hidden_size)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
-            # nn.Dropout(p=0.2)
+            nn.Dropout(p=0.2)
         )
         self.cuda_flag = cuda_flag
 
@@ -69,22 +69,23 @@ class Decoder(nn.Module):
             states = self.init_hidden(feature)
             start, states = self.sample(feature, states)
             start = F.log_softmax(start, dim=2)
+            start_scores, start_words = start.topk(beam_size, dim=2)[0].squeeze(), start.topk(beam_size, dim=2)[1].squeeze()
             # a queue containing all searched words and their log_prob
-            searched = deque([([start.max(2)[1].view(1)], start.max(2)[0].view(1))])
+            searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
-            for i in range(beam_size * max_length):
+            for i in range(beam_size * (max_length - 1)):
                 candidate = searched.popleft()
-                prev_word, prev_prob = candidate
+                prev_word, prev_prob, prev_states = candidate
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     embedded = self.embedding(prev_word[-1])
-                    preds, states = self.sample(embedded, states)
+                    preds, new_states = self.sample(embedded, prev_states)
                     preds = F.log_softmax(preds, dim=2)
                     top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
                     for i in range(beam_size):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
                         next_prob += top_scores[i].view(1)
-                        searched.append((next_word, next_prob))
+                        searched.append((next_word, next_prob, new_states))
                 else:
                     done.append((prev_word, prev_prob))
                 if not searched:
@@ -177,15 +178,12 @@ class Attention2D(nn.Module):
         # MLP
         self.comp_visual = nn.Sequential(
             nn.Linear(hidden_size, hidden_size, bias=False),
-            # nn.Dropout(p=0.2)
         )
         self.comp_hidden = nn.Sequential(
             nn.Linear(hidden_size, hidden_size, bias=False),
-            # nn.Dropout(p=0.2)
         )
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, 1, bias=False),
-            # nn.Dropout(p=0.2)
         )
         # initialize weights
         self.reset_parameters()
@@ -278,11 +276,9 @@ class AttentionDecoder2D(nn.Module):
         # initialize hidden states
         self.init_h = nn.Sequential(
             nn.Linear(self.visual_channels, hidden_size),
-            # nn.Dropout(p=0.2)
         )
         self.init_c = nn.Sequential(
             nn.Linear(self.visual_channels, hidden_size),
-            # nn.Dropout(p=0.2)
         )
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
@@ -298,7 +294,7 @@ class AttentionDecoder2D(nn.Module):
         # output layer
         self.output_layer = nn.Sequential(
             nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
-            # nn.Dropout(p=0.2)
+            nn.Dropout(p=0.2)
         )
 
 
@@ -365,6 +361,46 @@ class AttentionDecoder2D(nn.Module):
         outputs = self.output_layer(outputs).unsqueeze(1)
 
         return outputs, new_states, attention_weights
+
+    def beam_search(self, features, caption_inputs, beam_size, max_length):
+        batch_size = features[0].size(0)
+        outputs = []
+        for feat_id in range(batch_size):
+            feats = (
+                features[0][feat_id].unsqueeze(0),
+                features[1][feat_id].unsqueeze(0),
+                features[2][feat_id].unsqueeze(0),
+            )
+            states = self.init_hidden(feats[0])
+            start, states, _ = self.sample(feats, caption_inputs[feat_id, 0].view(1), states)
+            start = F.log_softmax(start, dim=2)
+            start_scores, start_words = start.topk(beam_size, dim=2)[0].squeeze(), start.topk(beam_size, dim=2)[1].squeeze()
+            # a queue containing all searched words and their log_prob
+            searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
+            done = []
+            for i in range(beam_size * (max_length - 1)):
+                candidate = searched.popleft()
+                prev_word, prev_prob, prev_states = candidate
+                if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
+                    preds, new_states, _ = self.sample(feats, prev_word[-1], prev_states)
+                    preds = F.log_softmax(preds, dim=2)
+                    top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(), preds.topk(beam_size, dim=2)[1].squeeze()
+                    for i in range(beam_size):
+                        next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
+                        next_word.append(top_words[i].view(1))
+                        next_prob += top_scores[i].view(1)
+                        searched.append((next_word, next_prob, new_states))
+                else:
+                    done.append((prev_word, prev_prob))
+                if not searched:
+                    break
+                else:
+                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
+            
+            best = [word[0].item() for word in done[0][0]]
+            outputs.append(best)
+        
+        return outputs
 
 # pipeline for pretrained encoder-decoder pipeline
 # same pipeline for both 2d and 3d

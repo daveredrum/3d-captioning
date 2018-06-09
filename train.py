@@ -26,6 +26,7 @@ def main(args):
     train_size = args.train_size
     val_size = args.val_size
     test_size = args.test_size
+    beam_size = args.beam_size
     epoch = args.epoch
     verbose = args.verbose
     lr = args.learning_rate
@@ -51,6 +52,7 @@ def main(args):
     print("train_size:", args.train_size)
     print("val_size:", args.val_size)
     print("test_size:", args.test_size)
+    print("beam_size:", args.beam_size)
     print("epoch:", args.epoch)
     print("verbose:", args.verbose)
     print("batch_size:", args.batch_size)
@@ -195,9 +197,14 @@ def main(args):
         print("preparing data....")
         print()
         coco = COCO(
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            # # for training
             # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
+            # pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
+            # [train_size, val_size, test_size]
+            # for debugging
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
+            pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
             pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
             [train_size, val_size, test_size]
         )
@@ -215,11 +222,14 @@ def main(args):
                 database="data/train_feature_{}.hdf5".format(pretrained)
             )
             val_ds = COCOCaptionDataset(
-                "/mnt/raid/davech2y/COCO_2014/preprocessed/val_index.json", 
-                # "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
+                # # for training
+                # "/mnt/raid/davech2y/COCO_2014/preprocessed/val_index.json", 
+                # val_captions,
+                # database="data/val_feature_{}.hdf5".format(pretrained)
+                # for debugging
+                "/mnt/raid/davech2y/COCO_2014/preprocessed/train_index.json", 
                 val_captions,
-                database="data/val_feature_{}.hdf5".format(pretrained)
-                # database="data/train_feature_{}.hdf5".format(pretrained)
+                database="data/train_feature_{}.hdf5".format(pretrained)
             )
             train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
             val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
@@ -312,16 +322,11 @@ def main(args):
     print("start training....")
     print()
     if attention:
-        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "attention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d_beam%d" % (model_type, model_name, "attention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
     else:
-        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d" % (model_type, model_name, "noattention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size)
+        settings = "%s_%s_%s_trs%d_vs%d_ts%d_e%d_lr%f_wd%f_bs%d_vocal%d_beam%d" % (model_type, model_name, "noattention", train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
     encoder_decoder_solver = EncoderDecoderSolver(optimizer, criterion, model_type, settings)
-    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention)
-
-    # save
-    print("save models...")
-    torch.save(encoder, "models/encoder_%s.pth"  % settings)
-    torch.save(decoder, "models/decoder_%s.pth"  % settings)
+    encoder_decoder_solver.train(encoder, decoder, dataloader, corpus, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention, beam_size)
 
     # plot the result
     epochs = len(encoder_decoder_solver.log.keys())
@@ -424,6 +429,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
     parser.add_argument("--val_size", type=int, default=100, help="val size for input captions")
     parser.add_argument("--test_size", type=int, default=100, help="test size for input captions")
+    parser.add_argument("--beam_size", type=int, default=1, help="beam size")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
