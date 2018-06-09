@@ -189,8 +189,6 @@ class Attention2D(nn.Module):
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, 1, bias=False),
         )
-        # scalar
-        self.gate_scalar = nn.Linear(hidden_size, 1, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -217,9 +215,6 @@ class Attention2D(nn.Module):
         # outputs = (batch_size, visual_flat)
         outputs = self.output_layer(outputs).squeeze(2)
         outputs = F.softmax(outputs, dim=1)
-        # gating scalar
-        gs = F.sigmoid(self.gate_scalar(hidden))
-        outputs = outputs * gs
 
         return outputs
 
@@ -296,6 +291,8 @@ class AttentionDecoder2D(nn.Module):
         self.attention = Attention2D(self.visual_channels, self.hidden_size, self.visual_flat)
         # self.attention = Attention2D(self.visual_channels, self.visual_flat)
 
+        # scalar
+        self.gate_scalar = nn.Linear(hidden_size, 1, bias=False)
 
         # self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, self.hidden_size)
         self.lstm_layer_1 = nn.LSTMCell(2 * self.hidden_size, self.hidden_size)
@@ -340,6 +337,8 @@ class AttentionDecoder2D(nn.Module):
             lstm_input = torch.cat((embedded, global_features), dim=1)
             attention_weights = self.attention(area_features, states)
             attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            gs = self.gate_scalar(states[0])
+            attended = gs * attended
             states = self.lstm_layer_1(lstm_input, states)
             lstm_outputs = states[0]
             outputs = torch.cat((attended, lstm_outputs), dim=1)
