@@ -396,29 +396,32 @@ class EncoderDecoderSolver():
                             decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            # # generate until <END> token
-                            # outputs = []
-                            # states = decoder.init_hidden(visual_contexts[0])
-                            # max_length = int(cap_lengths[0].item()) + 10
-                            # for idx in range(visual_contexts[0].size(0)):
-                            #     h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                            #     inputs = caption_inputs[idx, 0]
-                            #     temp = []
-                            #     for i in range(max_length):
-                            #         features = (
-                            #             visual_contexts[0][idx].unsqueeze(0), 
-                            #             visual_contexts[1][idx].unsqueeze(0), 
-                            #             visual_contexts[2][idx].unsqueeze(0)
-                            #         )
-                            #         predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
-                            #         inputs = predicted.max(2)[1].view(1)
-                            #         temp.append(inputs[0].item())
-                            #         if inputs[0].item() == dict_word2idx['<END>']:
-                            #             break
-                            #     outputs.append(temp)
-                            # beam search
-                            max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
+                            if beam_size == 1:
+                                # greedy search
+                                # generate until <END> token
+                                outputs = []
+                                states = decoder.init_hidden(visual_contexts[0])
+                                max_length = int(cap_lengths[0].item()) + 10
+                                for idx in range(visual_contexts[0].size(0)):
+                                    h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                                    inputs = caption_inputs[idx, 0]
+                                    temp = []
+                                    for i in range(max_length):
+                                        features = (
+                                            visual_contexts[0][idx].unsqueeze(0), 
+                                            visual_contexts[1][idx].unsqueeze(0), 
+                                            visual_contexts[2][idx].unsqueeze(0)
+                                        )
+                                        predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
+                                        inputs = predicted.max(2)[1].view(1)
+                                        temp.append(inputs[0].item())
+                                        if inputs[0].item() == dict_word2idx['<END>']:
+                                            break
+                                    outputs.append(temp)
+                            else:
+                                # beam search
+                                max_length = int(cap_lengths[0].item()) + 10
+                                outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
 
                             # decode the outputs
                             outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
@@ -499,31 +502,34 @@ class EncoderDecoderSolver():
                             decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            # # greedy search
-                            # # generate until <END> token
-                            # outputs = []
-                            # states = decoder.init_hidden(visual_contexts)
-                            # max_length = int(cap_lengths[0].item()) + 10
-                            # for idx in range(visual_contexts.size(0)):
-                            #     h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                            #     temp = []
-                            #     for i in range(max_length):
-                            #         if i == 0:
-                            #             embedded = visual_contexts[idx].unsqueeze(0)
-                            #             predicted, (h, c) = decoder.sample(embedded, (h, c))
-                            #             inputs = caption_inputs[idx, 0].view(1)
-                            #             temp.append(predicted.max(2)[1].view(1).item())
-                            #         else:
-                            #             embedded = decoder.embedding(inputs)
-                            #             predicted, (h, c) = decoder.sample(embedded, (h, c))
-                            #             inputs = predicted.max(2)[1].view(1)
-                            #             temp.append(inputs[0].item())
-                            #         if inputs[0].item() == dict_word2idx['<END>']:
-                            #             break
-                            #     outputs.append(temp)
-                            max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
-                            
+                            if beam_size == 1:
+                                # greedy search
+                                # generate until <END> token
+                                outputs = []
+                                states = decoder.init_hidden(visual_contexts)
+                                max_length = int(cap_lengths[0].item()) + 10
+                                for idx in range(visual_contexts.size(0)):
+                                    h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                                    temp = []
+                                    for i in range(max_length):
+                                        if i == 0:
+                                            embedded = visual_contexts[idx].unsqueeze(0)
+                                            predicted, (h, c) = decoder.sample(embedded, (h, c))
+                                            inputs = caption_inputs[idx, 0].view(1)
+                                            temp.append(predicted.max(2)[1].view(1).item())
+                                        else:
+                                            embedded = decoder.embedding(inputs)
+                                            predicted, (h, c) = decoder.sample(embedded, (h, c))
+                                            inputs = predicted.max(2)[1].view(1)
+                                            temp.append(inputs[0].item())
+                                        if inputs[0].item() == dict_word2idx['<END>']:
+                                            break
+                                    outputs.append(temp)
+                            else:
+                                # beam search
+                                max_length = int(cap_lengths[0].item()) + 10
+                                outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
+                                
                             # decode outputs
                             outputs = self._decode_outputs(outputs, None, dict_idx2word, phase)
                             # save to candidates

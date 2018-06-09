@@ -74,7 +74,6 @@ class Decoder(nn.Module):
             searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
             for i in range(beam_size * (max_length - 1)):
-                print(len(searched))
                 candidate = searched.popleft()
                 prev_word, prev_prob, prev_states = candidate
                 if len(prev_word) <= max_length:
@@ -98,11 +97,8 @@ class Decoder(nn.Module):
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
             done = sorted(done, reverse=True, key=lambda s: s[1])
-            if not done:
-                best = [word[0].item() for word in done[0][0]]
-                outputs.append(best)
-            else:
-                outputs.append([3])
+            best = [word[0].item() for word in done[0][0]]
+            outputs.append(best)
         
         return outputs
                         
@@ -406,11 +402,8 @@ class AttentionDecoder2D(nn.Module):
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
             done = sorted(done, reverse=True, key=lambda s: s[1])
-            if not done:
-                best = [word[0].item() for word in done[0][0]]
-                outputs.append(best)
-            else:
-                outputs.append([3])
+            best = [word[0].item() for word in done[0][0]]
+            outputs.append(best)
         
         return outputs
 
