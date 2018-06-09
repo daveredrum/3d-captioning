@@ -96,8 +96,8 @@ class Decoder(nn.Module):
                 else:
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
-            done = sorted(done, reverse=True, key=lambda s: s[1])
             if not done:
+                done = sorted(done, reverse=True, key=lambda s: s[1])
                 best = [word[0].item() for word in done[0][0]]
                 outputs.append(best)
         
@@ -402,9 +402,10 @@ class AttentionDecoder2D(nn.Module):
                 else:
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
-            done = sorted(done, reverse=True, key=lambda s: s[1])
-            best = [word[0].item() for word in done[0][0]]
-            outputs.append(best)
+            if not done:
+                done = sorted(done, reverse=True, key=lambda s: s[1])
+                best = [word[0].item() for word in done[0][0]]
+                outputs.append(best)
         
         return outputs
 
