@@ -189,6 +189,8 @@ class Attention2D(nn.Module):
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, 1, bias=False),
         )
+        # scalar
+        self.gate_scalar = nn.Linear(hidden_size, 1, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -215,6 +217,9 @@ class Attention2D(nn.Module):
         # outputs = (batch_size, visual_flat)
         outputs = self.output_layer(outputs).squeeze(2)
         outputs = F.softmax(outputs, dim=1)
+        # gating scalar
+        gs = F.sigmoid(self.gate_scalar(hidden))
+        outputs *= gs
 
         return outputs
 

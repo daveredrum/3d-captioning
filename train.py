@@ -43,7 +43,10 @@ def main(args):
         model_name = pretrained
     else:
         model_name = "shallow"
-    evaluation = args.evaluation
+    if args.evaluation == "true":
+        args.evaluation = True
+    elif args.evaluation == "false":
+        args.evaluation = False
 
     print("\n[settings]")
     print("GPU:", args.gpu)
@@ -442,6 +445,8 @@ def main(args):
     #                                                                 #
     ###################################################################
     if evaluation:
+        print("evaluating...")
+        print()
         encoder.eval()
         decoder.eval()
         beam_size = [3, 5, 7]
@@ -461,7 +466,7 @@ def main(args):
                     outputs[bs] = decoder.beam_search(visual_contexts, caption_inputs, bs, max_length)
                     outputs[bs] = encoder_decoder_solver._decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
                 else:
-                    outputs[bs] = decoder.beam_search(visual_contexts, beam_size, max_length)
+                    outputs[bs] = decoder.beam_search(visual_contexts, bs, max_length)
                     outputs[bs] = encoder_decoder_solver._decode_outputs(outputs, None, dict_idx2word, "val")
                 for model_id, output in zip(model_ids, outputs[bs]):
                     if model_id not in candidates[bs].keys():
