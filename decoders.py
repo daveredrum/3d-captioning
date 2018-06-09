@@ -219,7 +219,7 @@ class Attention2D(nn.Module):
         outputs = F.softmax(outputs, dim=1)
         # gating scalar
         gs = F.sigmoid(self.gate_scalar(hidden))
-        outputs *= gs
+        outputs = outputs * gs
 
         return outputs
 
