@@ -700,16 +700,16 @@ class EncoderDecoderSolver():
                 eta_m,
                 eta_s - eta_m * 60)
             )
-            print("[Debug] train_id: {}\n[Debug] train_ref: {}\n[Debug] train_can: {}\n".format(
-                list(references["train"].keys())[0],
-                references["train"][list(references["train"].keys())[0]],
-                candidates["train"][list(references["train"].keys())[0]]
-            ))
-            print("[Debug] val_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n\n".format(
-                list(references["val"].keys())[0],
-                references["val"][list(references["val"].keys())[0]],
-                candidates["val"][list(references["val"].keys())[0]]
-            ))
+            # print("[Debug] train_id: {}\n[Debug] train_ref: {}\n[Debug] train_can: {}\n".format(
+            #     list(references["train"].keys())[0],
+            #     references["train"][list(references["train"].keys())[0]],
+            #     candidates["train"][list(references["train"].keys())[0]]
+            # ))
+            # print("[Debug] val_id: {}\n[Debug] val_ref: {}\n[Debug] val_can: {}\n\n".format(
+            #     list(references["val"].keys())[0],
+            #     references["val"][list(references["val"].keys())[0]],
+            #     candidates["val"][list(references["val"].keys())[0]]
+            # ))
             
             # save log
             self.log[epoch_id] = log

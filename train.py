@@ -444,18 +444,19 @@ def main(args):
     if evaluation:
         encoder.eval()
         decoder.eval()
-        candidates = {}
-        outputs = {}
-        bleu = {}
-        cider = {}
-        rouge = {}
+        beam_size = [3, 5, 7]
+        candidates = {i:None for i in beam_size}
+        outputs = {i:None for i in beam_size}
+        bleu = {i:None for i in beam_size}
+        cider = {i:None for i in beam_size}
+        rouge = {i:None for i in beam_size}
         for _, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader["test"]):
             visual_inputs = Variable(visuals, requires_grad=False).cuda()
             caption_inputs = Variable(captions[:, :-1], requires_grad=False).cuda()
             cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
             visual_contexts = encoder(visual_inputs)
             max_length = int(cap_lengths[0].item()) + 10
-            for bs in [3, 5, 7]:
+            for bs in beam_size:
                 if attention:
                     outputs[bs] = decoder.beam_search(visual_contexts, caption_inputs, bs, max_length)
                     outputs[bs] = encoder_decoder_solver._decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
