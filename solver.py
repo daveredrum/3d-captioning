@@ -307,15 +307,15 @@ class EncoderDecoderSolver():
                         caption_inputs = captions[:, :-1]
                         caption_targets = captions[:, 1:]
                         if self.cuda_flag:
-                            visual_inputs = Variable(visuals).cuda()
-                            caption_inputs = Variable(caption_inputs).cuda()
-                            caption_targets = Variable(caption_targets).cuda()
-                            cap_lengths = Variable(cap_lengths).cuda()
+                            visual_inputs = Variable(visuals, requires_grad=False).cuda()
+                            caption_inputs = Variable(caption_inputs, requires_grad=False).cuda()
+                            caption_targets = Variable(caption_targets, requires_grad=False).cuda()
+                            cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
                         else:
-                            visual_inputs = Variable(visuals)
-                            caption_inputs = Variable(caption_inputs)
-                            caption_targets = Variable(caption_targets)
-                            cap_lengths = Variable(cap_lengths)
+                            visual_inputs = Variable(visuals, requires_grad=False)
+                            caption_inputs = Variable(caption_inputs, requires_grad=False)
+                            caption_targets = Variable(caption_targets, requires_grad=False)
+                            cap_lengths = Variable(cap_lengths, requires_grad=False)
                         
                         if phase == "train":
                             encoder.train()

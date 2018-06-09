@@ -29,8 +29,8 @@ class Decoder(nn.Module):
 
     def init_hidden(self, visual_inputs):
         states = (
-            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda(),
-            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda()
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size), requires_grad=False).cuda(),
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size), requires_grad=False).cuda()
         )
 
         return states
