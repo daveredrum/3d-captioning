@@ -94,10 +94,10 @@ class Decoder(nn.Module):
                 if not searched:
                     break
                 else:
-                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1][0].item())[:beam_size])
+                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
             
             if not done:
-                done = sorted(done, reverse=True, key=lambda s: s[1][0].item())
+                done = sorted(done, reverse=True, key=lambda s: s[1])
                 best = [word[0].item() for word in done[0][0]]
                 outputs.append(best)
         
