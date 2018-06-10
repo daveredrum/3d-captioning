@@ -246,7 +246,7 @@ class EncoderDecoderSolver():
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention, beam_size=3):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        # scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
+        scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
         best_scores = {
             'epoch_id': 0,
             'bleu_1': 0.0,
@@ -262,7 +262,7 @@ class EncoderDecoderSolver():
         }
         for epoch_id in range(epoch):
             print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
-            # scheduler.step()
+            scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
