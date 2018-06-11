@@ -20,6 +20,7 @@ __progress:__
 |Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
 
 > __best models:__
+>
 > |Model|learning_rate|weight_decay|batch_size|dropout|
 > |---|---|---|---|---|
 > |__ResNet101 + LSTM <br/>(beam_size=1)__|2e-4|0|256|0.2|
