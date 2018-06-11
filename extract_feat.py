@@ -19,10 +19,10 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     print("\ninitializing model...")
     print()
-    if args.pretrained == "vgg16_bn":
+    if args.pretrained == "vgg":
         model = encoders.VGG16BN().cuda()
-    elif args.pretrained == "resnet101":
-        model = encoders.ResNet101().cuda()
+    elif args.pretrained == "resnet":
+        model = encoders.ResNet152().cuda()
     for phase in phases:
         print(phase)
         print()
@@ -31,13 +31,13 @@ def main(args):
         dataset = data.FeatureDataset(
             database="/mnt/raid/davech2y/COCO_2014/preprocessed/coco_{}2014_224.hdf5".format(phase)
         )
-        dataloader = DataLoader(dataset, batch_size=args.batch_size)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
         if not os.path.exists("data/"):
             os.mkdir("data/")
         database = h5py.File("data/{}_feature_{}.hdf5".format(phase, args.pretrained), "w", libver='latest')
-        if args.pretrained == "vgg16_bn":
+        if args.pretrained == "vgg":
             storage = database.create_dataset("features", (len(dataset), 512 * 14 * 14), dtype="float")
-        elif args.pretrained == "resnet101":
+        elif args.pretrained == "resnet":
             storage = database.create_dataset("features", (len(dataset), 2048 * 7 * 7), dtype="float")
         offset = 0
         print("extracting...")

@@ -109,39 +109,14 @@ class COCOCaptionDataset(Dataset):
         self.model_ids = copy.deepcopy(csv_file.image_id.values.tolist())
         self.caption_lists = copy.deepcopy(csv_file.caption.values.tolist())
         self.csv_file = copy.deepcopy(csv_file)
-        # self.data_pairs = self._build_data_pairs()
         self.database = h5py.File(database, "r")
-
-    # def _build_data_pairs(self):
-    #     # initialize data pairs: (model_id, image_path, caption, cap_length)
-    #     data_pairs = [(
-    #         str(self.model_ids[i]),
-    #         self.index[str(i)],
-    #         self.caption_lists[i],
-    #         len(self.caption_lists[i])
-    #     ) for i in range(self.__len__())]
-    #     # sort data pairs according to cap_length in descending order
-    #     data_pairs = sorted(data_pairs, key=lambda item: item[3], reverse=True)
-    #     # pad caption with 0 if it's length is not maximum
-    #     for index in range(1, len(data_pairs)):
-    #         for i in range(len(data_pairs[0][2]) - len(data_pairs[index][2])):
-    #             data_pairs[index][2].append(0)
-        
-    #     return data_pairs
 
     def __len__(self):
         return self.csv_file.image_id.count()
 
     def __getitem__(self, idx):
         # return (model_id, image_inputs, padded_caption, cap_length)
-        # image = self.database["features"][self.data_pairs[idx][1]]
-        # image = np.reshape(image, (512, 14, 14))
-        # image = torch.FloatTensor(image)
-
-        # return self.data_pairs[idx][0], image, self.data_pairs[idx][2], self.data_pairs[idx][3]
-
         image = self.database["features"][self.index[str(idx)]]
-        image = np.reshape(image, (512, 14, 14))
         image = torch.FloatTensor(image)
 
         return str(self.model_ids[idx]), image, self.caption_lists[idx], len(self.caption_lists[idx])

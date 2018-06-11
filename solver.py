@@ -6,16 +6,16 @@ import os
 import random
 from datetime import datetime
 import numpy as np
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
-from nltk.translate.bleu_score import sentence_bleu
 from tensorboardX import SummaryWriter
 import capeval.bleu.bleu as capbleu
 import capeval.cider.cider as capcider
 import capeval.meteor.meteor as capmeteor
 import capeval.rouge.rouge as caprouge
+from utils import *
 
 # only for encoder offline training 
 class EncoderSolver():
@@ -165,90 +165,16 @@ class EncoderDecoderSolver():
         self.cuda_flag = cuda_flag
         self.settings = settings
         self.log = {}
-    
-    # # unpack the sequence
-    # def _unpack_outputs(self, sequence, pack_info):
-        
-    #     return pad_packed_sequence(PackedSequence(sequence, pack_info))[0].transpose(1, 0)
-
-    # # unpad the sequence by removing the zeros
-    # def _unpad_outputs(self, unpacked_sequence, cap_lengths):
-    #     return [unpacked_sequence[i][:cap_lengths[i]].tolist() for i in range(cap_lengths.size(0))]
-
-    # for model without attention
-    # for model with attention
-    def _decode_outputs(self, sequence, cap_lengths, dictionary, phase):
-        decoded = []
-        if phase == "train":
-            # get the indices for each predicted word
-            _, indices = torch.max(sequence, 2)
-            # chop the sequences according to their lengths
-            unpadded_sequence = [indices[i][:int(cap_lengths.tolist()[i])].tolist() for i in range(cap_lengths.size(0))]
-            # decode the indices
-            for sequence in unpadded_sequence:
-                temp = []
-                for idx in sequence:
-                    try:
-                        temp.append(dictionary[idx])
-                    except Exception:
-                        pass
-                decoded.append(" ".join(temp))
-        elif phase == "val":
-            for i in range(len(sequence)):
-                temp = []
-                for j in range(len(sequence[i])):
-                    try:
-                        temp.append(dictionary[sequence[i][j]])
-                    except Exception:
-                        pass
-                decoded.append(" ".join(temp))
-
-        return decoded
-    
-    # for model with attention
-    def _decode_attention_outputs(self, sequence, cap_lengths, dictionary, phase):
-        decoded = []
-        if phase == "train":
-            # get the indices for each predicted word
-            _, indices = torch.max(sequence, 2)
-            # chop the sequences according to their lengths
-            unpadded_sequence = [indices[i][:int(cap_lengths.tolist()[i])-1].tolist() for i in range(cap_lengths.size(0))]
-            # decode the indices
-            for sequence in unpadded_sequence:
-                temp = ['<START>']
-                for idx in sequence:
-                    try:
-                        temp.append(dictionary[idx])
-                    except Exception:
-                        pass
-                decoded.append(" ".join(temp))
-        elif phase == "val":
-            for i in range(len(sequence)):
-                temp = ['<START>']
-                for j in range(len(sequence[i])):
-                    try:
-                        temp.append(dictionary[sequence[i][j]])
-                    except Exception:
-                        pass
-                decoded.append(" ".join(temp))
-
-        return decoded
-
-    def _clip_grad_value_(self, optimizer, clip_value):
-        '''
-        in-place gradient clipping
-        '''
-        clip_value = float(clip_value)
-        for group in optimizer.param_groups:
-            for param in group['params']:
-                param.grad.data.clamp_(-clip_value, clip_value)
 
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention, beam_size=3):
         # setup tensorboard
         writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        scheduler = StepLR(self.optimizer, step_size=3, gamma=0.9)
-        best_scores = {
+        scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=3, threshold=0.001)
+        best_info = {
             'epoch_id': 0,
+            'loss': 0,
+        }
+        best_scores = {
             'bleu_1': 0.0,
             'bleu_2': 0.0,
             'bleu_3': 0.0,
@@ -262,7 +188,6 @@ class EncoderDecoderSolver():
         }
         for epoch_id in range(epoch):
             print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
-            scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
@@ -358,7 +283,7 @@ class EncoderDecoderSolver():
                             loss = self.criterion(outputs_packed, targets)
                             
                             # decode outputs
-                            outputs = self._decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                            outputs = decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -373,7 +298,7 @@ class EncoderDecoderSolver():
                             # back prop
                             loss.backward()
                             # clipping the gradient
-                            self._clip_grad_value_(self.optimizer, 5)
+                            clip_grad_value_(self.optimizer, 5)
                             # optimize
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
@@ -396,35 +321,38 @@ class EncoderDecoderSolver():
                             decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            if beam_size == 1:
-                                # greedy search
-                                # generate until <END> token
-                                outputs = []
-                                states = decoder.init_hidden(visual_contexts[0])
-                                max_length = int(cap_lengths[0].item()) + 10
-                                for idx in range(visual_contexts[0].size(0)):
-                                    h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                                    inputs = caption_inputs[idx, 0]
-                                    temp = []
-                                    for i in range(max_length):
-                                        features = (
-                                            visual_contexts[0][idx].unsqueeze(0), 
-                                            visual_contexts[1][idx].unsqueeze(0), 
-                                            visual_contexts[2][idx].unsqueeze(0)
-                                        )
-                                        predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
-                                        inputs = predicted.max(2)[1].view(1)
-                                        temp.append(inputs[0].item())
-                                        if inputs[0].item() == dict_word2idx['<END>']:
-                                            break
-                                    outputs.append(temp)
-                            else:
-                                # beam search
-                                max_length = int(cap_lengths[0].item()) + 10
-                                outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
+                            # if beam_size == 1:
+                            #     # greedy search
+                            #     # generate until <END> token
+                            #     outputs = []
+                            #     states = decoder.init_hidden(visual_contexts[0])
+                            #     max_length = int(cap_lengths[0].item()) + 10
+                            #     for idx in range(visual_contexts[0].size(0)):
+                            #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                            #         inputs = caption_inputs[idx, 0]
+                            #         temp = []
+                            #         for i in range(max_length):
+                            #             features = (
+                            #                 visual_contexts[0][idx].unsqueeze(0), 
+                            #                 visual_contexts[1][idx].unsqueeze(0), 
+                            #                 visual_contexts[2][idx].unsqueeze(0)
+                            #             )
+                            #             predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
+                            #             inputs = predicted.max(2)[1].view(1)
+                            #             temp.append(inputs[0].item())
+                            #             if inputs[0].item() == dict_word2idx['<END>']:
+                            #                 break
+                            #         outputs.append(temp)
+                            # else:
+                            #     # beam search
+                            #     max_length = int(cap_lengths[0].item()) + 10
+                            #     outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
+                            # beam search
+                            max_length = int(cap_lengths[0].item()) + 10
+                            outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
 
                             # decode the outputs
-                            outputs = self._decode_attention_outputs(outputs, None, dict_idx2word, phase)
+                            outputs = decode_attention_outputs(outputs, None, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -466,7 +394,7 @@ class EncoderDecoderSolver():
                             loss = self.criterion(outputs_packed, targets)
                             
                             # decode outputs
-                            outputs = self._decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                            outputs = decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -480,7 +408,7 @@ class EncoderDecoderSolver():
                             backward_since = time.time()
                             loss.backward()
                             # clipping the gradient
-                            self._clip_grad_value_(self.optimizer, 5)
+                            clip_grad_value_(self.optimizer, 5)
                             self.optimizer.step()
                             log['backward'].append(time.time() - backward_since)
                             log['train_loss'].append(loss.data[0])
@@ -502,36 +430,39 @@ class EncoderDecoderSolver():
                             decoder.eval()
                             val_since = time.time()
                             visual_contexts = encoder(visual_inputs)
-                            if beam_size == 1:
-                                # greedy search
-                                # generate until <END> token
-                                outputs = []
-                                states = decoder.init_hidden(visual_contexts)
-                                max_length = int(cap_lengths[0].item()) + 10
-                                for idx in range(visual_contexts.size(0)):
-                                    h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                                    temp = []
-                                    for i in range(max_length):
-                                        if i == 0:
-                                            embedded = visual_contexts[idx].unsqueeze(0)
-                                            predicted, (h, c) = decoder.sample(embedded, (h, c))
-                                            inputs = caption_inputs[idx, 0].view(1)
-                                            temp.append(predicted.max(2)[1].view(1).item())
-                                        else:
-                                            embedded = decoder.embedding(inputs)
-                                            predicted, (h, c) = decoder.sample(embedded, (h, c))
-                                            inputs = predicted.max(2)[1].view(1)
-                                            temp.append(inputs[0].item())
-                                        if inputs[0].item() == dict_word2idx['<END>']:
-                                            break
-                                    outputs.append(temp)
-                            else:
-                                # beam search
-                                max_length = int(cap_lengths[0].item()) + 10
-                                outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
-                                
+                            # if beam_size == 1:
+                            #     # greedy search
+                            #     # generate until <END> token
+                            #     outputs = []
+                            #     states = decoder.init_hidden(visual_contexts)
+                            #     max_length = int(cap_lengths[0].item()) + 10
+                            #     for idx in range(visual_contexts.size(0)):
+                            #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                            #         temp = []
+                            #         for i in range(max_length):
+                            #             if i == 0:
+                            #                 embedded = visual_contexts[idx].unsqueeze(0)
+                            #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
+                            #                 inputs = caption_inputs[idx, 0].view(1)
+                            #                 temp.append(predicted.max(2)[1].view(1).item())
+                            #             else:
+                            #                 embedded = decoder.embedding(inputs)
+                            #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
+                            #                 inputs = predicted.max(2)[1].view(1)
+                            #                 temp.append(inputs[0].item())
+                            #             if inputs[0].item() == dict_word2idx['<END>']:
+                            #                 break
+                            #         outputs.append(temp)
+                            # else:
+                            #     # beam search
+                            #     max_length = int(cap_lengths[0].item()) + 10
+                            #     outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
+                            # beam search
+                            max_length = int(cap_lengths[0].item()) + 10
+                            outputs = decoder.beam_search(visual_contexts, beam_size, max_length) 
+
                             # decode outputs
-                            outputs = self._decode_outputs(outputs, None, dict_idx2word, phase)
+                            outputs = decode_outputs(outputs, None, dict_idx2word, phase)
                             # save to candidates
                             for model_id, output in zip(model_ids, outputs):
                                 if model_id not in candidates[phase].keys():
@@ -554,6 +485,9 @@ class EncoderDecoderSolver():
             # evaluate cider
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
+            # reduce the learning rate on plateau if training loss if training loss is small
+            if log['train_loss'] <= 2.0:
+                scheduler.step(val_cider)
             # # evaluate meteor
             # try:
             #     train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
@@ -715,8 +649,9 @@ class EncoderDecoderSolver():
             self.log[epoch_id] = log
             
             # best
-            if log['val_cider'] > best_scores["cider"]:
-                best_scores['epoch_id'] = epoch_id + 1
+            if log['train_loss'] <= 2.0 and log['val_cider'] > best_scores["cider"]:
+                best_info['epoch_id'] = epoch_id + 1
+                best_info['loss'] = log['train_loss']
                 best_scores['bleu_1'] = log['val_bleu_1']
                 best_scores['bleu_2'] = log['val_bleu_2']
                 best_scores['bleu_3'] = log['val_bleu_3']
@@ -726,14 +661,10 @@ class EncoderDecoderSolver():
                 best_models['encoder'] = encoder
                 best_models['decoder'] = decoder
 
-                # save model
-                print("saving the best models...\n")
-                torch.save(best_models['encoder'], "models/encoder_%s.pth" % self.settings)
-                torch.save(best_models['encoder'], "models/decoder_%s.pth" % self.settings)
-
         # show the best
         print("---------------------best----------------------")
-        print("[Best] Epoch_id: {}".format(best_scores['epoch_id']))
+        print("[Best] Epoch_id: {}".format(best_info['epoch_id']))
+        print("[Best] Loss: {}".format(best_info['loss']))
         print("[Best] BLEU-1: {}".format(best_scores['bleu_1']))
         print("[Best] BLEU-2: {}".format(best_scores['bleu_2']))
         print("[Best] BLEU-3: {}".format(best_scores['bleu_3']))
@@ -751,4 +682,5 @@ class EncoderDecoderSolver():
         writer.export_scalars_to_json("logs/all_scalars.json")
         writer.close()
 
+        return best_models['encoder'], best_models['decoder']
                 

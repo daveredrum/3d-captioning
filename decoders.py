@@ -23,7 +23,7 @@ class Decoder(nn.Module):
         self.lstm_layer = nn.LSTMCell(self.hidden_size, self.hidden_size)
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, input_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
         self.cuda_flag = cuda_flag
 
@@ -73,10 +73,10 @@ class Decoder(nn.Module):
             # a queue containing all searched words and their log_prob
             searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
-            for i in range(beam_size * (max_length - 1)):
+            while True:
                 candidate = searched.popleft()
                 prev_word, prev_prob, prev_states = candidate
-                if len(prev_word) <= max_length:
+                if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     embedded = self.embedding(prev_word[-1])
                     preds, new_states = self.sample(embedded, prev_states)
                     preds = F.log_softmax(preds, dim=2)
@@ -85,16 +85,12 @@ class Decoder(nn.Module):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
                         next_prob += top_scores[i].view(1)
-                        if top_words[i].view(1)[0].item() != 3:
-                            searched.append((next_word, next_prob, new_states))
-                        else:
-                            done.append((next_word, next_prob, new_states))
+                        searched.append((next_word, next_prob, new_states))
+                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])    
                 else:
                     done.append((prev_word, prev_prob))
                 if not searched:
-                    break
-                else:
-                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
+                    break       
             
             done = sorted(done, reverse=True, key=lambda s: s[1])
             best = [word[0].item() for word in done[0][0]]
@@ -291,16 +287,13 @@ class AttentionDecoder2D(nn.Module):
         self.attention = Attention2D(self.visual_channels, self.hidden_size, self.visual_flat)
         # self.attention = Attention2D(self.visual_channels, self.visual_flat)
 
-        # scalar
-        self.gate_scalar = nn.Linear(hidden_size, 1, bias=False)
-
         # self.lstm_layer_1 = AttentionLSTMCell2D(self.visual_channels, self.hidden_size)
         self.lstm_layer_1 = nn.LSTMCell(2 * self.hidden_size, self.hidden_size)
         # self.lstm_layer_2 = nn.LSTMCell(self.hidden_size, self.hidden_size)
         # output layer
         self.output_layer = nn.Sequential(
             nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
-            nn.Dropout(p=0.2)
+            # nn.Dropout(p=0.2)
         )
 
 
@@ -324,26 +317,24 @@ class AttentionDecoder2D(nn.Module):
         seq_length = caption_inputs.size(1)
         decoder_outputs = []
         for step in range(seq_length):
-            # embedded = self.embedding(caption_inputs[:, step])
-            # lstm_input = torch.cat((embedded, global_features), dim=1)
-            # states = self.lstm_layer_1(lstm_input, states)
-            # lstm_outputs = states[0]
-            # attention_weights = self.attention(area_features, states)
-            # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
-            # outputs = torch.cat((attended, lstm_outputs), dim=1)
-            # outputs = self.output_layer(outputs).unsqueeze(1)
-            # decoder_outputs.append(outputs)
             embedded = self.embedding(caption_inputs[:, step])
             lstm_input = torch.cat((embedded, global_features), dim=1)
-            attention_weights = self.attention(area_features, states)
-            attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
-            gs = self.gate_scalar(states[0])
-            attended = gs * attended
             states = self.lstm_layer_1(lstm_input, states)
             lstm_outputs = states[0]
+            attention_weights = self.attention(area_features, states)
+            attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
             outputs = torch.cat((attended, lstm_outputs), dim=1)
             outputs = self.output_layer(outputs).unsqueeze(1)
             decoder_outputs.append(outputs)
+            # embedded = self.embedding(caption_inputs[:, step])
+            # lstm_input = torch.cat((embedded, global_features), dim=1)
+            # attention_weights = self.attention(area_features, states)
+            # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            # states = self.lstm_layer_1(lstm_input, states)
+            # lstm_outputs = states[0]
+            # outputs = torch.cat((attended, lstm_outputs), dim=1)
+            # outputs = self.output_layer(outputs).unsqueeze(1)
+            # decoder_outputs.append(outputs)
 
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
 
@@ -351,22 +342,22 @@ class AttentionDecoder2D(nn.Module):
 
     def sample(self, features, caption_inputs, states):
         _, global_features, area_features = features
-        # embedded = self.embedding(caption_inputs)
-        # lstm_input = torch.cat((embedded, global_features), dim=1)
-        # new_states = self.lstm_layer_1(lstm_input, states)
-        # lstm_outputs = new_states[0]
-        # attention_weights = self.attention(area_features, states)
-        # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
-        # outputs = attended + lstm_outputs
-        # outputs = self.output_layer(outputs).unsqueeze(1)
         embedded = self.embedding(caption_inputs)
         lstm_input = torch.cat((embedded, global_features), dim=1)
-        attention_weights = self.attention(area_features, states)
-        attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
         new_states = self.lstm_layer_1(lstm_input, states)
         lstm_outputs = new_states[0]
+        attention_weights = self.attention(area_features, states)
+        attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
         outputs = torch.cat((attended, lstm_outputs), dim=1)
         outputs = self.output_layer(outputs).unsqueeze(1)
+        # embedded = self.embedding(caption_inputs)
+        # lstm_input = torch.cat((embedded, global_features), dim=1)
+        # attention_weights = self.attention(area_features, states)
+        # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+        # new_states = self.lstm_layer_1(lstm_input, states)
+        # lstm_outputs = new_states[0]
+        # outputs = torch.cat((attended, lstm_outputs), dim=1)
+        # outputs = self.output_layer(outputs).unsqueeze(1)
 
         return outputs, new_states, attention_weights
 
@@ -386,7 +377,7 @@ class AttentionDecoder2D(nn.Module):
             # a queue containing all searched words and their log_prob
             searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
-            for i in range(beam_size * (max_length - 1)):
+            while True:
                 candidate = searched.popleft()
                 prev_word, prev_prob, prev_states = candidate
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
@@ -398,12 +389,11 @@ class AttentionDecoder2D(nn.Module):
                         next_word.append(top_words[i].view(1))
                         next_prob += top_scores[i].view(1)
                         searched.append((next_word, next_prob, new_states))
+                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
                 else:
                     done.append((prev_word, prev_prob))
                 if not searched:
-                    break
-                else:
-                    searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])
+                    break           
             
             done = sorted(done, reverse=True, key=lambda s: s[1])
             best = [word[0].item() for word in done[0][0]]
