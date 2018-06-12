@@ -88,7 +88,7 @@ def main(args):
                 outputs[bs] = decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
             else:
                 outputs[bs] = decoder.beam_search(visual_contexts, bs, max_length)
-                outputs[bs] = decode_outputs(outputs, None, dict_idx2word, "val")
+                outputs[bs] = decode_outputs(outputs[bs], None, dict_idx2word, "val")
             for model_id, output in zip(model_ids, outputs[bs]):
                 if model_id not in candidates[bs].keys():
                     candidates[bs][model_id] = [output]

@@ -1,1 +1,6 @@
 captions.tablechair.csv
+autoencoder.ipynb
+preprocessing.ipynb
+__pycache__
+.ipynb*
+.vscode
