@@ -13,7 +13,7 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
-|__ResNet101 + LSTM <br/>(beam_size=1)__|__0.563__|__0.355__|__0.210__|__0.136__|__0.258__|
+|__ResNet101 + LSTM <br/>(beam_size=7)__|__0.720__|__0.536__|__0.388__|__0.286__|__0.805__|
 |__ResNet101 + Attention + LSTM <br/>(beam_size=1)__|__0.57__|__0.363__|__0.212__|__0.134__|__0.259__|
 |NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
 |Show and Tell|0.666|0.461|0.329|0.27|-|
@@ -21,9 +21,11 @@ __progress:__
 
 > __best models:__
 >
-> |Model|learning_rate|weight_decay|batch_size|dropout|
-> |---|---|---|---|---|
-> |__ResNet101 + LSTM <br/>(beam_size=1)__|2e-4|0|256|0.2|
+> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|dropout|
+> |---|---|---|---|---|---|---|
+> |__ResNet101 + LSTM <br/>(beam_size=7)__|-1|-1|2e-4|0|512|0|
+
+
 
 __TODOs:__
 - search for the best hyperparameters
