@@ -17,6 +17,50 @@ import capeval.rouge.rouge as caprouge
 from utils import *
 
 
+class Report():
+    def __init__(self, corpus, candidates, cider, num=3):
+        '''
+        params:
+        - corpus: a dict containing image_ids and corresponding captions
+        - candidates: a dict containing several dicts indexed by different beam sizes, in which images_ids
+                      and corresponding generated captions are stored
+        - cider: a dict containing several tuples indexed by different beam sizes, in which the mean CIDEr
+                      scores and the per-image CIDEr scores are stored
+        - num: number of images shown in the report, 3 by default
+        '''
+        self.corpus = corpus
+        self.candidates = candidates
+        self.cider = cider
+        self.beam_sizes = list(candidates.keys())
+        self.image_ids = list(corpus.keys())
+        self.chosen = self._pick()
+
+    def _pick(self):
+        # return a dict of dicts containing images and captions
+        chosen = {bs:None for bs in self.beam_sizes}
+        for bs in self.beam_sizes:
+            assert self.image_ids == list(self.candidates[bs].keys())
+            pairs = [(image_id, score) for x, y in zip(self.image_ids, self.cider[bs][1])]
+            # choose the images with the highest scores, picking the first caption in candidates
+            highest = sorted(pairs, reverse=True, key=lambda x: x[1])[:3]
+            highest = [(highest[i][0], self.candidates[bs][highest[i][0]][0]) for i in range(len(highest))]
+            # the same thing for the lowest
+            lowest = sorted(pairs, key=lambda x: x[1])[:3]
+            lowest = [(lowest[i][0], self.candidates[bs][lowest[i][0]][0]) for i in range(len(lowest))]
+            # choose the images with the closest scores to the mean scores
+            med_pairs = [(image_id, abs(score - self.cider[bs][0])) for x, y in zip(self.image_ids, self.cider[bs][1])]
+            med = sorted(med_pairs, key=lambda x: x[1])[:3]
+            med = [(med[i][0], self.candidates[bs][med[i][0]][0]) for i in range(len(med))]
+            # add into chosen
+            chosen[bs] = {
+                'high': highest,
+                'low': lowest,
+                'medium': med
+            }
+        
+        return chosen
+
+
 ###################################################################
 #                                                                 #
 #                                                                 #

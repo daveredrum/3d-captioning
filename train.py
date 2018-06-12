@@ -274,7 +274,7 @@ def main(args):
                     print()
                     encoder = EncoderVGG16BN().cuda()
             else:
-                print("inval model name, terminating..outputs = attended + lstm_outputs.")
+                print("inval model name, terminating...")
                 return
         else:
             train_ds = COCOCaptionDataset(
