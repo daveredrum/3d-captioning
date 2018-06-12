@@ -1,5 +1,26 @@
 # Development Log
 
+## Jun. 12
+
+__progress:__
+- performance evaluation:
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
+|__ResNet152 <br/> LSTM__|__0.720__|__0.536__|__0.388__|__0.286__|__0.805__|
+|__ResNet152 <br/> Attention <br/> LSTM__|__0.672__|__0.467__|__0.314__|__0.213__|__0.641__|
+|NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
+|Show and Tell|0.666|0.461|0.329|0.27|-|
+|Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
+
+> __best models:__
+>
+> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
+> |---|---|---|---|---|---|---|---|
+> |__ResNet152 <br/> LSTM__|-1|-1|2e-4|0|512|7|0|
+> |__ResNet152 <br/> Attention <br/> LSTM__|-1|-1|2e-4|0|512|7|0|
+
 ## Jun. 8
 
 > __milestone:__ beam search is now available
@@ -13,20 +34,11 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
-|__ResNet101 + LSTM <br/>(beam_size=7)__|__0.720__|__0.536__|__0.388__|__0.286__|__0.805__|
-|__ResNet101 + Attention + LSTM <br/>(beam_size=7)__|__0.672__|__0.467__|__0.314__|__0.213__|__0.641__|
+|__ResNet101 + LSTM__|__0.567__|__0.356__|__0.207__|__0.133__|__0.241__|
+|__ResNet101 + Attention + LSTM__|__0.57__|__0.363__|__0.212__|__0.134__|__0.259__|
 |NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
 |Show and Tell|0.666|0.461|0.329|0.27|-|
 |Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
-
-> __best models:__
->
-> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|dropout|
-> |---|---|---|---|---|---|---|
-> |__ResNet101 + LSTM <br/>(beam_size=7)__|-1|-1|2e-4|0|512|0|
-> |__ResNet101 + Attention + LSTM <br/>(beam_size=7)__|-1|-1|2e-4|0|512|0|
-
-
 
 __TODOs:__
 - search for the best hyperparameters
