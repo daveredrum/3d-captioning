@@ -9,17 +9,19 @@ __progress:__
 |---|---|---|---|---|---|
 |Baseline (Nearest neighbor)|0.48|0.281|0.166|0.1|0.383|
 |__ResNet152 <br/> LSTM__|__0.720__|__0.536__|__0.388__|__0.286__|__0.805__|
-|__ResNet152 <br/> Attention <br/> LSTM__|__0.683__|__0.482__|__0.329__|__0.227__|__0.659__|
+|__ResNet152 <br/> Attention <br/> LSTM__|__0.697__|__0.504__|__0.351__|__0.249__|__0.718__|
 |NeuralTalk2|0.625|0.45|0.321|0.23|0.66|
 |Show and Tell|0.666|0.461|0.329|0.27|-|
 |Show, Attend and Tell|0.707|0.492|0.344|0.243|-|
+|Adaptive Attention|0.742|0.580|0.439|0.266|1.085|
+|Neural Baby Talk|0.755|-|-|0.347|1.072|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
 > |__ResNet152 <br/> LSTM__|-1|-1|2e-4|0|512|7|0|
-> |__ResNet152 <br/> Attention <br/> LSTM__|-1|-1|2e-4|1e-5|512|7|0|
+> |__ResNet152 <br/> Attention <br/> LSTM__|-1|-1|2e-4|1e-5|128|7|0|
 
 ## Jun. 8
 
