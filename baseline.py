@@ -39,10 +39,10 @@ if __name__ == "__main__":
             if sim > best_sim:
                 best_sim = sim
                 best_match = ' '.join([embeddings.dict_idx2word[str(index)] for index in train_item[1]])
-        if test_item[1] in test_can.keys():
-            test_can[test_item[1]].append(best_match)
+        if test_item[0] in test_can.keys():
+            test_can[test_item[0]].append(best_match)
         else:
-            test_can[test_item[1]] = [best_match]
+            test_can[test_item[0]] = [best_match]
     # compute metrics
     print("computing metrics\n")
     bleu, _ = capbleu.Bleu(4).compute_score(test_ref, test_can)
