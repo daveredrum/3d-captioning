@@ -198,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty on the optimizer")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
-    parser.add_argument("--gpu", type=str, help="specify the graphic card")
+    parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     parser.add_argument("--evaluation", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)
