@@ -18,7 +18,7 @@ def main(args):
         pretrained = pickle.load(open(os.path.join(configs.PRETRAINED_ROOT, configs.PRETRAINED_SHAPE_EMBEDDING.format(phase)), 'rb'))
         pretrained = {item[2]: item[3] for item in pretrained['caption_embedding_tuples']}
         embeddings = {
-            'caption_embedding_tuples': [(item[0], item[2], pretrained[item[2]]) for item in split]
+            'caption_embedding_tuples': [(item[2], item[0], pretrained[item[2]]) for item in split]
         }
         
         with open(configs.PROCESSED_SHAPE_EMBEDDING.format(phase), 'wb') as f:
