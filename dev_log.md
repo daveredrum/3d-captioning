@@ -5,6 +5,11 @@
 __progress:__
 - migrate image captioning to [image-captioning](https://github.com/daveredrum/image-captioning)
 - new data interface for pretrained shape embeddings
+- set up baseline for captioning:
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline (Nearest neighbor)|0.569|0.314|0.143|0.064|0.096|
 
 __TODOs:__
 - finish data interface
