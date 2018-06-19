@@ -17,159 +17,15 @@ import capeval.meteor.meteor as capmeteor
 import capeval.rouge.rouge as caprouge
 from utils import *
 
-# only for encoder offline training 
-class EncoderSolver():
-    def __init__(self, optimizer, criterion, cuda_flag=True):
-        self.optimizer = optimizer
-        self.criterion = criterion
-        self.cuda_flag = cuda_flag
-        self.log = {}
-
-    def train(self, model, dataloader, epoch, verbose):
-        for epoch_id in range(epoch):
-            log = {
-                'train_loss': [],
-                'train_acc': [],
-                'val_loss': [],
-                'val_acc': []    
-            }
-            start = time.time()
-            for phase in ['train', 'val']:
-                if phase == "val":
-                    model.eval()
-                else:
-                    model.train()
-                for image, label in dataloader[phase]:
-                    if self.cuda_flag:
-                        inputs = Variable(image).cuda()
-                        targets = Variable(label).cuda()
-                    else:
-                        inputs = Variable(image)
-                        targets = Variable(label)
-                    # feed the model
-                    outputs = model(inputs)
-                    # compute loss
-                    self.optimizer.zero_grad()
-                    loss = self.criterion(outputs, targets)
-                    # compute accuracy
-                    _, preds = torch.max(outputs, 1)
-                    if self.cuda_flag:
-                        acc = accuracy_score(preds.data.cpu().numpy(), targets.data.cpu().numpy())
-                    else:
-                        acc = accuracy_score(preds.data.numpy(), targets.data.numpy())
-                    # record
-                    if phase == 'train':
-                        loss.backward()
-                        self.optimizer.step()
-                        log['train_loss'].append(loss.data[0])
-                        log['train_acc'].append(acc)
-                        # print("train", log['train_loss'][-1], log['train_acc'][-1])
-                    else:
-                        log['val_loss'].append(loss.data[0])
-                        log['val_acc'].append(acc)
-                        # print("val", log['val_loss'][-1], log['val_acc'][-1])
-            # show report
-            if epoch_id % verbose == (verbose - 1):
-                exetime_s = time.time() - start
-                eta_s = exetime_s * (epoch - (epoch_id + 1))
-                eta_m = math.floor(eta_s / 60)
-                print("[epoch %d]: train_loss: %f, train_acc: %f, val_loss: %f, val_acc: %f, ETA: %dm %ds" % (
-                    epoch_id + 1, 
-                    np.mean(log['train_loss']), 
-                    np.mean(log['train_acc']),
-                    np.mean(log['val_loss']), 
-                    np.mean(log['val_acc']),
-                    eta_m,
-                    eta_s - eta_m * 60
-
-                ))
-            # save log
-            log['train_loss'] = np.mean(log['train_loss'])
-            log['train_acc'] = np.mean(log['train_acc'])
-            log['val_loss'] = np.mean(log['val_loss'])
-            log['val_acc'] = np.mean(log['val_acc'])
-            self.log[epoch_id] = log
-            # save model
-            torch.save(model, "models/encoder.pth")
-
-# only for decoder offline training
-# extracted visual contexts required
-class DecoderSolver():
-    def __init__(self, optimizer, criterion, cuda_flag=True):
-        self.optimizer = optimizer
-        self.criterion = criterion
-        self.cuda_flag = cuda_flag
-        self.log = {}
-
-    def train(self, model, dataloader, epoch, verbose):
-        # training_pairs is a list of (visual_context, caption)
-        # visual_context and caption are both numpy arrays
-        for epoch_id in range(epoch):
-            log = {
-                'train_loss': [],
-                'val_loss': []   
-            }
-            start = time.time()
-            for phase in ["train", "val"]:
-                for visuals, captions, cap_lengths in dataloader[phase]:
-                    # caption_inputs = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]-1]
-                    # caption_targets = torch.cat([item.view(1, -1) for item in captions]).transpose(1, 0)[:, :cap_lengths[0]]
-                    caption_inputs = captions[:, :cap_lengths[0]-1]
-                    caption_targets = captions[:, :cap_lengths[0]]
-                    if self.cuda_flag:
-                        visual_inputs = Variable(visuals).cuda()
-                        caption_inputs = Variable(caption_inputs).cuda()
-                        caption_targets = Variable(caption_targets).cuda()
-                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
-                        cap_lengths = Variable(cap_lengths).cuda()
-                    else:
-                        visual_inputs = Variable(visuals)
-                        caption_inputs = Variable(caption_inputs)
-                        caption_targets = Variable(caption_targets)
-                        caption_targets = pack_padded_sequence(caption_targets, cap_lengths, batch_first=True)[0]
-                        cap_lengths = Variable(cap_lengths)
-                    outputs, _ = model(visual_inputs, caption_inputs, cap_lengths)
-                    loss = self.criterion(outputs, caption_targets)
-                    if phase == "train":
-                        self.optimizer.zero_grad()
-                        loss.backward()
-                        self.optimizer.step()
-                        log['train_loss'].append(loss.data[0])
-                    else:
-                        log['val_loss'].append(loss.data[0])
-            # show report
-            if epoch_id % verbose == (verbose - 1):
-                exetime_s = time.time() - start
-                eta_s = exetime_s * (epoch - (epoch_id + 1))
-                eta_m = math.floor(eta_s / 60)
-                print("[epoch %d/%d] train_loss: %f, val_loss: %f, ETA: %dm %ds" % (
-                    epoch_id + 1,
-                    epoch, 
-                    np.mean(log['train_loss']), 
-                    np.mean(log['val_loss']),
-                    eta_m,
-                    eta_s - eta_m * 60
-                    ))
-            # save log
-            log['train_loss'] = np.mean(log['train_loss'])
-            log['val_loss'] = np.mean(log['val_loss'])
-            self.log[epoch_id] = log
-            # save model
-            torch.save(model, "models/decoder.pth")
-
 class EncoderDecoderSolver():
-    def __init__(self, optimizer, criterion, model_type, settings, cuda_flag=True):
+    def __init__(self, optimizer, criterion, settings):
         self.optimizer = optimizer
         self.criterion = criterion
-        self.model_type = model_type
-        self.cuda_flag = cuda_flag
         self.settings = settings
         self.log = {}
 
-    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, model_type, attention, beam_size=3):
-        # setup tensorboard
-        writer = SummaryWriter(log_dir="logs/%s" % self.settings)
-        scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=3, threshold=0.001)
+    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, beam_size=3):
+        # scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=3, threshold=0.001)
         best_info = {
             'epoch_id': 0,
             'loss': 0,
@@ -219,259 +75,108 @@ class EncoderDecoderSolver():
             start = time.time()
             for phase in ["train", "val"]:
                 total_iter = len(dataloader[phase])
-                for iter_id, (model_ids, visuals, captions, cap_lengths) in enumerate(dataloader[phase]):
-                    # visuals must be tensor
-                    if model_type == "2d":
-                        visuals = visuals
-                    elif model_type == "3d":
-                        visuals = visuals[1]
-                    elif model_type == "coco":
-                        visuals = visuals
-                    # inputs for decoder with attention
-                    if attention: 
-                        caption_inputs = captions[:, :-1]
-                        caption_targets = captions[:, 1:]
-                        if self.cuda_flag:
-                            visual_inputs = Variable(visuals, requires_grad=False).cuda()
-                            caption_inputs = Variable(caption_inputs, requires_grad=False).cuda()
-                            caption_targets = Variable(caption_targets, requires_grad=False).cuda()
-                            cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
-                        else:
-                            visual_inputs = Variable(visuals, requires_grad=False)
-                            caption_inputs = Variable(caption_inputs, requires_grad=False)
-                            caption_targets = Variable(caption_targets, requires_grad=False)
-                            cap_lengths = Variable(cap_lengths, requires_grad=False)
-                        
-                        if phase == "train":
-                            encoder.train()
-                            decoder.train()
-                            self.optimizer.zero_grad()
-                            # forward pass
-                            forward_since = time.time()
-                            visual_contexts = encoder(visual_inputs)
-                            # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
-                            # teacher forcing
-                            states = decoder.init_hidden(visual_contexts[0])
-                            outputs = decoder(visual_contexts, caption_inputs, states)
-                            # # schedule sampling
-                            # inputs = caption_inputs[:, 0]
-                            # outputs = []
-                            # states = decoder.init_hidden(visual_contexts[0])
-                            # seq_length = caption_inputs.size(1)
-                            # convg = 50
-                            # prob = convg / (convg + np.exp((epoch_id + 1) / convg))
-                            # for step in range(seq_length):
-                            #     predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
-                            #     if step != seq_length - 1:
-                            #         if random.random() < prob:
-                            #             inputs = caption_inputs[:, step + 1]
-                            #         else:
-                            #             inputs = predicted.max(2)[1].view(visual_contexts[0].size(0))
-                            #     outputs.append(predicted)
-                            # outputs = torch.cat(outputs, dim=1)
-                            # # no teacher forcing
-                            # outputs = []
-                            # inputs = caption_inputs[:, 0]
-                            # states = decoder.init_hidden(visual_contexts)
-                            # for i in range(cap_lengths[0].item() - 1):
-                            #     predicted, states, _ = decoder.sample(visual_contexts, inputs, states)
-                            #     inputs = predicted.max(2)[1].view(visual_contexts.size(0))
-                            #     outputs.append(predicted)
-                            # outputs = torch.cat(outputs, dim=1)
-                            outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
-                            targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
-                            loss = self.criterion(outputs_packed, targets)
-                            
-                            # decode outputs
-                            outputs = decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
-                            # save to candidates
-                            for model_id, output in zip(model_ids, outputs):
-                                if model_id not in candidates[phase].keys():
-                                    candidates[phase][model_id] = [output]
-                                else:
-                                    candidates[phase][model_id].append(output)
-
-                            log['forward'].append(time.time() - forward_since)
-                            # backward pass
-                            # save log
-                            backward_since = time.time()
-                            # back prop
-                            loss.backward()
-                            # clipping the gradient
-                            clip_grad_value_(self.optimizer, 5)
-                            # optimize
-                            self.optimizer.step()
-                            log['backward'].append(time.time() - backward_since)
-                            log['train_loss'].append(loss.data[0])
-                            log['train_perplexity'].append(np.exp(loss.data[0]))
-
-                            # report
-                            if (iter_id+1) % verbose == 0:
-                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
-                                    epoch_id+1,
-                                    epoch,
-                                    iter_id+1, 
-                                    total_iter, 
-                                    log['train_loss'][-1], 
-                                    log['train_perplexity'][-1]
-                                ))
-                        else:
-                            # validate
-                            encoder.eval()
-                            decoder.eval()
-                            val_since = time.time()
-                            visual_contexts = encoder(visual_inputs)
-                            # if beam_size == 1:
-                            #     # greedy search
-                            #     # generate until <END> token
-                            #     outputs = []
-                            #     states = decoder.init_hidden(visual_contexts[0])
-                            #     max_length = int(cap_lengths[0].item()) + 10
-                            #     for idx in range(visual_contexts[0].size(0)):
-                            #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                            #         inputs = caption_inputs[idx, 0]
-                            #         temp = []
-                            #         for i in range(max_length):
-                            #             features = (
-                            #                 visual_contexts[0][idx].unsqueeze(0), 
-                            #                 visual_contexts[1][idx].unsqueeze(0), 
-                            #                 visual_contexts[2][idx].unsqueeze(0)
-                            #             )
-                            #             predicted, (h, c), _ = decoder.sample(features, inputs.view(1), (h, c))
-                            #             inputs = predicted.max(2)[1].view(1)
-                            #             temp.append(inputs[0].item())
-                            #             if inputs[0].item() == dict_word2idx['<END>']:
-                            #                 break
-                            #         outputs.append(temp)
-                            # else:
-                            #     # beam search
-                            #     max_length = int(cap_lengths[0].item()) + 10
-                            #     outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
-                            # beam search
-                            max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
-
-                            # decode the outputs
-                            outputs = decode_attention_outputs(outputs, None, dict_idx2word, phase)
-                            # save to candidates
-                            for model_id, output in zip(model_ids, outputs):
-                                if model_id not in candidates[phase].keys():
-                                    candidates[phase][model_id] = [output]
-                                else:
-                                    candidates[phase][model_id].append(output)
-                            # save log
-                            log['val_time'].append(time.time() - val_since)
-
+                for iter_id, (model_ids, captions, embeddings, lengths) in enumerate(dataloader[phase]):
                     # decoder without attention
-                    else:
-                        caption_inputs = captions[:, :-1]
-                        caption_targets = captions
-                        if self.cuda_flag:
-                            visual_inputs = Variable(visuals).cuda()
-                            caption_inputs = Variable(caption_inputs).cuda()
-                            caption_targets = Variable(caption_targets).cuda()
-                            cap_lengths = Variable(cap_lengths).cuda()
-                        else:
-                            visual_inputs = Variable(visuals)
-                            caption_inputs = Variable(caption_inputs)
-                            caption_targets = Variable(caption_targets)
-                            cap_lengths = Variable(cap_lengths)
+                    visual_inputs = Variable(embeddings).cuda()
+                    caption_inputs = Variable(captions[:, :-1]).cuda()
+                    caption_targets = Variable(captions).cuda()
+                    cap_lengths = Variable(lengths).cuda()
+                    
+                    if phase == "train":
+                        encoder.train()
+                        decoder.train()
+                        self.optimizer.zero_grad()
+                        # forward pass
+                        forward_since = time.time()
+                        visual_contexts = encoder(visual_inputs)
+                        # teacher forcing
+                        states = decoder.init_hidden(visual_contexts)
+                        outputs = decoder(visual_contexts, caption_inputs, states)
+                        # # no teacher forcing
+                        # outputs = decoder.sample(visual_contexts, cap_lengths)
+                        outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
+                        targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
+                        loss = self.criterion(outputs_packed, targets)
                         
-                        if phase == "train":
-                            encoder.train()
-                            decoder.train()
-                            self.optimizer.zero_grad()
-                            # forward pass
-                            forward_since = time.time()
-                            visual_contexts = encoder(visual_inputs)
-                            # teacher forcing
-                            states = decoder.init_hidden(visual_contexts)
-                            outputs = decoder(visual_contexts, caption_inputs, states)
-                            # # no teacher forcing
-                            # outputs = decoder.sample(visual_contexts, cap_lengths)
-                            outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
-                            targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
-                            loss = self.criterion(outputs_packed, targets)
-                            
-                            # decode outputs
-                            outputs = decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
-                            # save to candidates
-                            for model_id, output in zip(model_ids, outputs):
-                                if model_id not in candidates[phase].keys():
-                                    candidates[phase][model_id] = [output]
-                                else:
-                                    candidates[phase][model_id].append(output)
-                            log['forward'].append(time.time() - forward_since)
+                        # decode outputs
+                        outputs = decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                        # save to candidates
+                        for model_id, output in zip(model_ids, outputs):
+                            if model_id not in candidates[phase].keys():
+                                candidates[phase][model_id] = [output]
+                            else:
+                                candidates[phase][model_id].append(output)
+                        log['forward'].append(time.time() - forward_since)
 
-                            # backward pass
-                            # save log
-                            backward_since = time.time()
-                            loss.backward()
-                            # clipping the gradient
-                            clip_grad_value_(self.optimizer, 5)
-                            self.optimizer.step()
-                            log['backward'].append(time.time() - backward_since)
-                            log['train_loss'].append(loss.data[0])
-                            log['train_perplexity'].append(np.exp(loss.data[0]))
+                        # backward pass
+                        # save log
+                        backward_since = time.time()
+                        loss.backward()
+                        # clipping the gradient
+                        clip_grad_value_(self.optimizer, 5)
+                        self.optimizer.step()
+                        log['backward'].append(time.time() - backward_since)
+                        log['train_loss'].append(loss.item())
+                        log['train_perplexity'].append(np.exp(loss.item()))
 
-                            # report
-                            if (iter_id+1) % verbose == 0:
-                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
-                                    epoch_id+1,
-                                    epoch,
-                                    iter_id+1, 
-                                    total_iter, 
-                                    log['train_loss'][-1], 
-                                    log['train_perplexity'][-1]
-                                ))
-                        else:
-                            # validate
-                            encoder.eval()
-                            decoder.eval()
-                            val_since = time.time()
-                            visual_contexts = encoder(visual_inputs)
-                            # if beam_size == 1:
-                            #     # greedy search
-                            #     # generate until <END> token
-                            #     outputs = []
-                            #     states = decoder.init_hidden(visual_contexts)
-                            #     max_length = int(cap_lengths[0].item()) + 10
-                            #     for idx in range(visual_contexts.size(0)):
-                            #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                            #         temp = []
-                            #         for i in range(max_length):
-                            #             if i == 0:
-                            #                 embedded = visual_contexts[idx].unsqueeze(0)
-                            #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
-                            #                 inputs = caption_inputs[idx, 0].view(1)
-                            #                 temp.append(predicted.max(2)[1].view(1).item())
-                            #             else:
-                            #                 embedded = decoder.embedding(inputs)
-                            #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
-                            #                 inputs = predicted.max(2)[1].view(1)
-                            #                 temp.append(inputs[0].item())
-                            #             if inputs[0].item() == dict_word2idx['<END>']:
-                            #                 break
-                            #         outputs.append(temp)
-                            # else:
-                            #     # beam search
-                            #     max_length = int(cap_lengths[0].item()) + 10
-                            #     outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
-                            # beam search
-                            max_length = int(cap_lengths[0].item()) + 10
-                            outputs = decoder.beam_search(visual_contexts, beam_size, max_length) 
+                        # report
+                        if (iter_id+1) % verbose == 0:
+                            print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                epoch_id+1,
+                                epoch,
+                                iter_id+1, 
+                                total_iter, 
+                                log['train_loss'][-1], 
+                                log['train_perplexity'][-1]
+                            ))
+                    else:
+                        # validate
+                        encoder.eval()
+                        decoder.eval()
+                        val_since = time.time()
+                        visual_contexts = encoder(visual_inputs)
+                        # if beam_size == 1:
+                        #     # greedy search
+                        #     # generate until <END> token
+                        #     outputs = []
+                        #     states = decoder.init_hidden(visual_contexts)
+                        #     max_length = int(cap_lengths[0].item()) + 10
+                        #     for idx in range(visual_contexts.size(0)):
+                        #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
+                        #         temp = []
+                        #         for i in range(max_length):
+                        #             if i == 0:
+                        #                 embedded = visual_contexts[idx].unsqueeze(0)
+                        #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
+                        #                 inputs = caption_inputs[idx, 0].view(1)
+                        #                 temp.append(predicted.max(2)[1].view(1).item())
+                        #             else:
+                        #                 embedded = decoder.embedding(inputs)
+                        #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
+                        #                 inputs = predicted.max(2)[1].view(1)
+                        #                 temp.append(inputs[0].item())
+                        #             if inputs[0].item() == dict_word2idx['<END>']:
+                        #                 break
+                        #         outputs.append(temp)
+                        # else:
+                        #     # beam search
+                        #     max_length = int(cap_lengths[0].item()) + 10
+                        #     outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
+                        # beam search
+                        max_length = int(cap_lengths[0].item()) + 10
+                        outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
 
-                            # decode outputs
-                            outputs = decode_outputs(outputs, None, dict_idx2word, phase)
-                            # save to candidates
-                            for model_id, output in zip(model_ids, outputs):
-                                if model_id not in candidates[phase].keys():
-                                    candidates[phase][model_id] = [output]
-                                else:
-                                    candidates[phase][model_id].append(output)
+                        # decode outputs
+                        outputs = decode_outputs(outputs, None, dict_idx2word, phase)
+                        # save to candidates
+                        for model_id, output in zip(model_ids, outputs):
+                            if model_id not in candidates[phase].keys():
+                                candidates[phase][model_id] = [output]
+                            else:
+                                candidates[phase][model_id].append(output)
 
-                            # save log
-                            log['val_time'].append(time.time() - val_since)
+                        # save log
+                        log['val_time'].append(time.time() - val_since)
                         
 
             # accumulate loss
@@ -486,8 +191,8 @@ class EncoderDecoderSolver():
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
             # reduce the learning rate on plateau if training loss if training loss is small
-            if log['train_loss'] <= 2.0:
-                scheduler.step(val_cider)
+            # if log['train_loss'] <= 2.0:
+            #     scheduler.step(val_cider)
             # # evaluate meteor
             # try:
             #     train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
@@ -515,74 +220,6 @@ class EncoderDecoderSolver():
             # log['val_meteor'] = val_meteor
             log['train_rouge'] = train_rouge
             log['val_rouge'] = val_rouge
-
-            # update report on tensorboard after every epoch
-            writer.add_scalars(
-                "Loss", 
-                {
-                    "train_loss": log['train_loss'], 
-                    # "val_loss": log['val_loss']
-                    # "train_perplexity": log['train_perplexity']
-                }, 
-                epoch_id
-            )
-            writer.add_scalars(
-                "BLEU/BLEU-1", 
-                {
-                    "train_bleu_1": log['train_bleu_1'], 
-                    "val_bleu_1": log['val_bleu_1'],
-                }, 
-                epoch_id
-            )
-            writer.add_scalars(
-                "BLEU/BLEU-2", 
-                {
-                    "train_bleu_2": log['train_bleu_2'], 
-                    "val_bleu_2": log['val_bleu_2'],
-                }, 
-                epoch_id
-            )
-            writer.add_scalars(
-                "BLEU/BLEU-3", 
-                {
-                    "train_bleu_3": log['train_bleu_3'], 
-                    "val_bleu_3": log['val_bleu_3'],
-                }, 
-                epoch_id
-            )
-            writer.add_scalars(
-                "BLEU/BLEU-4", 
-                {
-                    "train_bleu_4": log['train_bleu_4'], 
-                    "val_bleu_4": log['val_bleu_4'],
-                }, 
-                epoch_id
-            )
-            writer.add_scalars(
-                "CIDEr", 
-                {
-                    "train_cider": log['train_cider'], 
-                    "val_cider": log['val_cider']
-                }, 
-                epoch_id
-            )
-            # writer.add_scalar(
-            #     "METEOR", 
-            #     {
-            #         "train_meteor": log['train_meteor'], 
-            #         "val_meteor": log['val_meteor']
-            #     }, 
-            #     epoch_id
-            # )
-            writer.add_scalars(
-                "ROUGE-L", 
-                {
-                    "train_rouge": log['train_rouge'], 
-                    "val_rouge": log['val_rouge']
-                }, 
-                epoch_id
-            )
-
             log['epoch_time'].append(np.mean(time.time() - start))
             # show report
             exetime_s = np.sum(log['epoch_time'])
@@ -673,14 +310,15 @@ class EncoderDecoderSolver():
         print("[Best] ROUGE_L: {}".format(best_scores['rouge']))
         print()
 
+        # save the best model
+        print("saving the best models...\n")
+        torch.save(best_models['encoder'], "models/encoder_{}.pth".format(self.settings))
+        torch.save(best_models['decoder'], "models/decoder_{}.pth".format(self.settings))
+
         # save the best scores
         if not os.path.exists("scores/"):
             os.mkdir("scores/")
         json.dump(best_scores, open("scores/{}".format(self.settings), "w"))
-
-        # export scalar data to JSON for external processing
-        writer.export_scalars_to_json("logs/all_scalars.json")
-        writer.close()
 
         return best_models['encoder'], best_models['decoder']
                 
