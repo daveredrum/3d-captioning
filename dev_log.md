@@ -1,5 +1,16 @@
 # Development Log
 
+## Jun. 19
+
+__progress:__
+- migrate image captioning to [image-captioning](https://github.com/daveredrum/image-captioning)
+- new data interface for pretrained shape embeddings
+
+__TODOs:__
+- finish data interface
+- set up captioning baseline with pretrained shape embeddings
+- train decoder on pretrained embeddings
+
 ## Jun. 12
 
 __progress:__
