@@ -4,6 +4,9 @@ import argparse
 import configs
 
 def main(args):
+    '''
+    generate processed captions with embeddings in 'caption_embedding_tuples'
+    '''
     if args.phases:
         phases = [args.phases]
     else:
@@ -11,9 +14,14 @@ def main(args):
     for phase in phases:
         print("phase:", phase)
         print()
-        embeddings = pickle.load(open(os.path.join(configs.EMBEDDING_ROOT, configs.EMBEDDING_PRETRAINED.format(phase)), 'rb'))
-        embeddings = {item[2]: item[3] for item in embeddings['caption_embedding_tuples']}
-        with open(configs.EMBEDDING_PROCESSED.format(phase), 'wb') as f:
+        split = pickle.load(open(os.path.join(configs.SPLIT_ROOT, configs.SPLIT_NAME.format(phase)), 'rb'))['caption_tuples']
+        pretrained = pickle.load(open(os.path.join(configs.PRETRAINED_ROOT, configs.PRETRAINED_SHAPE_EMBEDDING.format(phase)), 'rb'))
+        pretrained = {item[2]: item[3] for item in pretrained['caption_embedding_tuples']}
+        embeddings = {
+            'caption_embedding_tuples': [(item[0], item[2], pretrained[item[2]]) for item in split]
+        }
+        
+        with open(configs.PROCESSED_SHAPE_EMBEDDING.format(phase), 'wb') as f:
             pickle.dump(f, embeddings)
 
 if __name__ == "__main__":
