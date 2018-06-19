@@ -22,7 +22,7 @@ def main(args):
         }
         
         with open(configs.PROCESSED_SHAPE_EMBEDDING.format(phase), 'wb') as f:
-            pickle.dump(f, embeddings)
+            pickle.dump(embeddings, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
