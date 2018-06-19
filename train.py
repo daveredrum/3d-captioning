@@ -46,9 +46,9 @@ def main(args):
     # preprocess embeddings
     embeddings = PretrainedEmbeddings(
         [
-            pickle.load(open(os.path.join(configs.EMBEDDING_ROOT, configs.EMBEDDING_PRETRAINED.format("train")), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(os.path.join(configs.EMBEDDING_ROOT, configs.EMBEDDING_PRETRAINED.format("val")), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(os.path.join(configs.EMBEDDING_ROOT, configs.EMBEDDING_PRETRAINED.format("test")), 'rb'))['caption_embedding_tuples'],
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("train"), 'rb'))['caption_embedding_tuples'],
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("val"), 'rb'))['caption_embedding_tuples'],
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("test"), 'rb'))['caption_embedding_tuples'],
         ],
         [
             train_size,

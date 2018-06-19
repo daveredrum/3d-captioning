@@ -39,8 +39,8 @@ class EncoderDecoderSolver():
             'rouge': 0.0,
         }
         best_models = {
-            'encoder': None,
-            'decoder': None,
+            'encoder': encoder,
+            'decoder': decoder,
         }
         for epoch_id in range(epoch):
             print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
