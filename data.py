@@ -75,43 +75,43 @@ class PretrainedEmbeddings():
         self.test_embeddings = []
         # decode train
         for i in range(len(pretrained_train)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_train[i][0] if idx != 0]
+            temp = [dict_idx2word[str(idx)] for idx in pretrained_train[i][1] if idx != 0]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.train_embeddings.append([pretrained_train[i][2], temp, pretrained_train[i][3]])
-            if pretrained_train[i][2] in self.train_ref.keys():
-                self.train_ref[pretrained_train[i][2]].append(temp)
+            self.train_embeddings.append([pretrained_train[i][0], temp, pretrained_train[i][2]])
+            if pretrained_train[i][0] in self.train_ref.keys():
+                self.train_ref[pretrained_train[i][0]].append(temp)
             else:
-                self.train_ref[pretrained_train[i][2]] = [temp]
+                self.train_ref[pretrained_train[i][0]] = [temp]
         # decode val
         for i in range(len(pretrained_val)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_val[i][0] if idx != 0]
+            temp = [dict_idx2word[str(idx)] for idx in pretrained_val[i][1] if idx != 0]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.val_embeddings.append([pretrained_val[i][2], temp, pretrained_val[i][3]])
-            if pretrained_val[i][2] in self.val_ref.keys():
-                self.val_ref[pretrained_val[i][2]].append(temp)
+            self.val_embeddings.append([pretrained_val[i][0], temp, pretrained_val[i][2]])
+            if pretrained_val[i][0] in self.val_ref.keys():
+                self.val_ref[pretrained_val[i][0]].append(temp)
             else:
-                self.val_ref[pretrained_val[i][2]] = [temp]
+                self.val_ref[pretrained_val[i][0]] = [temp]
         # decode test
         for i in range(len(pretrained_test)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_test[i][0] if idx != 0]
+            temp = [dict_idx2word[str(idx)] for idx in pretrained_test[i][1] if idx != 0]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.test_embeddings.append([pretrained_test[i][2], temp, pretrained_test[i][3]])
-            if pretrained_test[i][2] in self.test_ref.keys():
-                self.test_ref[pretrained_test[i][2]].append(temp)
+            self.test_embeddings.append([pretrained_test[i][0], temp, pretrained_test[i][2]])
+            if pretrained_test[i][0] in self.test_ref.keys():
+                self.test_ref[pretrained_test[i][0]].append(temp)
             else:
-                self.test_ref[pretrained_test[i][2]] = [temp]
+                self.test_ref[pretrained_test[i][0]] = [temp]
 
     def _build_dict(self):
         word_list = {}
