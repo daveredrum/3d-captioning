@@ -1,6 +1,7 @@
 
 # path for shapenet
-DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid" # TODO mofidy this
+DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
+SHAPE_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_32_solid" # TODO mofidy this
 
 # path to split
 SPLIT_ROOT = "/home/davech2y/text2shape/data/shapenet/" # TODO modify this

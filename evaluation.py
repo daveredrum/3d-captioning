@@ -73,7 +73,7 @@ class Report():
             for i in range(self.num):
                 image_id = self.chosen['1'][q][i][0]
                 plt.subplot(self.num, 1, i+1)
-                plt.imshow(Image.open(os.path.join(configs.DATA_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
+                plt.imshow(Image.open(os.path.join(configs.SHAPE_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
                 plt.text(240, 60, 'beam size 1 : ' + self.chosen['1'][q][i][2], fontsize=28)
                 plt.text(240, 90, 'beam size 3 : ' + self.chosen['3'][q][i][2], fontsize=28)
                 plt.text(240, 120, 'beam size 5 : ' + self.chosen['5'][q][i][2], fontsize=28)
