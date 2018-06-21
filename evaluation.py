@@ -101,7 +101,7 @@ def main(args):
     num = args.num
     encoder_path = args.encoder
     decoder_path = args.decoder
-    outname = encoder_path.split('.')[0][8:]
+    outname = encoder_path[8:-4]
     print("\n[settings]")
     print("GPU:", args.gpu)
     print("train_size:", args.train_size)
@@ -135,8 +135,6 @@ def main(args):
     print()
     encoder = torch.load(os.path.join("models", encoder_path)).cuda()
     decoder = torch.load(os.path.join("models", decoder_path)).cuda()
-    print("evaluating...")
-    print()
     encoder.eval()
     decoder.eval()
     beam_size = ['1', '3', '5', '7']
