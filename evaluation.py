@@ -71,7 +71,7 @@ class Report():
             fig.set_facecolor('white')
             fig.clf()
             for i in range(self.num):
-                image_id = int(self.chosen['1'][q][i][0])
+                image_id = self.chosen['1'][q][i][0]
                 plt.subplot(self.num, 1, i+1)
                 plt.imshow(Image.open(os.path.join(configs.DATA_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
                 plt.text(240, 60, 'beam size 1 : ' + self.chosen['1'][q][i][2], fontsize=28)
