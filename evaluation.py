@@ -80,7 +80,7 @@ class Report():
                 plt.text(240, 150, 'beam size 7 : ' + self.chosen['7'][q][i][2], fontsize=28)
                 plt.text(240, 180, 'ground truth : ' + self.chosen['7'][q][i][3], fontsize=28)
                 plt.axis('off')
-            if os.path.exists("results/{}".format(path)):
+            if not os.path.exists("results/{}".format(path)):
                 os.mkdir("results/{}".format(path))
             plt.savefig("results/{}/{}.png".format(path, q), bbox_inches="tight")
 
