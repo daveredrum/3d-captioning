@@ -8,13 +8,13 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline (Nearest neighbor)|0.569|0.314|0.143|0.064|0.096|
-|__Text2Shape + LSTM__|0.715|0.486|0.292|0.168|0.274|
+|__Text2Shape<br/>LSTM__|0.715|0.486|0.292|0.168|0.274|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
-> |__Text2Shape + LSTM__|-1|-1|1e-4|0|100|1|0|
+> |__Text2Shape<br/>LSTM__|-1|-1|1e-4|0|100|1|0|
 
 ## Jun. 19
 
