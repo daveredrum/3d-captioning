@@ -25,7 +25,7 @@ class EncoderDecoderSolver():
         self.log = {}
 
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, beam_size=3):
-        # scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=3, threshold=0.001)
+        scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=5, threshold=0.001)
         best_info = {
             'epoch_id': 0,
             'loss': 0,
@@ -191,8 +191,8 @@ class EncoderDecoderSolver():
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
             # reduce the learning rate on plateau if training loss if training loss is small
-            # if log['train_loss'] <= 2.0:
-            #     scheduler.step(val_cider)
+            if log['train_loss'] <= 2.0:
+                scheduler.step(val_cider)
             # # evaluate meteor
             # try:
             #     train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
