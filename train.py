@@ -56,7 +56,7 @@ def main(args):
             test_size
         ],
         json.load(open(os.path.join(configs.DATA_ROOT, "shapenet.json")))['idx_to_word'],
-        18
+        configs.MAX_LENGTH
     )
 
     # data settings

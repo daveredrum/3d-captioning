@@ -15,6 +15,8 @@ import capeval.cider.cider as capcider
 import capeval.meteor.meteor as capmeteor
 import capeval.rouge.rouge as caprouge
 from utils import *
+import configs
+import matplotlib.pyplot as plt
 
 
 class Report():
@@ -61,6 +63,26 @@ class Report():
         
         return chosen
 
+    def __call__(self, path):
+        for q in ["high", "low", "medium"]:
+            fig = plt.figure(dpi=100)
+            fig.set_size_inches(8, 24)
+            fig.set_facecolor('white')
+            fig.clf()
+            for i in range(self.num):
+                image_id = int(self.chosen['1'][q][i][0])
+                plt.subplot(self.num, 1, i+1)
+                plt.imshow(Image.open(os.path.join(configs.DATA_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
+                plt.text(240, 60, 'beam size 1 : ' + self.chosen['1'][q][i][2], fontsize=28)
+                plt.text(240, 90, 'beam size 3 : ' + self.chosen['3'][q][i][2], fontsize=28)
+                plt.text(240, 120, 'beam size 5 : ' + self.chosen['5'][q][i][2], fontsize=28)
+                plt.text(240, 150, 'beam size 7 : ' + self.chosen['7'][q][i][2], fontsize=28)
+                plt.text(240, 180, 'ground truth : ' + self.chosen['7'][q][i][3], fontsize=28)
+                plt.axis('off')
+            if os.path.exists("results/{}".format(path)):
+                os.mkdir("results/{}".format(path))
+            plt.savefig("results/{}/{}.png".format(path, q), bbox_inches="tight")
+
 
 ###################################################################
 #                                                                 #
@@ -76,37 +98,39 @@ def main(args):
     train_size = args.train_size
     test_size = args.test_size
     batch_size = args.batch_size
-    pretrained = args.pretrained
+    num = args.num
     encoder_path = args.encoder
     decoder_path = args.decoder
-    if args.attention == "true":
-        attention = True
-    elif args.attention == "false":
-        attention = False
+    outname = encoder_path.split('.')[8:]
     print("\n[settings]")
     print("GPU:", args.gpu)
     print("train_size:", args.train_size)
     print("test_size:", args.test_size)
     print("batch_size:", args.batch_size)
-    print("pretrained:", args.pretrained)
+    print("outname:", outname)
     print()
     print("preparing data...")
     print()
-    coco = COCO(
-        # for training
-        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_train2014.caption.csv"), 
-        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_val2014.caption.csv"),
-        pandas.read_csv("/mnt/raid/davech2y/COCO_2014/preprocessed/coco_test2014.caption.csv"),
-        [train_size, 0, test_size]
+    embeddings = PretrainedEmbeddings(
+        [
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("train"), 'rb'))['caption_embedding_tuples'],
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("val"), 'rb'))['caption_embedding_tuples'],
+            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("test"), 'rb'))['caption_embedding_tuples'],
+        ],
+        [
+            train_size,
+            0,
+            test_size
+        ],
+        json.load(open(os.path.join(configs.DATA_ROOT, "shapenet.json")))['idx_to_word'],
+        configs.MAX_LENGTH
     )
-    dict_idx2word = coco.dict_idx2word
-    corpus = coco.corpus["test"]
-    test_ds = COCOCaptionDataset(
-        "/mnt/raid/davech2y/COCO_2014/preprocessed/test_index.json", 
-        coco.transformed_data['test'], 
-        database="data/test_feature_{}.hdf5".format(pretrained)
+    dict_idx2word = embeddings.dict_idx2word
+    corpus = embeddings.test_ref
+    test_ds = EmbeddingCaptionDataset(
+        embeddings.test_embeddings
     )
-    test_dl = DataLoader(test_ds, batch_size=batch_size, collate_fn=collate_fn, shuffle=True)
+    test_dl = DataLoader(test_ds, batch_size=batch_size, collate_fn=collate_ec, shuffle=True)
     print("initializing models...")
     print()
     encoder = torch.load(os.path.join("models", encoder_path)).cuda()
@@ -115,30 +139,34 @@ def main(args):
     print()
     encoder.eval()
     decoder.eval()
-    beam_size = [3, 5, 7]
+    beam_size = ['1', '3', '5', '7']
     candidates = {i:{} for i in beam_size}
     outputs = {i:{} for i in beam_size}
     bleu = {i:{} for i in beam_size}
     cider = {i:{} for i in beam_size}
     rouge = {i:{} for i in beam_size}
-    for _, (model_ids, visuals, captions, cap_lengths) in enumerate(test_dl):
-        visual_inputs = Variable(visuals, requires_grad=False).cuda()
-        caption_inputs = Variable(captions[:, :-1], requires_grad=False).cuda()
-        cap_lengths = Variable(cap_lengths, requires_grad=False).cuda()
-        visual_contexts = encoder(visual_inputs)
-        max_length = int(cap_lengths[0].item()) + 10
-        for bs in beam_size:
-            if attention:
-                outputs[bs] = decoder.beam_search(visual_contexts, caption_inputs, bs, max_length)
-                outputs[bs] = decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
-            else:
-                outputs[bs] = decoder.beam_search(visual_contexts, bs, max_length)
+    if os.path.exists("scores/{}.json".format(outname)):
+        print("loading existing results...")
+        print()
+        candidates = json.load(open("scores/{}.json".format(outname)))
+    else:
+        print("\nevaluating with beam search...")
+        print()
+        for _, (model_ids, _, embeddings, lengths) in enumerate(test_dl):
+            visual_inputs = Variable(embeddings, requires_grad=False).cuda()
+            cap_lengths = Variable(lengths, requires_grad=False).cuda()
+            visual_contexts = encoder(visual_inputs)
+            max_length = int(cap_lengths[0].item()) + 10
+            for bs in beam_size:
+                outputs[bs] = decoder.beam_search(visual_contexts, int(bs), max_length)
                 outputs[bs] = decode_outputs(outputs[bs], None, dict_idx2word, "val")
-            for model_id, output in zip(model_ids, outputs[bs]):
-                if model_id not in candidates[bs].keys():
-                    candidates[bs][model_id] = [output]
-                else:
-                    candidates[bs][model_id].append(output)
+                for model_id, output in zip(model_ids, outputs[bs]):
+                    if model_id not in candidates[bs].keys():
+                        candidates[bs][model_id] = [output]
+                    else:
+                        candidates[bs][model_id].append(output)
+        # save results
+        json.dump(candidates, open("scores/{}.json".format(outname), 'w'))
 
     for bs in beam_size:
         # compute
@@ -155,14 +183,17 @@ def main(args):
         print("[ROUGE-L] Mean: {:.4f}, Max: {:.4f}, Min: {:.4f}".format(rouge[bs][0], max(rouge[bs][1]), min(rouge[bs][1])))
         print()
 
+   # save figs
+    report = Report(corpus, candidates, cider, num)
+    report(outname)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
     parser.add_argument("--test_size", type=int, default=0, help="test size for input captions")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
+    parser.add_argument("--num", type=int, default=3, help="number of shown images")
     parser.add_argument("--gpu", type=str, help="specify the graphic card")
-    parser.add_argument("--pretrained", type=str, default=None, help="vgg/resnet")
-    parser.add_argument("--attention", type=str, default=None, help="true/false")
     parser.add_argument("--encoder", type=str, default=None, help="path to encoder")
     parser.add_argument("--decoder", type=str, default=None, help="path to decoder")
     args = parser.parse_args()

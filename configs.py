@@ -13,3 +13,6 @@ PRETRAINED_SHAPE_EMBEDDING = "shape_embeddings_{}.p"
 
 # path to processed embeddings
 PROCESSED_SHAPE_EMBEDDING = "data/shape_embeddings_{}.p"
+
+# max length of captions
+MAX_LENGTH = 18
