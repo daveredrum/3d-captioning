@@ -5,28 +5,47 @@ import numpy
 import os
 import json
 import random
+import argparse
 import capeval.bleu.bleu as capbleu
 import capeval.cider.cider as capcider
 from data import PretrainedEmbeddings
 
-if __name__ == "__main__":
-    embeddings = PretrainedEmbeddings(
-        [
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("train"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("val"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("test"), 'rb'))['caption_embedding_tuples'],
-        ],
-        [
-            -1,
-            0,
-            -1
-        ],
-        json.load(open(os.path.join(configs.DATA_ROOT, "shapenet.json")))['idx_to_word'],
-        18
-    )
+def main(args):
+    # embeddings
+    if args.dataset == 'shapenet':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                -1,
+                0,
+                -1
+            ],
+            configs.MAX_LENGTH
+        )
+    elif args.dataset == 'primitive':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                -1,
+                0,
+                -1
+            ],
+            configs.MAX_LENGTH
+        )
+    else:
+        print("invalid dataset, terminating...")
+        return
     train_embeddings = embeddings.train_embeddings
     test_embeddings = embeddings.test_embeddings
-    train_ref = embeddings.train_ref
+    # train_ref = embeddings.train_ref
     test_ref = embeddings.test_ref
     # get candidates
     print("\ntesting...\n")
@@ -53,3 +72,9 @@ if __name__ == "__main__":
     print("[BLEU-3]: {}".format(bleu[2]))
     print("[BLEU-4]: {}".format(bleu[3]))
     print("[CIDEr]: {}".format(cider))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default='shapenet', help="shapenet/primitive")
+    args = parser.parse_args()
+    main(args)

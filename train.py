@@ -43,21 +43,38 @@ def main(args):
     #                                                                 #
     ###################################################################
     
-    # preprocess embeddings
-    embeddings = PretrainedEmbeddings(
-        [
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("train"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("val"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("test"), 'rb'))['caption_embedding_tuples'],
-        ],
-        [
-            train_size,
-            val_size,
-            test_size
-        ],
-        json.load(open(os.path.join(configs.DATA_ROOT, "shapenet.json")))['idx_to_word'],
-        configs.MAX_LENGTH
-    )
+    # embeddings
+    if args.dataset == 'shapenet':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                train_size,
+                val_size,
+                test_size
+            ],
+            configs.MAX_LENGTH
+        )
+    elif args.dataset == 'primitive':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                train_size,
+                val_size,
+                test_size
+            ],
+            configs.MAX_LENGTH
+        )
+    else:
+        print("invalid dataset, terminating...")
+        return
 
     # data settings
     train_ds = EmbeddingCaptionDataset(
@@ -102,7 +119,7 @@ def main(args):
     # train
     print("\n[settings]")
     print("GPU:", args.gpu)
-    print("evaluation:", args.evaluation)
+    print("dataset:", args.dataset)
     print("train_size:", args.train_size)
     print("val_size:", args.val_size)
     print("test_size:", args.test_size)
@@ -113,6 +130,7 @@ def main(args):
     print("learning_rate:", args.learning_rate)
     print("weight_decay:", args.weight_decay)
     print("vocabulary:", input_size)
+    print("evaluation:", args.evaluation)
     print()
     settings = "trs{}_vs{}_ts{}_e{}_lr{:0.5f}_w{:0.5f}_bs{}_vocab{}_beam{}".format(train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
     encoder_decoder_solver = EncoderDecoderSolver(
@@ -189,6 +207,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default='shapenet', help="shapenet/primitive")
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
     parser.add_argument("--val_size", type=int, default=10, help="val size for input captions")
     parser.add_argument("--test_size", type=int, default=10, help="test size for input captions")

@@ -35,7 +35,7 @@ def collate_ec(data):
     return model_id, merge_cap, embeddings, torch.Tensor(list(lengths))
 
 class PretrainedEmbeddings():
-    def __init__(self, pretrained_embeddings, size, dict_idx2word, max_length):
+    def __init__(self, pretrained_embeddings, size, max_length):
         '''
         params:
             pretrained_embeddings: [pretrained_train_pickle, pretrained_val_pickle, pretrained_test_pickle]
@@ -49,13 +49,13 @@ class PretrainedEmbeddings():
         self.train_embeddings, self.val_embeddings, self.test_embeddings = None, None, None
         self.train_ref, self.val_ref, self.test_ref = {}, {}, {}
         # decode tokenized captions
-        self._decode(dict_idx2word)
+        self._decode()
         # build dict
         self.dict_idx2word, self.dict_word2idx  = self._build_dict()
         # transform
         self._transform()
 
-    def _decode(self, dict_idx2word):
+    def _decode(self):
         # slice
         if self.train_size != -1:
             pretrained_train = self.pretrained_embeddings[0][:self.train_size]
@@ -75,7 +75,7 @@ class PretrainedEmbeddings():
         self.test_embeddings = []
         # decode train
         for i in range(len(pretrained_train)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_train[i][1] if idx != 0]
+            temp = pretrained_train[i][1]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
@@ -88,7 +88,7 @@ class PretrainedEmbeddings():
                 self.train_ref[pretrained_train[i][0]] = [temp]
         # decode val
         for i in range(len(pretrained_val)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_val[i][1] if idx != 0]
+            temp = pretrained_val[i][1]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
@@ -101,7 +101,7 @@ class PretrainedEmbeddings():
                 self.val_ref[pretrained_val[i][0]] = [temp]
         # decode test
         for i in range(len(pretrained_test)):
-            temp = [dict_idx2word[str(idx)] for idx in pretrained_test[i][1] if idx != 0]
+            temp = pretrained_test[i][1]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
