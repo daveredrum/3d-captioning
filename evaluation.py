@@ -105,6 +105,7 @@ def main(args):
     outname = encoder_path[8:-4]
     print("\n[settings]")
     print("GPU:", args.gpu)
+    print("dataset:", args.dataset)
     print("train_size:", args.train_size)
     print("test_size:", args.test_size)
     print("batch_size:", args.batch_size)
@@ -112,20 +113,37 @@ def main(args):
     print()
     print("preparing data...")
     print()
-    embeddings = PretrainedEmbeddings(
-        [
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("train"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("val"), 'rb'))['caption_embedding_tuples'],
-            pickle.load(open(configs.PROCESSED_SHAPE_EMBEDDING.format("test"), 'rb'))['caption_embedding_tuples'],
-        ],
-        [
-            train_size,
-            0,
-            test_size
-        ],
-        json.load(open(os.path.join(configs.DATA_ROOT, "shapenet.json")))['idx_to_word'],
-        configs.MAX_LENGTH
-    )
+    if args.dataset == 'shapenet':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                train_size,
+                0,
+                test_size
+            ],
+            configs.MAX_LENGTH
+        )
+    elif args.dataset == 'primitive':
+        embeddings = PretrainedEmbeddings(
+            [
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+            ],
+            [
+                train_size,
+                0,
+                test_size
+            ],
+            configs.MAX_LENGTH
+        )
+    else:
+        print("invalid dataset, terminating...")
+        return
     dict_idx2word = embeddings.dict_idx2word
     corpus = embeddings.test_ref
     test_ds = EmbeddingCaptionDataset(
@@ -188,6 +206,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default='shapenet', help="shapenet/primitive")
     parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
     parser.add_argument("--test_size", type=int, default=0, help="test size for input captions")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")

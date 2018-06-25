@@ -132,7 +132,7 @@ def main(args):
     print("vocabulary:", input_size)
     print("evaluation:", args.evaluation)
     print()
-    settings = "trs{}_vs{}_ts{}_e{}_lr{:0.5f}_w{:0.5f}_bs{}_vocab{}_beam{}".format(train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
+    settings = "{}_trs{}_vs{}_ts{}_e{}_lr{:0.5f}_w{:0.5f}_bs{}_vocab{}_beam{}".format(args.dataset, train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
     encoder_decoder_solver = EncoderDecoderSolver(
         optimizer,
         criterion,
