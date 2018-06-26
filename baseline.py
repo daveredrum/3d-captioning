@@ -67,35 +67,35 @@ def main(args):
     total_iter = len(test_embeddings)
     for test_id, test_embedding in enumerate(test_embeddings):
         print("[Info] step: {}/{}".format(test_id + 1, total_iter))
+        start = time.time()
         for test_item in test_embedding:
-            start = time.time()
             best = mp.Manager().dict()
             best['sim'] = 0
             best['match'] = None
             processes = [mp.Process(target=match, args=(embeddings, test_item, best)) for i in range(args.worker)]
-            print("[Info] starting processes...")
+            # print("[Info] starting processes...")
             for p in processes:
                 p.start()
 
-            print("[Info] joining processes...")
+            # print("[Info] joining processes...")
             for p in processes:
                 p.join()
             
-            print("[Info] recording...")
+            # print("[Info] recording...")
             if test_item[0] in test_can.keys():
                 test_can[test_item[0]].append(best['match'])
             else:
                 test_can[test_item[0]] = [best['match']]
 
-            exe_s = time.time() - start
-            print("[Info] time_per_step: {}s".format(int(exe_s)))
-            eta = (total_iter - test_id) * exe_s
-            if eta < 60:
-                print("[Info] ETA: {}s\n".format(int(eta)))
-            elif 60 <= eta < 60 * 60:
-                print("[Info] ETA: {}m {}s\n".format(int(eta // 60), int(eta % 60)))
-            else:
-                print("[Info] ETA: {}h {}m {}s\n".format(int(eta // 3600), int(eta % 3600 // 60), int(eta % 3600 % 60)))
+        exe_s = time.time() - start
+        print("[Info] time_per_step: {}s".format(int(exe_s)))
+        eta = (total_iter - test_id) * exe_s
+        if eta < 60:
+            print("[Info] ETA: {}s\n".format(int(eta)))
+        elif 60 <= eta < 60 * 60:
+            print("[Info] ETA: {}m {}s\n".format(int(eta // 60), int(eta % 60)))
+        else:
+            print("[Info] ETA: {}h {}m {}s\n".format(int(eta // 3600), int(eta % 3600 // 60), int(eta % 3600 % 60)))
 
     # compute metrics
     print("computing metrics\n")
