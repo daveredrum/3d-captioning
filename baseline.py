@@ -98,7 +98,7 @@ def main(args):
 
     # compute metrics
     print(list(test_ref.keys()))
-    print(list(test_can))
+    print(list(test_can.keys()))
     print("computing metrics\n")
     bleu, _ = capbleu.Bleu(4).compute_score(test_ref, test_can)
     cider, _ = capcider.Cider().compute_score(test_ref, test_can)
