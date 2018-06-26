@@ -97,8 +97,7 @@ def main(args):
             print("[Info] ETA: {}h {}m {}s\n".format(int(eta // 3600), int(eta % 3600 // 60), int(eta % 3600 % 60)))
 
     # compute metrics
-    print(list(test_ref.keys()))
-    print(list(test_can.keys()))
+    print(test_ref.keys() == test_can.keys())
     print("computing metrics\n")
     bleu, _ = capbleu.Bleu(4).compute_score(test_ref, test_can)
     cider, _ = capcider.Cider().compute_score(test_ref, test_can)
