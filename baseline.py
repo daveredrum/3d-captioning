@@ -93,8 +93,11 @@ def main(args):
             print("[Info] ETA: {}s\n".format(int(eta)))
         elif 60 <= eta < 60 * 60:
             print("[Info] ETA: {}m {}s\n".format(int(eta // 60), int(eta % 60)))
-        else:
+        elif 60 * 60 <= eta < 24 * 60 * 60:
             print("[Info] ETA: {}h {}m {}s\n".format(int(eta // 3600), int(eta % 3600 // 60), int(eta % 3600 % 60)))
+        else:
+            print("[Info] ETA: {}d {}h {}m {}s\n".format(
+                int(eta // (3600 * 24)), int(eta % (3600 * 24) // 3600), int(eta % (3600 * 24) % 3600 // 60), int(eta % (3600 * 24) % 3600 % 60)))
 
     # compute metrics
     print("computing metrics\n")
