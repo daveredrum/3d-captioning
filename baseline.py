@@ -88,7 +88,7 @@ def main(args):
         
         exe_s = time.time() - start
         print("[Info] time_per_step: {}s".format(int(exe_s)))
-        eta = (total_iter - test_id) * exe_s
+        eta = (total_iter - test_id - 1) * exe_s
         if eta < 60:
             print("[Info] ETA: {}s\n".format(int(eta)))
         elif 60 <= eta < 60 * 60:
