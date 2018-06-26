@@ -29,6 +29,8 @@ def match(embeddings, test_embedding, test_can):
             test_can[test_item[0]].append(best_match)
         else:
             test_can[test_item[0]] = [best_match]
+        
+        print(test_can)
 
 def chunk(target, size):
     for i in range(0, len(target), size):
