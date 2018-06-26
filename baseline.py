@@ -47,7 +47,7 @@ def main(args):
             [
                 -1,
                 0,
-                10
+                -1
             ],
             configs.MAX_LENGTH
         )
