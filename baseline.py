@@ -29,8 +29,6 @@ def match(embeddings, test_embedding, test_can):
             test_can[test_item[0]].append(best_match)
         else:
             test_can[test_item[0]] = [best_match]
-        
-        print(test_can)
 
 def chunk(target, size):
     for i in range(0, len(target), size):
@@ -99,6 +97,7 @@ def main(args):
             print("[Info] ETA: {}h {}m {}s\n".format(int(eta // 3600), int(eta % 3600 // 60), int(eta % 3600 % 60)))
 
     # compute metrics
+    print(test_ref)
     print(test_can)
     print("computing metrics\n")
     bleu, _ = capbleu.Bleu(4).compute_score(test_ref, test_can)
