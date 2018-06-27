@@ -7,7 +7,7 @@ __progress:__
 
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
-|Baseline (Nearest neighbor)|0.569|0.314|0.143|0.064|0.096|
+|Baseline (Nearest neighbor)|0.589|0.319|0.154|0.074|0.126|
 |__Text2Shape<br/>LSTM__|0.715|0.486|0.292|0.168|0.274|
 
 > __best models:__
