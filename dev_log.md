@@ -3,20 +3,31 @@
 ## Jun. 21
 
 __progress:__
-- performance of shape captioning:
+- performance of shape captioning on __ShapeNetCore__:
 
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
-|Baseline (ShapeNetCore)|0.573|0.314|0.151|0.075|0.117|
-|Baseline (Primitives)|0.867|0.781|0.681|0.569|0.550|
-|__Text2Shape<br/>LSTM<br/> (ShapeNetCore)__|0.715|0.486|0.292|0.168|0.274|
-|__Text2Shape<br/>LSTM<br/> (Primitives)__|0.715|0.486|0.292|0.168|0.274|
+|Baseline|0.573|0.314|0.151|0.075|0.117|
+|__Text2Shape<br/>LSTM__|0.715|0.486|0.292|0.168|0.274|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
-> |__Text2Shape<br/>LSTM<br/> (ShapeNetCore)__|-1|-1|1e-4|0|100|1|0|
+> |__Text2Shape<br/>LSTM__|-1|-1|1e-4|0|100|1|0|
+
+- performance of shape captioning on __Primitives__:
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline|0.867|0.781|0.681|0.569|0.550|
+|__Text2Shape<br/>LSTM__|0.715|0.486|0.292|0.168|0.274|
+
+> __best models:__
+>
+> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
+> |---|---|---|---|---|---|---|---|
+> |__Text2Shape<br/>LSTM__|-1|-1|1e-4|0|100|1|0|
 
 ## Jun. 19
 
