@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 class Report():
-    def __init__(self, corpus, candidates, cider, num=3):
+    def __init__(self, corpus, candidates, cider, mode, num=3):
         '''
         params:
         - corpus: a dict containing image_ids and corresponding captions
@@ -28,12 +28,14 @@ class Report():
                       and corresponding generated captions are stored
         - cider: a dict containing several tuples indexed by different beam sizes, in which the mean CIDEr
                       scores and the per-image CIDEr scores are stored
+        - mode: shapenet/primitive
         - num: number of images shown in the report, 3 by default
         '''
         self.corpus = corpus
         self.candidates = candidates
         self.cider = cider
         self.num = num
+        self.mode = mode
         self.beam_sizes = list(candidates.keys())
         self.image_ids = list(corpus.keys())
         self.chosen = self._pick()
@@ -73,7 +75,11 @@ class Report():
             for i in range(self.num):
                 image_id = self.chosen['1'][q][i][0]
                 plt.subplot(self.num, 1, i+1)
-                plt.imshow(Image.open(os.path.join(configs.SHAPE_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
+                if self.mode == 'shapenet':
+                    plt.imshow(Image.open(os.path.join(configs.SHAPE_ROOT, "{}/{}.png".format(image_id, image_id))).convert('RGBA').resize((224, 224)))
+                elif self.mode == 'primitive':
+                    category = image_id.split("_")[0]
+                    plt.imshow(Image.open(os.path.join(configs.PRIMITIVE_ROOT, "{}/{}.png".format(category, image_id))).convert('RGBA').resize((224, 224)))
                 plt.text(240, 60, 'beam size 1 : ' + self.chosen['1'][q][i][2], fontsize=28)
                 plt.text(240, 90, 'beam size 3 : ' + self.chosen['3'][q][i][2], fontsize=28)
                 plt.text(240, 120, 'beam size 5 : ' + self.chosen['5'][q][i][2], fontsize=28)
@@ -116,9 +122,9 @@ def main(args):
     if args.dataset == 'shapenet':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 train_size,
@@ -130,9 +136,9 @@ def main(args):
     elif args.dataset == 'primitive':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 train_size,
@@ -147,7 +153,7 @@ def main(args):
     dict_idx2word = embeddings.dict_idx2word
     corpus = embeddings.test_ref
     test_ds = EmbeddingCaptionDataset(
-        embeddings.test_embeddings
+        embeddings.test_shape_embeddings
     )
     test_dl = DataLoader(test_ds, batch_size=batch_size, collate_fn=collate_ec, shuffle=True)
     print("initializing models...")

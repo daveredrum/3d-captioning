@@ -223,7 +223,7 @@ class EncoderDecoderSolver():
             log['epoch_time'].append(np.mean(time.time() - start))
             # show report
             exetime_s = np.sum(log['epoch_time'])
-            eta_s = exetime_s * (epoch - (epoch_id))
+            eta_s = exetime_s * (epoch - (epoch_id + 1))
             eta_m = math.floor(eta_s / 60)
             print("----------------------summary-----------------------")
             print("[Loss] train_loss: %f, perplexity: %f" % (

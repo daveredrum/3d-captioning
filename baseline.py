@@ -18,7 +18,7 @@ def match(embeddings, test_embedding, test_can):
     for test_item in test_embedding:
         best_sim = 0
         best_match = None
-        for train_item in embeddings.train_embeddings:
+        for train_item in embeddings.train_shape_embeddings:
             sim = test_item[2].reshape((1, 128)).dot(train_item[2].reshape((128, 1)))[0, 0]
             sim /= (norm(test_item[2]) * norm(train_item[2]))
             if sim > best_sim:
@@ -40,9 +40,9 @@ def main(args):
     if args.dataset == 'shapenet':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 -1,
@@ -54,9 +54,9 @@ def main(args):
     elif args.dataset == 'primitive':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 -1,
@@ -68,12 +68,12 @@ def main(args):
     else:
         print("invalid dataset, terminating...")
         return
-    test_embeddings = list(chunk(embeddings.test_embeddings, args.batch_size))
+    test_shape_embeddings = list(chunk(embeddings.test_shape_embeddings, args.batch_size))
     test_ref = embeddings.test_ref
     test_can = mp.Manager().dict()
     # queue = mp.SimpleQueue()
-    total_iter = len(test_embeddings)
-    for test_id, test_embedding in enumerate(test_embeddings):
+    total_iter = len(test_shape_embeddings)
+    for test_id, test_embedding in enumerate(test_shape_embeddings):
         print("[Info] step: {}/{}".format(test_id + 1, total_iter))
         start = time.time()
         processes = [mp.Process(target=match, args=(embeddings, test_embedding, test_can)) for i in range(args.worker)]

@@ -47,9 +47,9 @@ def main(args):
     if args.dataset == 'shapenet':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.SHAPENET_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.SHAPENET_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 train_size,
@@ -61,9 +61,9 @@ def main(args):
     elif args.dataset == 'primitive':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_SHAPE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("train"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("val"), 'rb')),
+                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("test"), 'rb')),
             ],
             [
                 train_size,
@@ -81,10 +81,10 @@ def main(args):
         embeddings.train_embeddings
     )
     val_ds = EmbeddingCaptionDataset(
-        embeddings.val_embeddings
+        embeddings.val_shape_embeddings
     )
     test_ds = EmbeddingCaptionDataset(
-        embeddings.test_embeddings
+        embeddings.test_shape_embeddings
     )
     dataloader = {
         'train': DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_ec),
@@ -171,7 +171,7 @@ def main(args):
             print()
             candidates = json.load(open("scores/{}.json".format(settings)))
         else:
-            print("\nevaluating with beam search...")
+            print("evaluating with beam search...")
             print()
             for _, (model_ids, _, embeddings, lengths) in enumerate(dataloader['test']):
                 visual_inputs = Variable(embeddings, requires_grad=False).cuda()
@@ -221,3 +221,4 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)
+    

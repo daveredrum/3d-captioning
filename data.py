@@ -47,6 +47,7 @@ class PretrainedEmbeddings():
         self.train_size, self.val_size, self.test_size = size
         self.max_length = max_length
         self.train_embeddings, self.val_embeddings, self.test_embeddings = None, None, None
+        self.train_shape_embeddings, self.val_shape_embeddings, self.test_shape_embeddings = None, None, None
         self.train_ref, self.val_ref, self.test_ref = {}, {}, {}
         # decode tokenized captions
         self._decode()
@@ -69,10 +70,11 @@ class PretrainedEmbeddings():
             pretrained_test = self.pretrained_embeddings[2][:self.test_size]
         else:
             pretrained_test = self.pretrained_embeddings[2]
+        
         # objectives
-        self.train_embeddings = []
-        self.val_embeddings = []
-        self.test_embeddings = []
+        self.train_embeddings, self.val_embeddings, self.test_embeddings = [], [], []
+        self.train_shape_embeddings, self.val_shape_embeddings, self.test_shape_embeddings = {}, {}, {}
+        
         # decode train
         for i in range(len(pretrained_train)):
             temp = pretrained_train[i][1]
@@ -86,6 +88,9 @@ class PretrainedEmbeddings():
                 self.train_ref[pretrained_train[i][0]].append(temp)
             else:
                 self.train_ref[pretrained_train[i][0]] = [temp]
+        self.train_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.train_embeddings if item[0] not in self.train_shape_embeddings.keys()}
+        self.train_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.train_shape_embeddings.items()]
+        
         # decode val
         for i in range(len(pretrained_val)):
             temp = pretrained_val[i][1]
@@ -99,6 +104,9 @@ class PretrainedEmbeddings():
                 self.val_ref[pretrained_val[i][0]].append(temp)
             else:
                 self.val_ref[pretrained_val[i][0]] = [temp]
+        self.val_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.val_embeddings if item[0] not in self.val_shape_embeddings.keys()}
+        self.val_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.val_shape_embeddings.items()]
+       
         # decode test
         for i in range(len(pretrained_test)):
             temp = pretrained_test[i][1]
@@ -112,6 +120,9 @@ class PretrainedEmbeddings():
                 self.test_ref[pretrained_test[i][0]].append(temp)
             else:
                 self.test_ref[pretrained_test[i][0]] = [temp]
+        self.test_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.test_embeddings if item[0] not in self.test_shape_embeddings.keys()}
+        self.test_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.test_shape_embeddings.items()]
+
 
     def _build_dict(self):
         word_list = {}
@@ -148,6 +159,14 @@ class PretrainedEmbeddings():
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
             self.train_embeddings[i][1] = temp
+        for i in range(len(self.train_shape_embeddings)):
+            temp = []
+            for word in self.train_shape_embeddings[i][1].split(" "):
+                if word in self.dict_word2idx.keys():
+                    temp.append(int(self.dict_word2idx[word]))
+                else:
+                    temp.append(int(self.dict_word2idx['<UNK>']))
+            self.train_shape_embeddings[i][1] = temp
         # transform val
         for i in range(len(self.val_embeddings)):
             temp = []
@@ -157,6 +176,14 @@ class PretrainedEmbeddings():
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
             self.val_embeddings[i][1] = temp
+        for i in range(len(self.val_shape_embeddings)):
+            temp = []
+            for word in self.val_shape_embeddings[i][1].split(" "):
+                if word in self.dict_word2idx.keys():
+                    temp.append(int(self.dict_word2idx[word]))
+                else:
+                    temp.append(int(self.dict_word2idx['<UNK>']))
+            self.val_shape_embeddings[i][1] = temp
         # transform test
         for i in range(len(self.test_embeddings)):
             temp = []
@@ -166,6 +193,14 @@ class PretrainedEmbeddings():
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
             self.test_embeddings[i][1] = temp
+        for i in range(len(self.test_shape_embeddings)):
+            temp = []
+            for word in self.test_shape_embeddings[i][1].split(" "):
+                if word in self.dict_word2idx.keys():
+                    temp.append(int(self.dict_word2idx[word]))
+                else:
+                    temp.append(int(self.dict_word2idx['<UNK>']))
+            self.test_shape_embeddings[i][1] = temp
     
 
 class EmbeddingCaptionDataset(Dataset):
