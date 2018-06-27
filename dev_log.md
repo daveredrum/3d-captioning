@@ -7,14 +7,16 @@ __progress:__
 
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
-|Baseline (Nearest neighbor)|0.589|0.319|0.154|0.074|0.126|
-|__Text2Shape<br/>LSTM__|0.715|0.486|0.292|0.168|0.274|
+|Baseline (ShapeNetCore)|0.573|0.314|0.151|0.075|0.117|
+|Baseline (Primitives)|0.867|0.781|0.681|0.569|0.550|
+|__Text2Shape<br/>LSTM<br/> (ShapeNetCore)__|0.715|0.486|0.292|0.168|0.274|
+|__Text2Shape<br/>LSTM<br/> (Primitives)__|0.715|0.486|0.292|0.168|0.274|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
-> |__Text2Shape<br/>LSTM__|-1|-1|1e-4|0|100|1|0|
+> |__Text2Shape<br/>LSTM<br/> (ShapeNetCore)__|-1|-1|1e-4|0|100|1|0|
 
 ## Jun. 19
 
