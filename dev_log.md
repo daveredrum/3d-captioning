@@ -21,7 +21,7 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline|0.867|0.781|0.681|0.569|0.550|
-|__Text2Shape<br/>LSTM__|0.868|0.787|0.734|0.687|0.642|
+|__Text2Shape<br/>LSTM__|0.876|0.798|0.744|0.696|0.676|
 
 > __best models:__
 >
