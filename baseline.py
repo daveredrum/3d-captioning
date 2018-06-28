@@ -1,4 +1,3 @@
-import configs
 import pickle
 import pandas
 import numpy
@@ -9,9 +8,10 @@ import random
 import argparse
 from queue import Queue
 import multiprocessing as mp
-import capeval.bleu.bleu as capbleu
-import capeval.cider.cider as capcider
-from data import PretrainedEmbeddings
+import lib.configs as configs
+import lib.capeval.bleu.bleu as capbleu
+import lib.capeval.cider.cider as capcider
+from lib.pretrained_data import PretrainedEmbeddings
 from numpy.linalg import norm
 
 def match(embeddings, test_embedding, test_can):
