@@ -49,14 +49,26 @@ class Report():
                 pairs = [(x, y) for x, y in zip(self.image_ids, self.cider[bs][1])]
                 # choose the images with the highest scores, picking the first caption in candidates
                 highest = sorted(pairs, reverse=True, key=lambda x: x[1])[:self.num]
-                highest = [(highest[i][0], self.candidates[bs][highest[i][0]][0], self.corpus[highest[i][0]][0]) for i in range(len(highest))]
+                highest = [(
+                    highest[i][0], 
+                    " ".join([item for item in self.candidates[bs][highest[i][0]][0].split(" ") if item != '\n']), 
+                    self.corpus[highest[i][0]][0]
+                    ) for i in range(len(highest))]
                 # the same thing for the lowest
                 lowest = sorted(pairs, key=lambda x: x[1])[:self.num]
-                lowest = [(lowest[i][0], self.candidates[bs][lowest[i][0]][0], self.corpus[lowest[i][0]][0]) for i in range(len(lowest))]
+                lowest = [(
+                    lowest[i][0], 
+                    " ".join([item for item in self.candidates[bs][lowest[i][0]][0].split(" ") if item != '\n']), 
+                    self.corpus[lowest[i][0]][0]
+                    ) for i in range(len(lowest))]
                 # choose the images with the closest scores to the mean scores
                 med_pairs = [(x, abs(y - self.cider[bs][0])) for x, y in zip(self.image_ids, self.cider[bs][1])]
                 med = sorted(med_pairs, key=lambda x: x[1])[:self.num]
-                med = [(med[i][0], self.candidates[bs][med[i][0]][0], self.corpus[med[i][0]][0]) for i in range(len(med))]
+                med = [(
+                    med[i][0], 
+                    " ".join([item for item in self.candidates[bs][med[i][0]][0].split(" ") if item != '\n']), 
+                    self.corpus[med[i][0]][0]
+                    ) for i in range(len(med))]
                 # add into chosen
                 chosen[bs] = {
                     'high': sorted(highest, key=lambda x: x[0]),
@@ -70,9 +82,21 @@ class Report():
                 }
             else:
                 chosen[bs] = {
-                    'high': [(item, self.candidates[bs][item][0], self.corpus[item][0]) for item in cache['high']],
-                    'low': [(item, self.candidates[bs][item][0], self.corpus[item][0]) for item in cache['low']],
-                    'medium': [(item, self.candidates[bs][item][0], self.corpus[item][0]) for item in cache['medium']]
+                    'high': [(
+                        item, 
+                        ' '.join([item for item in self.candidates[bs][item][0].split(' ') if item != '\n']), 
+                        self.corpus[item][0]
+                        ) for item in cache['high']],
+                    'low': [(
+                        item, 
+                        ' '.join([item for item in self.candidates[bs][item][0].split(' ') if item != '\n']), 
+                        self.corpus[item][0]
+                        ) for item in cache['low']],
+                    'medium': [(
+                        item, 
+                        ' '.join([item for item in self.candidates[bs][item][0].split(' ') if item != '\n']), 
+                        self.corpus[item][0]
+                        ) for item in cache['medium']]
                 }
                 
 
