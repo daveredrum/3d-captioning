@@ -7,7 +7,7 @@ import math
 import argparse
 import torch
 import torch.nn as nn
-from lib.pretrained_data import *
+from lib.data_pretrained import *
 from model.encoders import *
 from model.decoders import *
 import lib.capeval.bleu.bleu as capbleu
