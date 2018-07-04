@@ -34,6 +34,12 @@ def main(args):
     lr = args.learning_rate
     batch_size = args.batch_size
     weight_decay = args.weight_decay
+    if args.attention == "true":
+        attention = True
+        attention_s = 'attention'
+    elif args.attention == "false":
+        attention = False
+        attention_s = 'noattention'
     if args.evaluation == "true":
         evaluation = True
     elif args.evaluation == "false":
@@ -48,6 +54,7 @@ def main(args):
     ###################################################################
     
     # embeddings
+    print('\npreparing data...\n')
     if args.dataset == 'shapenet':
         embeddings = PretrainedEmbeddings(
             [
@@ -106,11 +113,14 @@ def main(args):
     input_size = len(dict_idx2word)
 
     # initialize the models
-    encoder = EmbeddingEncoder().cuda()
-    decoder = Decoder(
-        input_size,
-        512
-    ).cuda()
+    if attention:
+        print('initializing models with attention...\n')
+        encoder = AttentionEncoder().cuda()
+        decoder = AttentionDecoder3D(batch_size, input_size, 512, 256, 4).cuda()
+    else:
+        print('initializing models without attention...\n')
+        encoder = EmbeddingEncoder().cuda()
+        decoder = Decoder(input_size, 512).cuda()
 
     # initialize the optimizer
     criterion = nn.CrossEntropyLoss(ignore_index=0)
@@ -121,12 +131,12 @@ def main(args):
     )
 
     # train
-    print("\n[settings]")
+    print("[settings]")
     print("GPU:", args.gpu)
     print("dataset:", args.dataset)
-    print("train_size:", args.train_size)
-    print("val_size:", args.val_size)
-    print("test_size:", args.test_size)
+    print("train_size:", len(train_ds))
+    print("val_size:", len(val_ds))
+    print("test_size:", len(test_ds))
     print("beam_size:", args.beam_size)
     print("epoch:", args.epoch)
     print("verbose:", args.verbose)
@@ -134,9 +144,11 @@ def main(args):
     print("learning_rate:", args.learning_rate)
     print("weight_decay:", args.weight_decay)
     print("vocabulary:", input_size)
-    print("evaluation:", args.evaluation)
+    print("attention:", attention)
+    print("evaluation:", evaluation)
     print()
-    settings = "{}_trs{}_vs{}_ts{}_e{}_lr{:0.5f}_w{:0.5f}_bs{}_vocab{}_beam{}".format(args.dataset, train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
+    
+    settings = "{}_{}_trs{}_vs{}_ts{}_e{}_lr{:0.5f}_w{:0.5f}_bs{}_vocab{}_beam{}".format(args.dataset, attention_s, train_size, val_size, test_size, epoch, lr, weight_decay, batch_size, input_size, beam_size)
     encoder_decoder_solver = EncoderDecoderSolver(
         optimizer,
         criterion,
@@ -151,6 +163,7 @@ def main(args):
         dict_idx2word,
         epoch,
         verbose,
+        attention,
         beam_size
     )
 
@@ -177,14 +190,23 @@ def main(args):
         else:
             print("evaluating with beam search...")
             print()
-            for _, (model_ids, _, embeddings, lengths) in enumerate(dataloader['test']):
-                visual_inputs = Variable(embeddings, requires_grad=False).cuda()
+            for _, (model_ids, _, captions, embeddings, embeddings_interm, lengths) in enumerate(dataloader['test']):
+                if attention:
+                    visual_inputs = Variable(embeddings_interm, requires_grad=False).cuda()
+                else:
+                    visual_inputs = Variable(embeddings, requires_grad=False).cuda()
+                caption_inputs = Variable(captions[:, :-1], requires_grad=False).cuda()
                 cap_lengths = Variable(lengths, requires_grad=False).cuda()
                 visual_contexts = encoder(visual_inputs)
                 max_length = int(cap_lengths[0].item()) + 10
                 for bs in beam_size:
-                    outputs[bs] = decoder.beam_search(visual_contexts, int(bs), max_length)
-                    outputs[bs] = decode_outputs(outputs[bs], None, dict_idx2word, "val")
+                    if attention:
+                        outputs[bs] = decoder.beam_search(visual_contexts, caption_inputs, int(bs), max_length)
+                        outputs[bs] = decode_attention_outputs(outputs[bs], None, dict_idx2word, "val")
+                    else:
+                        outputs[bs] = decoder.beam_search(visual_contexts, int(bs), max_length)
+                        outputs[bs] = decode_outputs(outputs[bs], None, dict_idx2word, "val")
+                    
                     for model_id, output in zip(model_ids, outputs[bs]):
                         if model_id not in candidates[bs].keys():
                             candidates[bs][model_id] = [output]
@@ -231,6 +253,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty on the optimizer")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
+    parser.add_argument("--attention", type=str, default="false", help="true/false")
     parser.add_argument("--evaluation", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)

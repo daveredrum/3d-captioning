@@ -20,19 +20,20 @@ from torchvision import transforms, utils
 # for EmbeddingCaptionDataset
 def collate_ec(data):
     # Sort a data list by caption length (descending order)
-    data.sort(key=lambda x: x[3], reverse=True)
+    data.sort(key=lambda x: x[5], reverse=True)
 
     # Merge embeddings (from tuple of 1D tensor to 2D tensor)
-    model_id, captions, embeddings, lengths = zip(*data)
-    embeddings = torch.stack(embeddings, 0)
+    model_id, model_cat, model_cap, model_emb, model_interm, lengths = zip(*data)
+    model_emb = torch.stack(model_emb, 0)
+    model_interm = torch.stack(model_interm, 0)
 
     # Merge captions (from tuple of 1D tensor to 2D tensor).
-    merge_cap = torch.zeros(len(captions), max(lengths)).long()
-    for i, cap in enumerate(captions):
+    merge_cap = torch.zeros(len(model_cap), max(lengths)).long()
+    for i, cap in enumerate(model_cap):
         end = int(lengths[i])
         merge_cap[i, :end] = torch.LongTensor(cap[:end])
 
-    return model_id, merge_cap, embeddings, torch.Tensor(list(lengths))
+    return model_id, model_cat, merge_cap, model_emb, model_interm, torch.Tensor(list(lengths))
 
 class PretrainedEmbeddings():
     def __init__(self, pretrained_embeddings, size, max_length):
@@ -77,57 +78,57 @@ class PretrainedEmbeddings():
         
         # decode train
         for i in range(len(pretrained_train)):
-            temp = pretrained_train[i][1]
+            temp = pretrained_train[i][2]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.train_embeddings.append([pretrained_train[i][0], temp, pretrained_train[i][2]])
+            self.train_embeddings.append([pretrained_train[i][0], pretrained_train[i][1], temp, pretrained_train[i][3], pretrained_train[i][4]])
             if pretrained_train[i][0] in self.train_ref.keys():
                 self.train_ref[pretrained_train[i][0]].append(temp)
             else:
                 self.train_ref[pretrained_train[i][0]] = [temp]
-        self.train_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.train_embeddings if item[0] not in self.train_shape_embeddings.keys()}
-        self.train_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.train_shape_embeddings.items()]
+        self.train_shape_embeddings = {item[0]: (item[1], item[2], item[3], item[4]) for item in self.train_embeddings if item[0] not in self.train_shape_embeddings.keys()}
+        self.train_shape_embeddings = [[item[0], item[1][0], item[1][1], item[1][2], item[1][3]] for item in self.train_shape_embeddings.items()]
         
         # decode val
         for i in range(len(pretrained_val)):
-            temp = pretrained_val[i][1]
+            temp = pretrained_val[i][2]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.val_embeddings.append([pretrained_val[i][0], temp, pretrained_val[i][2]])
+            self.val_embeddings.append([pretrained_val[i][0], pretrained_val[i][1], temp, pretrained_val[i][3], pretrained_val[i][4]])
             if pretrained_val[i][0] in self.val_ref.keys():
                 self.val_ref[pretrained_val[i][0]].append(temp)
             else:
                 self.val_ref[pretrained_val[i][0]] = [temp]
-        self.val_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.val_embeddings if item[0] not in self.val_shape_embeddings.keys()}
-        self.val_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.val_shape_embeddings.items()]
+        self.val_shape_embeddings = {item[0]: (item[1], item[2], item[3], item[4]) for item in self.val_embeddings if item[0] not in self.val_shape_embeddings.keys()}
+        self.val_shape_embeddings = [[item[0], item[1][0], item[1][1], item[1][2], item[1][3]] for item in self.val_shape_embeddings.items()]
        
         # decode test
         for i in range(len(pretrained_test)):
-            temp = pretrained_test[i][1]
+            temp = pretrained_test[i][2]
             if len(temp) > self.max_length:
                 temp = temp[:self.max_length]
             temp = ' '.join(temp)
             temp = '<START> ' + temp
             temp += ' <END>'
-            self.test_embeddings.append([pretrained_test[i][0], temp, pretrained_test[i][2]])
+            self.test_embeddings.append([pretrained_test[i][0], pretrained_test[i][1], temp, pretrained_test[i][3], pretrained_test[i][4]])
             if pretrained_test[i][0] in self.test_ref.keys():
                 self.test_ref[pretrained_test[i][0]].append(temp)
             else:
                 self.test_ref[pretrained_test[i][0]] = [temp]
-        self.test_shape_embeddings = {item[0]: (item[1], item[2]) for item in self.test_embeddings if item[0] not in self.test_shape_embeddings.keys()}
-        self.test_shape_embeddings = [[item[0], item[1][0], item[1][1]] for item in self.test_shape_embeddings.items()]
+        self.test_shape_embeddings = {item[0]: (item[1], item[2], item[3], item[4]) for item in self.test_embeddings if item[0] not in self.test_shape_embeddings.keys()}
+        self.test_shape_embeddings = [[item[0], item[1][0], item[1][1], item[1][2], item[1][3]] for item in self.test_shape_embeddings.items()]
 
 
     def _build_dict(self):
         word_list = {}
         for item in self.train_embeddings:
-            for word in item[1].split(" "):
+            for word in item[2].split(" "):
                 if word in word_list.keys() and word != '<START>' and word != '<END>':
                     word_list[word] += 1
                 else:
@@ -153,54 +154,54 @@ class PretrainedEmbeddings():
         # transform train
         for i in range(len(self.train_embeddings)):
             temp = []
-            for word in self.train_embeddings[i][1].split(" "):
+            for word in self.train_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.train_embeddings[i][1] = temp
+            self.train_embeddings[i][2] = temp
         for i in range(len(self.train_shape_embeddings)):
             temp = []
-            for word in self.train_shape_embeddings[i][1].split(" "):
+            for word in self.train_shape_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.train_shape_embeddings[i][1] = temp
+            self.train_shape_embeddings[i][2] = temp
         # transform val
         for i in range(len(self.val_embeddings)):
             temp = []
-            for word in self.val_embeddings[i][1].split(" "):
+            for word in self.val_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.val_embeddings[i][1] = temp
+            self.val_embeddings[i][2] = temp
         for i in range(len(self.val_shape_embeddings)):
             temp = []
-            for word in self.val_shape_embeddings[i][1].split(" "):
+            for word in self.val_shape_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.val_shape_embeddings[i][1] = temp
+            self.val_shape_embeddings[i][2] = temp
         # transform test
         for i in range(len(self.test_embeddings)):
             temp = []
-            for word in self.test_embeddings[i][1].split(" "):
+            for word in self.test_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.test_embeddings[i][1] = temp
+            self.test_embeddings[i][2] = temp
         for i in range(len(self.test_shape_embeddings)):
             temp = []
-            for word in self.test_shape_embeddings[i][1].split(" "):
+            for word in self.test_shape_embeddings[i][2].split(" "):
                 if word in self.dict_word2idx.keys():
                     temp.append(int(self.dict_word2idx[word]))
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
-            self.test_shape_embeddings[i][1] = temp
+            self.test_shape_embeddings[i][2] = temp
     
 
 class EmbeddingCaptionDataset(Dataset):
@@ -213,8 +214,10 @@ class EmbeddingCaptionDataset(Dataset):
     
     def __getitem__(self, idx):
         model_id = self.pretrained_embeddings[idx][0]
-        caption = torch.LongTensor(self.pretrained_embeddings[idx][1])
-        embedding = torch.Tensor(self.pretrained_embeddings[idx][2])
-        length = len([item for item in caption if item != 0])
+        model_cat = self.pretrained_embeddings[idx][1]
+        model_cap = torch.LongTensor(self.pretrained_embeddings[idx][2])
+        model_emb = torch.Tensor(self.pretrained_embeddings[idx][3])
+        model_interm = torch.Tensor(self.pretrained_embeddings[idx][4])
+        length = len([item for item in model_cap if item != 0])
         
-        return model_id, caption, embedding, length
+        return model_id, model_cat, model_cap, model_emb, model_interm, length

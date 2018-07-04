@@ -43,8 +43,9 @@ class ShapenetTextEncoder(nn.Module):
         embedded = self.embedding(inputs) # (batch_size, seq_size, emb_size)
         conved = self.conv_128(embedded.transpose(2, 1).contiguous()) # (batch_size, emb_size, seq_size)
         conved = self.bn_128(conved.unsqueeze(3)).squeeze() # (batch_size, emb_size, seq_size)
-        conved = self.conv_256(conved).transpose(2, 1).contiguous() # (batch_size, seq_size, emb_size)
-        
+        conved = self.conv_256(conved) # (batch_size, emb_size, seq_size)
+        conved = self.bn_256(conved.unsqueeze(3)).squeeze().transpose(2, 1).contiguous() # (batch_size, seq_size, emb_size)
+
         #################
         # recurrent
         ################# 

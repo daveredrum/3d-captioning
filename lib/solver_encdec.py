@@ -24,7 +24,7 @@ class EncoderDecoderSolver():
         self.settings = settings
         self.log = {}
 
-    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, beam_size=3):
+    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, attention, beam_size=3):
         scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=5, threshold=0.001)
         best_info = {
             'epoch_id': 0,
@@ -75,110 +75,155 @@ class EncoderDecoderSolver():
             start = time.time()
             for phase in ["train", "val"]:
                 total_iter = len(dataloader[phase])
-                for iter_id, (model_ids, captions, embeddings, lengths) in enumerate(dataloader[phase]):
+                for iter_id, (model_ids, _, captions, embeddings, embeddings_interm, lengths) in enumerate(dataloader[phase]):
                     # decoder without attention
-                    visual_inputs = Variable(embeddings).cuda()
-                    caption_inputs = Variable(captions[:, :-1]).cuda()
-                    caption_targets = Variable(captions).cuda()
-                    cap_lengths = Variable(lengths).cuda()
-                    
-                    if phase == "train":
-                        encoder.train()
-                        decoder.train()
-                        self.optimizer.zero_grad()
-                        # forward pass
-                        forward_since = time.time()
-                        visual_contexts = encoder(visual_inputs)
-                        # teacher forcing
-                        states = decoder.init_hidden(visual_contexts)
-                        outputs = decoder(visual_contexts, caption_inputs, states)
-                        # # no teacher forcing
-                        # outputs = decoder.sample(visual_contexts, cap_lengths)
-                        outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
-                        targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
-                        loss = self.criterion(outputs_packed, targets)
+                    if not attention:
+                        visual_inputs = Variable(embeddings).cuda()
+                        caption_inputs = Variable(captions[:, :-1]).cuda()
+                        caption_targets = Variable(captions).cuda()
+                        cap_lengths = Variable(lengths).cuda()
                         
-                        # decode outputs
-                        outputs = decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
-                        # save to candidates
-                        for model_id, output in zip(model_ids, outputs):
-                            if model_id not in candidates[phase].keys():
-                                candidates[phase][model_id] = [output]
-                            else:
-                                candidates[phase][model_id].append(output)
-                        log['forward'].append(time.time() - forward_since)
+                        if phase == "train":
+                            encoder.train()
+                            decoder.train()
+                            self.optimizer.zero_grad()
+                            # forward pass
+                            forward_since = time.time()
+                            visual_contexts = encoder(visual_inputs)
+                            # teacher forcing
+                            states = decoder.init_hidden(visual_contexts)
+                            outputs = decoder(visual_contexts, caption_inputs, states)
+                            # # no teacher forcing
+                            # outputs = decoder.sample(visual_contexts, cap_lengths)
+                            outputs_packed = pack_padded_sequence(outputs, [l for l in cap_lengths], batch_first=True)[0]
+                            targets = pack_padded_sequence(caption_targets, [l for l in cap_lengths], batch_first=True)[0]
+                            loss = self.criterion(outputs_packed, targets)
+                            
+                            # decode outputs
+                            outputs = decode_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+                            log['forward'].append(time.time() - forward_since)
 
-                        # backward pass
-                        # save log
-                        backward_since = time.time()
-                        loss.backward()
-                        # clipping the gradient
-                        clip_grad_value_(self.optimizer, 5)
-                        self.optimizer.step()
-                        log['backward'].append(time.time() - backward_since)
-                        log['train_loss'].append(loss.item())
-                        log['train_perplexity'].append(np.exp(loss.item()))
+                            # backward pass
+                            # save log
+                            backward_since = time.time()
+                            loss.backward()
+                            # clipping the gradient
+                            clip_grad_value_(self.optimizer, 5)
+                            self.optimizer.step()
+                            log['backward'].append(time.time() - backward_since)
+                            log['train_loss'].append(loss.item())
+                            log['train_perplexity'].append(np.exp(loss.item()))
 
-                        # report
-                        if (iter_id+1) % verbose == 0:
-                            print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
-                                epoch_id+1,
-                                epoch,
-                                iter_id+1, 
-                                total_iter, 
-                                log['train_loss'][-1], 
-                                log['train_perplexity'][-1]
-                            ))
+                            # report
+                            if (iter_id+1) % verbose == 0:
+                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1,
+                                    epoch,
+                                    iter_id+1, 
+                                    total_iter, 
+                                    log['train_loss'][-1], 
+                                    log['train_perplexity'][-1]
+                                ))
+                        else:
+                            # validate
+                            encoder.eval()
+                            decoder.eval()
+                            val_since = time.time()
+                            visual_contexts = encoder(visual_inputs)
+                            max_length = int(cap_lengths[0].item()) + 10
+                            outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
+
+                            # decode outputs
+                            outputs = decode_outputs(outputs, None, dict_idx2word, phase)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+
+                            # save log
+                            log['val_time'].append(time.time() - val_since)
+
                     else:
-                        # validate
-                        encoder.eval()
-                        decoder.eval()
-                        val_since = time.time()
-                        visual_contexts = encoder(visual_inputs)
-                        # if beam_size == 1:
-                        #     # greedy search
-                        #     # generate until <END> token
-                        #     outputs = []
-                        #     states = decoder.init_hidden(visual_contexts)
-                        #     max_length = int(cap_lengths[0].item()) + 10
-                        #     for idx in range(visual_contexts.size(0)):
-                        #         h, c = states[0][idx].unsqueeze(0), states[1][idx].unsqueeze(0)
-                        #         temp = []
-                        #         for i in range(max_length):
-                        #             if i == 0:
-                        #                 embedded = visual_contexts[idx].unsqueeze(0)
-                        #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
-                        #                 inputs = caption_inputs[idx, 0].view(1)
-                        #                 temp.append(predicted.max(2)[1].view(1).item())
-                        #             else:
-                        #                 embedded = decoder.embedding(inputs)
-                        #                 predicted, (h, c) = decoder.sample(embedded, (h, c))
-                        #                 inputs = predicted.max(2)[1].view(1)
-                        #                 temp.append(inputs[0].item())
-                        #             if inputs[0].item() == dict_word2idx['<END>']:
-                        #                 break
-                        #         outputs.append(temp)
-                        # else:
-                        #     # beam search
-                        #     max_length = int(cap_lengths[0].item()) + 10
-                        #     outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
-                        # beam search
-                        max_length = int(cap_lengths[0].item()) + 10
-                        outputs = decoder.beam_search(visual_contexts, beam_size, max_length)
-
-                        # decode outputs
-                        outputs = decode_outputs(outputs, None, dict_idx2word, phase)
-                        # save to candidates
-                        for model_id, output in zip(model_ids, outputs):
-                            if model_id not in candidates[phase].keys():
-                                candidates[phase][model_id] = [output]
-                            else:
-                                candidates[phase][model_id].append(output)
-
-                        # save log
-                        log['val_time'].append(time.time() - val_since)
+                        visual_inputs = Variable(embeddings_interm).cuda()
+                        caption_inputs = Variable(captions[:, :-1]).cuda()
+                        caption_targets = Variable(captions[:, 1:]).cuda() 
+                        cap_lengths = Variable(lengths).cuda()
                         
+                        if phase == "train":
+                            encoder.train()
+                            decoder.train()
+                            self.optimizer.zero_grad()
+                            # forward pass
+                            forward_since = time.time()
+                            visual_contexts = encoder(visual_inputs)
+                            # visual_contexts = (batch_size, visual_channels, visual_size, visual_size)
+                            # teacher forcing
+                            states = decoder.init_hidden(visual_contexts[0])
+                            outputs = decoder(visual_contexts, caption_inputs, states)
 
+                            outputs_packed = pack_padded_sequence(outputs, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            targets = pack_padded_sequence(caption_targets, [l-1 for l in cap_lengths], batch_first=True)[0]
+                            loss = self.criterion(outputs_packed, targets)
+
+                            # decode outputs
+                            outputs = decode_attention_outputs(outputs, cap_lengths, dict_idx2word, phase)
+                            
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+                            
+                            log['forward'].append(time.time() - forward_since)
+                            # backward pass
+                            backward_since = time.time()
+                            loss.backward()
+                            # clipping the gradient
+                            clip_grad_value_(self.optimizer, 5)
+                            self.optimizer.step()
+                            log['backward'].append(time.time() - backward_since)
+                            log['train_loss'].append(loss.item())
+                            log['train_perplexity'].append(np.exp(loss.item()))
+
+                            # report
+                            if (iter_id+1) % verbose == 0:
+                                print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
+                                    epoch_id+1,
+                                    epoch,
+                                    iter_id+1, 
+                                    total_iter, 
+                                    log['train_loss'][-1], 
+                                    log['train_perplexity'][-1]
+                                ))
+                        else:
+                            # validate
+                            encoder.eval()
+                            decoder.eval()
+                            val_since = time.time()
+                            visual_contexts = encoder(visual_inputs)
+                            max_length = int(cap_lengths[0].item()) + 10
+                            outputs = decoder.beam_search(visual_contexts, caption_inputs, beam_size, max_length)
+
+                            # decode the outputs
+                            outputs = decode_attention_outputs(outputs, None, dict_idx2word, phase)
+                            # save to candidates
+                            for model_id, output in zip(model_ids, outputs):
+                                if model_id not in candidates[phase].keys():
+                                    candidates[phase][model_id] = [output]
+                                else:
+                                    candidates[phase][model_id].append(output)
+                            # save log
+                            log['val_time'].append(time.time() - val_since)
+                        
             # accumulate loss
             log['train_loss'] = np.mean(log['train_loss'])
             # log['val_loss'] = np.mean(log['val_loss'])

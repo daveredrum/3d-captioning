@@ -89,6 +89,7 @@ class ShapenetDataset(Dataset):
         model_id = self.shapenet_data[idx][0]
         model_path = os.path.join(configs.SHAPE_ROOT, configs.SHAPENET_NRRD.format(model_id, model_id))
         voxel = torch.FloatTensor(nrrd.read(model_path)[0])
+        voxel /= 255.
         caption = self.shapenet_data[idx][2]
         length = len(caption)
         label = self.shapenet_data[idx][1]

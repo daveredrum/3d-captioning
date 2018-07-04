@@ -18,6 +18,7 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
+        self.loss = nn.BCEWithLogitsLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -40,12 +41,14 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a).log()
 
-        return -self.weight * targets.mul(inputs).sum()
+        return -self.weight * targets.mul(inputs).sum(1).mean()
+
 
 class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
+        self.loss = nn.BCEWithLogitsLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -69,7 +72,8 @@ class AssociationLoss(nn.Module):
         else:
             targets = torch.FloatTensor(1, inputs.size(1)).fill_(1. / inputs.size(1))
 
-        return -self.weight * targets.mul(inputs).sum()
+        return -self.weight * targets.mul(inputs).sum(1).mean()
+
 
 class MetricLoss(nn.Module):
     def __init__(self, margin=1.):
@@ -109,10 +113,21 @@ class MetricLoss(nn.Module):
         for pos_pair in pos:
             neg_i = [item for item in neg if item[0] == pos_pair[0]]
             neg_j = [item for item in neg if item[0] == pos_pair[1]]
-            V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i]))
-            V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j]))
-            max_ij = (V_i + V_j).log() - (a[pos_pair[0]].dot(b[pos_pair[1]]))
+            if a.is_cuda:
+                V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i])).cuda()
+                V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j])).cuda()
+                max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
+                max_ij = torch.max(max_ij, torch.zeros(max_ij.size()).cuda())
+            else:
+                V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i]))
+                V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j]))
+                max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
+                max_ij = torch.max(max_ij, torch.zeros(max_ij.size()))
+                
             local_comp = max_ij.pow(2)
             global_comp.append(local_comp.unsqueeze(0))
+        outputs = torch.cat(global_comp).sum().div(2 * len(pos))
+        if a.is_cuda:
+            outputs.cuda()
         
-        return torch.cat(global_comp).sum().div(2 * len(pos))
+        return outputs
