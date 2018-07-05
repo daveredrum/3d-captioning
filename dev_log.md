@@ -8,14 +8,14 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline|0.573|0.314|0.151|0.075|0.117|
-|__Text2Shape<br/>LSTM__|0.747|0.527|0.326|0.190|0.297|
+|__Text2Shape<br/>LSTM__|0.731|0.502|0.306|0.180|0.290|
 |__Text2Shape<br/>attention<br/>LSTM__|0.654|0.388|0.216|0.125|0.202|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
-> |__Text2Shape<br/>LSTM__|-1|-1|1e-4|0|100|1|0|
+> |__Text2Shape<br/>LSTM__|-1|-1|2e-4|0|100|1|0|
 > |__Text2Shape<br/>attention<br/>LSTM__|-1|-1|2e-4|0|100|3|0|
 
 - performance of shape captioning on __Primitives__:
