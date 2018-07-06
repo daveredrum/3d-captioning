@@ -9,14 +9,16 @@ __progress:__
 |---|---|---|---|---|---|
 |Baseline|0.573|0.314|0.151|0.075|0.117|
 |__Text2Shape<br/>LSTM__|0.731|0.502|0.306|0.180|0.290|
-|__Text2Shape<br/>attention<br/>LSTM__|0.654|0.388|0.216|0.125|0.202|
+|__Text2Shape<br/>att2in<br/>LSTM__|0.690|0.448|0.262|0.147|0.240|
+|__Text2Shape<br/>att2all<br/>LSTM__|0.685|0.445|0.258|0.143|0.238|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
 > |__Text2Shape<br/>LSTM__|-1|-1|2e-4|0|100|1|0|
-> |__Text2Shape<br/>attention<br/>LSTM__|-1|-1|2e-4|0|100|3|0|
+> |__Text2Shape<br/>att2in<br/>LSTM__|-1|-1|2e-4|0|100|1|0|
+> |__Text2Shape<br/>att2all<br/>LSTM__|-1|-1|2e-4|0|100|1|0|
 
 - performance of shape captioning on __Primitives__:
 
