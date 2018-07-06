@@ -144,10 +144,91 @@ class Attention3D(nn.Module):
 
         return outputs
 
+# new LSTM with visual attention context
+class Att2AllLSTMCell(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super(Att2AllLSTMCell, self).__init__()
+        # basic settings
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        # parameters
+        for gate in ["i", "f", "c", "o"]:
+            setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
+            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "z_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "b_{}".format(gate), Parameter(torch.Tensor(hidden_size)))
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+    
+    # inputs = (batch, input_size)
+    # states_h = (batch, hidden_size)
+    # states_c = (batch, hidden_size)
+    # atteded = (batch, input_size)
+    # outputs = (states_h, states_c)
+    def forward(self, embedded, states, atteded):
+        # unpack states
+        states_h, states_c = states
+        # forward feed
+        i = F.sigmoid(torch.matmul(embedded, self.w_i) + torch.matmul(states_h, self.u_i) + torch.matmul(atteded, self.z_i) + self.b_i)
+        f = F.sigmoid(torch.matmul(embedded, self.w_f) + torch.matmul(states_h, self.u_f) + torch.matmul(atteded, self.z_f) + self.b_f)
+        c_hat = F.tanh(torch.matmul(embedded, self.w_c) + torch.matmul(states_h, self.u_c) + torch.matmul(atteded, self.z_c) + self.b_c)
+        states_c = f * states_c + i * c_hat
+        o = F.sigmoid(torch.matmul(embedded, self.w_o) + torch.matmul(states_h, self.u_o) + torch.matmul(atteded, self.z_o) + self.b_o)
+        states_h = o * F.tanh(states_c)
+        # pack states
+        states = (states_h, states_c)
+
+        return states
+
+# new LSTM with visual attention context
+class Att2InLSTMCell(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super(Att2InLSTMCell, self).__init__()
+        # basic settings
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        # parameters
+        for gate in ["i", "f", "c", "o"]:
+            setattr(self, "w_{}".format(gate), Parameter(torch.Tensor(input_size, hidden_size)))
+            setattr(self, "u_{}".format(gate), Parameter(torch.Tensor(hidden_size, hidden_size)))
+            setattr(self, "b_{}".format(gate), Parameter(torch.Tensor(hidden_size)))
+        setattr(self, "z_c", Parameter(torch.Tensor(hidden_size, hidden_size)))
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+    
+    # inputs = (batch, input_size)
+    # states_h = (batch, hidden_size)
+    # states_c = (batch, hidden_size)
+    # atteded = (batch, input_size)
+    # outputs = (states_h, states_c)
+    def forward(self, embedded, states, atteded):
+        # unpack states
+        states_h, states_c = states
+        # forward feed
+        i = F.sigmoid(torch.matmul(embedded, self.w_i) + torch.matmul(states_h, self.u_i) + self.b_i)
+        f = F.sigmoid(torch.matmul(embedded, self.w_f) + torch.matmul(states_h, self.u_f) + self.b_f)
+        c_hat = F.tanh(torch.matmul(embedded, self.w_c) + torch.matmul(states_h, self.u_c) + torch.matmul(atteded, self.z_c) + self.b_c)
+        states_c = f * states_c + i * c_hat
+        o = F.sigmoid(torch.matmul(embedded, self.w_o) + torch.matmul(states_h, self.u_o) + self.b_o)
+        states_h = o * F.tanh(states_c)
+        # pack states
+        states = (states_h, states_c)
+
+        return states
 
 # decoder with attention
 class AttentionDecoder3D(nn.Module):
-    def __init__(self, batch_size, input_size, hidden_size, visual_channels, visual_size, cuda_flag=True):
+    def __init__(self, attention, batch_size, input_size, hidden_size, visual_channels, visual_size, cuda_flag=True):
         super(AttentionDecoder3D, self).__init__()
         # basic settings
         self.batch_size = batch_size
@@ -161,13 +242,13 @@ class AttentionDecoder3D(nn.Module):
         self.feat_size = 512
         self.cuda_flag = cuda_flag
         # layer settings
-        # initialize hidden states
-        self.init_h = nn.Sequential(
-            nn.Linear(self.visual_channels, hidden_size),
-        )
-        self.init_c = nn.Sequential(
-            nn.Linear(self.visual_channels, hidden_size),
-        )
+        # # initialize hidden states
+        # self.init_h = nn.Sequential(
+        #     nn.Linear(self.visual_channels, hidden_size),
+        # )
+        # self.init_c = nn.Sequential(
+        #     nn.Linear(self.visual_channels, hidden_size),
+        # )
         # embedding layer
         self.embedding = nn.Embedding(input_size, hidden_size)
 
@@ -175,7 +256,12 @@ class AttentionDecoder3D(nn.Module):
         self.attention = Attention3D(self.visual_channels, self.hidden_size, self.visual_flat)
 
         # LSTM
-        self.lstm_layer_1 = nn.LSTMCell(2 * self.hidden_size, self.hidden_size)
+        if attention == 'att2all':
+            self.lstm_layer_1 = Att2AllLSTMCell(2 * self.hidden_size, self.hidden_size)
+        elif attention == 'att2in':
+            self.lstm_layer_1 = Att2InLSTMCell(2 * self.hidden_size, self.hidden_size)
+        else:
+            self.lstm_layer_1 = nn.LSTMCell(2 * self.hidden_size, self.hidden_size)
 
         # output layer
         self.output_layer = nn.Sequential(
@@ -187,9 +273,13 @@ class AttentionDecoder3D(nn.Module):
     def init_hidden(self, visual_inputs):
         visual_flat = visual_inputs.view(visual_inputs.size(0), visual_inputs.size(1), visual_inputs.size(2) * visual_inputs.size(2) * visual_inputs.size(2))
         visual_flat = visual_flat.mean(2)
+        # states = (
+        #     self.init_h(visual_flat),
+        #     self.init_c(visual_flat)
+        # )
         states = (
-            self.init_h(visual_flat),
-            self.init_c(visual_flat)
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda(),
+            Variable(torch.zeros(visual_inputs.size(0), self.hidden_size)).cuda()
         )
 
         return states
@@ -200,12 +290,21 @@ class AttentionDecoder3D(nn.Module):
         seq_length = caption_inputs.size(1)
         decoder_outputs = []
         for step in range(seq_length):
+            # embedded = self.embedding(caption_inputs[:, step])
+            # lstm_input = torch.cat((embedded, global_features), dim=1)
+            # states = self.lstm_layer_1(lstm_input, states)
+            # lstm_outputs = states[0]
+            # attention_weights = self.attention(area_features, states)
+            # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            # outputs = torch.cat((attended, lstm_outputs), dim=1)
+            # outputs = self.output_layer(outputs).unsqueeze(1)
+            # decoder_outputs.append(outputs)
             embedded = self.embedding(caption_inputs[:, step])
             lstm_input = torch.cat((embedded, global_features), dim=1)
-            states = self.lstm_layer_1(lstm_input, states)
-            lstm_outputs = states[0]
             attention_weights = self.attention(area_features, states)
             attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+            states = self.lstm_layer_1(lstm_input, states, attended)
+            lstm_outputs = states[0]
             outputs = torch.cat((attended, lstm_outputs), dim=1)
             outputs = self.output_layer(outputs).unsqueeze(1)
             decoder_outputs.append(outputs)
@@ -216,12 +315,20 @@ class AttentionDecoder3D(nn.Module):
 
     def sample(self, features, caption_inputs, states):
         _, global_features, area_features = features
+        # embedded = self.embedding(caption_inputs)
+        # lstm_input = torch.cat((embedded, global_features), dim=1)
+        # new_states = self.lstm_layer_1(lstm_input, states)
+        # lstm_outputs = new_states[0]
+        # attention_weights = self.attention(area_features, states)
+        # attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+        # outputs = torch.cat((attended, lstm_outputs), dim=1)
+        # outputs = self.output_layer(outputs).unsqueeze(1)
         embedded = self.embedding(caption_inputs)
         lstm_input = torch.cat((embedded, global_features), dim=1)
-        new_states = self.lstm_layer_1(lstm_input, states)
-        lstm_outputs = new_states[0]
         attention_weights = self.attention(area_features, states)
         attended = torch.sum(area_features * attention_weights.unsqueeze(1), 2)
+        new_states = self.lstm_layer_1(lstm_input, states, attended)
+        lstm_outputs = new_states[0]
         outputs = torch.cat((attended, lstm_outputs), dim=1)
         outputs = self.output_layer(outputs).unsqueeze(1)
 

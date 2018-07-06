@@ -1,0 +1,13 @@
+python train.py \
+--dataset=primitive \
+--train_size=-1 \
+--val_size=-1 \
+--test_size=-1 \
+--epoch=100 \
+--verbose=100 \
+--learning_rate=2e-4 \
+--weight_decay=1e-5 \
+--batch_size=256 \
+--gpu=3 \
+--attention=att2in \
+--evaluation=true

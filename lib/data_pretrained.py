@@ -168,6 +168,7 @@ class PretrainedEmbeddings():
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
             self.train_shape_embeddings[i][2] = temp
+        
         # transform val
         for i in range(len(self.val_embeddings)):
             temp = []
@@ -185,6 +186,7 @@ class PretrainedEmbeddings():
                 else:
                     temp.append(int(self.dict_word2idx['<UNK>']))
             self.val_shape_embeddings[i][2] = temp
+       
         # transform test
         for i in range(len(self.test_embeddings)):
             temp = []

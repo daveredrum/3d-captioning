@@ -39,8 +39,8 @@ class EncoderDecoderSolver():
             'rouge': 0.0,
         }
         best_models = {
-            'encoder': encoder,
-            'decoder': decoder,
+            'encoder': None,
+            'decoder': None,
         }
         for epoch_id in range(epoch):
             print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
@@ -236,7 +236,7 @@ class EncoderDecoderSolver():
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
             # reduce the learning rate on plateau if training loss if training loss is small
-            if log['train_loss'] <= 1.5:
+            if log['train_loss'] <= 2.0:
                 scheduler.step(val_cider)
             # # evaluate meteor
             # try:
@@ -331,7 +331,7 @@ class EncoderDecoderSolver():
             self.log[epoch_id] = log
             
             # best
-            if log['train_loss'] <= 1.5 and log['val_cider'] > best_scores["cider"]:
+            if log['train_loss'] <= 2.0 and log['val_cider'] > best_scores["cider"]:
                 best_info['epoch_id'] = epoch_id + 1
                 best_info['loss'] = log['train_loss']
                 best_scores['bleu_1'] = log['val_bleu_1']
@@ -357,6 +357,10 @@ class EncoderDecoderSolver():
 
         # save the best model
         print("saving the best models...\n")
+        if not best_models['encoder'] or  not best_models['decoder']:
+            best_models['encoder'] = encoder
+            best_models['decoder'] = decoder
+        
         torch.save(best_models['encoder'], "outputs/models/encoder_{}.pth".format(self.settings))
         torch.save(best_models['decoder'], "outputs/models/decoder_{}.pth".format(self.settings))
 
