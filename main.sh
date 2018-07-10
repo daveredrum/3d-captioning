@@ -9,5 +9,5 @@ python train.py \
 --weight_decay=1e-4 \
 --batch_size=256 \
 --gpu=3 \
---attention=att2in \
+--attention=att2all \
 --evaluation=true
