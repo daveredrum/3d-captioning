@@ -133,8 +133,10 @@ class PretrainedEmbeddings():
                     word_list[word] += 1
                 else:
                     word_list[word] = 1
+       
+        # min_freq = 5    
         word_list = sorted(word_list.items(), key=operator.itemgetter(1), reverse=True)
-        word_list = [item[0] for item in word_list]
+        word_list = [item[0] for item in word_list if item[1] >= 5]
         # indexing starts at 4
         dict_word2idx = {word_list[i]: str(i + 4) for i in range(len(word_list))}
         dict_idx2word = {str(i + 4): word_list[i] for i in range(len(word_list))}

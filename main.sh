@@ -1,13 +1,13 @@
 python train.py \
---dataset=primitive \
+--dataset=shapenet \
 --train_size=-1 \
 --val_size=-1 \
 --test_size=-1 \
---epoch=100 \
+--epoch=50 \
 --verbose=100 \
---learning_rate=2e-4 \
---weight_decay=1e-5 \
+--learning_rate=5e-4 \
+--weight_decay=1e-4 \
 --batch_size=256 \
 --gpu=3 \
---attention=att2in \
+--attention=spatial \
 --evaluation=true

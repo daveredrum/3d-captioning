@@ -22,10 +22,12 @@ class EncoderDecoderSolver():
         self.optimizer = optimizer
         self.criterion = criterion
         self.settings = settings
+        self.threshold = {'schedule': 2.5, 'save': 2.5}
         self.log = {}
 
     def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, attention, beam_size=3):
-        scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=5, threshold=0.001)
+        # scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=5, threshold=0.001)
+        scheduler = StepLR(self.optimizer, gamma=0.8, step_size=3)
         best_info = {
             'epoch_id': 0,
             'loss': 0,
@@ -44,6 +46,7 @@ class EncoderDecoderSolver():
         }
         for epoch_id in range(epoch):
             print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
+            scheduler.step()
             log = {
                 'train_loss': [],
                 'train_perplexity': [],
@@ -236,8 +239,8 @@ class EncoderDecoderSolver():
             train_cider, _ = capcider.Cider().compute_score(references["train"], candidates["train"])
             val_cider, _ = capcider.Cider().compute_score(references["val"], candidates["val"])
             # reduce the learning rate on plateau if training loss if training loss is small
-            if log['train_loss'] <= 2.0:
-                scheduler.step(val_cider)
+            # if log['train_loss'] <= 2.0:
+            #     scheduler.step(val_cider)
             # # evaluate meteor
             # try:
             #     train_meteor, _ = capmeteor.Meteor().compute_score(references["train"], candidates["train"])
@@ -331,7 +334,7 @@ class EncoderDecoderSolver():
             self.log[epoch_id] = log
             
             # best
-            if log['train_loss'] <= 2.0 and log['val_cider'] > best_scores["cider"]:
+            if log['train_loss'] <= self.threshold['save'] and log['val_cider'] > best_scores["cider"]:
                 best_info['epoch_id'] = epoch_id + 1
                 best_info['loss'] = log['train_loss']
                 best_scores['bleu_1'] = log['val_bleu_1']

@@ -35,11 +35,12 @@ def main(args):
     batch_size = args.batch_size
     weight_decay = args.weight_decay
     attention = args.attention
-    if args.attention == 'att2all' or args.attention == 'att2in':
-        attention_s = args.attention
-    else:
+    if args.attention == 'none':
         attention = None
         attention_s = 'noattention'
+    else:
+        attention = args.attention
+        attention_s = args.attention
     if args.evaluation == "true":
         evaluation = True
     elif args.evaluation == "false":
@@ -114,7 +115,7 @@ def main(args):
 
     # initialize the models
     if attention:
-        print('initializing models with attention...\n')
+        print('initializing models with attention {}...\n'.format(attention))
         encoder = AttentionEncoder().cuda()
         decoder = AttentionDecoder3D(attention, batch_size, input_size, 512, 256, 4).cuda()
     else:
@@ -124,11 +125,21 @@ def main(args):
 
     # initialize the optimizer
     criterion = nn.CrossEntropyLoss(ignore_index=0)
-    optimizer = optim.Adam(
-        list(encoder.parameters()) + list(decoder.parameters()),
-        lr=lr,
-        weight_decay=weight_decay
-    )
+    if attention:
+        optimizer = optim.Adam(
+            [
+                {'params': list(encoder.parameters()), 'lr': 0.1 * lr},
+                {'params': list(decoder.parameters())}
+            ],
+            lr=lr,
+            weight_decay=weight_decay
+        )
+    else:
+        optimizer = optim.Adam(
+            list(encoder.parameters()) + list(decoder.parameters()),
+            lr=lr,
+            weight_decay=weight_decay
+        )
 
     # train
     print("[settings]")
@@ -351,7 +362,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty on the optimizer")
     parser.add_argument("--batch_size", type=int, default=50, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
-    parser.add_argument("--attention", type=str, default='none', help="att2all/att2in/none")
+    parser.add_argument("--attention", type=str, default='none', help="att2all/att2in/spatial/adaptive/none")
     parser.add_argument("--evaluation", type=str, default="false", help="true/false")
     args = parser.parse_args()
     main(args)
