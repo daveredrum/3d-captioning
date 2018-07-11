@@ -9,18 +9,20 @@ __progress:__
 |---|---|---|---|---|---|
 |Baseline|0.573|0.314|0.151|0.075|0.117|
 |__Text2Shape<br/>LSTM__|0.731|0.502|0.306|0.180|0.290|
-|__Text2Shape<br/>att2in<br/>LSTM__|0.700|0.444|0.262|0.159|0.248|
-|__Text2Shape<br/>att2all<br/>LSTM__|0.692|0.452|0.256|0.138|0.235|
+|__Text2Shape<br/>att2in<br/>LSTM__|0.784|0.571|0.359|0.217|0.336|
+|__Text2Shape<br/>att2all<br/>LSTM__|0.769|0.554|0.352|0.218|0.269|
 |__Text2Shape<br/>spatial<br/>LSTM__|0.775|0.551|0.344|0.206|0.333|
+|__Text2Shape<br/>adaptive<br/>LSTM__|0.781|0.561|0.354|0.214|0.344|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
 > |__Text2Shape<br/>LSTM__|-1|-1|2e-4|0|100|1|0|
-> |__Text2Shape<br/>att2in<br/>LSTM__|-1|-1|2e-4|1e-5|256|3|0|
-> |__Text2Shape<br/>att2all<br/>LSTM__|-1|-1|2e-4|1e-5|256|1|0|
+> |__Text2Shape<br/>att2in<br/>LSTM__|-1|-1|2e-4|1e-4|256|3|0|
+> |__Text2Shape<br/>att2all<br/>LSTM__|-1|-1|2e-4|1e-4|256|1|0|
 > |__Text2Shape<br/>spatial<br/>LSTM__|-1|-1|2e-4|1e-4|256|1|0|
+> |__Text2Shape<br/>adaptive<br/>LSTM__|-1|-1|2e-4|1e-4|256|1|0|
 
 - performance of shape captioning on __Primitives__:
 
