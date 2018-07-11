@@ -8,6 +8,6 @@ python train.py \
 --learning_rate=5e-4 \
 --weight_decay=1e-5 \
 --batch_size=256 \
---gpu=3 \
---attention=att2in \
+--gpu=1 \
+--attention=adaptive \
 --evaluation=true

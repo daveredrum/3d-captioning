@@ -14,7 +14,7 @@ class EmbeddingEncoder(nn.Module):
     def __init__(self):
         super(EmbeddingEncoder, self).__init__()
         self.fc_layer = nn.Sequential(
-            nn.Linear(128, 512),
+            nn.Linear(128, 512, bias=False),
             nn.ReLU(),
             nn.BatchNorm1d(512)
         )
@@ -30,13 +30,13 @@ class AttentionEncoder(nn.Module):
         super(AttentionEncoder, self).__init__()
         self.avg_pool = nn.AvgPool3d(kernel_size=4, stride=4)
         self.global_mapping = nn.Sequential(
-            nn.Linear(256, 512),
+            nn.Linear(256, 512, bias=False),
             nn.ReLU(),
             # nn.Dropout(p=0.5),
         )
         self.global_bn = nn.BatchNorm1d(512, momentum=0.01)
         self.area_mapping = nn.Sequential(
-            nn.Linear(256, 512),
+            nn.Linear(256, 512, bias=False),
             nn.ReLU(),
             # nn.Dropout(p=0.5),
         )
