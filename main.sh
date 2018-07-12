@@ -6,7 +6,7 @@ python train.py \
 --epoch=50 \
 --verbose=100 \
 --learning_rate=5e-4 \
---weight_decay=1e-5 \
+--weight_decay=0 \
 --batch_size=256 \
 --gpu=3 \
 --attention=adaptive \
