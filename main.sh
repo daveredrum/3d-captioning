@@ -9,5 +9,5 @@ python train.py \
 --weight_decay=0 \
 --batch_size=256 \
 --gpu=3 \
---attention=adaptive \
+--attention=spatial \
 --evaluation=true
