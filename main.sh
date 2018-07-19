@@ -5,9 +5,9 @@ python train.py \
 --test_size=-1 \
 --epoch=50 \
 --verbose=100 \
---learning_rate=5e-4 \
---weight_decay=0 \
+--learning_rate=2e-4 \
+--weight_decay=1e-4 \
 --batch_size=256 \
---gpu=3 \
+--gpu=2 \
 --attention=spatial \
 --evaluation=true

@@ -41,7 +41,7 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a).log()
 
-        return -self.weight * targets.mul(inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 * inputs).sum(1).mean()
 
 
 class AssociationLoss(nn.Module):
@@ -72,7 +72,7 @@ class AssociationLoss(nn.Module):
         else:
             targets = torch.FloatTensor(1, inputs.size(1)).fill_(1. / inputs.size(1))
 
-        return -self.weight * targets.mul(inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 * inputs).sum(1).mean()
 
 
 class MetricLoss(nn.Module):
@@ -98,6 +98,41 @@ class MetricLoss(nn.Module):
 
         return pos, neg
 
+    # def forward(self, a, b, labels):
+    #     '''
+    #     param:
+    #         a: 2D embedding tensor, either text embeddings or shape embeddings
+    #         b: 2D embedding tensor, either text embeddings or shape embeddings
+    #         labels: 1D tensor, labels of samples
+        
+    #     return:
+    #         metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.3
+    #     '''
+    #     pos, neg = self._build_pairs(labels)
+    #     global_comp = []
+    #     for pos_pair in pos:
+    #         neg_i = [item for item in neg if item[0] == pos_pair[0]]
+    #         neg_j = [item for item in neg if item[0] == pos_pair[1]]
+    #         if a.is_cuda:
+    #             V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i])).cuda()
+    #             V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j])).cuda()
+    #             max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])
+    #             # print("sim: {}, dis: {}, max: {}".format(a[pos_pair[0]].dot(b[pos_pair[1]]), (V_i + V_j).log(), max_ij))
+    #             max_ij = torch.max(max_ij, torch.zeros(max_ij.size()).cuda())
+    #         else:
+    #             V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i]))
+    #             V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j]))
+    #             max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
+    #             max_ij = torch.max(max_ij, torch.zeros(max_ij.size()))
+                
+    #         local_comp = max_ij.pow(2)
+    #         global_comp.append(local_comp.unsqueeze(0))
+    #     outputs = torch.cat(global_comp).sum().div(2 * len(pos))
+    #     if a.is_cuda:
+    #         outputs.cuda()
+        
+    #     return outputs
+
     def forward(self, a, b, labels):
         '''
         param:
@@ -106,28 +141,33 @@ class MetricLoss(nn.Module):
             labels: 1D tensor, labels of samples
         
         return:
-            metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.1
+            metric_loss: see https://arxiv.org/pdf/1511.06452.pdf Sec.4
         '''
         pos, neg = self._build_pairs(labels)
+        Xa = a.clone().unsqueeze(0)
+        Xb = b.clone().unsqueeze(1)
+        Dsq = torch.sum(torch.pow(Xa - Xb, 2), dim=2)
+        D = torch.sqrt(Dsq)
+        Dexpm = torch.exp(self.margin - D)
         global_comp = []
         for pos_pair in pos:
             neg_i = [item for item in neg if item[0] == pos_pair[0]]
             neg_j = [item for item in neg if item[0] == pos_pair[1]]
+            neg_ik = torch.sum(torch.FloatTensor([Dexpm[item] for item in neg_i]))
+            neg_jl = torch.sum(torch.FloatTensor([Dexpm[item] for item in neg_j]))
+            Dissim = neg_ik + neg_jl
             if a.is_cuda:
-                V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i])).cuda()
-                V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j])).cuda()
-                max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
-                max_ij = torch.max(max_ij, torch.zeros(max_ij.size()).cuda())
+                J_ij = torch.log(Dissim).cuda() + D[pos_pair]
+                max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
             else:
-                V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i]))
-                V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j]))
-                max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
-                max_ij = torch.max(max_ij, torch.zeros(max_ij.size()))
-                
-            local_comp = max_ij.pow(2)
-            global_comp.append(local_comp.unsqueeze(0))
+                J_ij = torch.log(Dissim) + D[pos_pair]
+                max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
+            
+            # print("sim: {}, dis: {}, max: {}".format(D[pos_pair].item(), Dissim.item(), max_ij.item()))
+            global_comp.append(max_ij.unsqueeze(0))
+        
         outputs = torch.cat(global_comp).sum().div(2 * len(pos))
         if a.is_cuda:
             outputs.cuda()
-        
+
         return outputs

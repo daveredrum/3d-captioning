@@ -26,16 +26,16 @@ class ShapenetTextEncoder(nn.Module):
         self.bn_256 = nn.BatchNorm2d(256)
 
         # recurrent block
-        self.init_h = nn.Linear(256, 512)
         self.lstm = nn.LSTM(256, 512, batch_first=True)
+        # self.lstm = nn.LSTMCell(256, 512)
 
         # output block
         self.outputs = nn.Sequential(
-            nn.Linear(512, 256),
+            nn.Linear(512, 256, bias=False),
             nn.ReLU(),
             nn.Linear(256, 128)
         )
-    
+
     def forward(self, inputs):
         #################
         # convolutional
@@ -49,16 +49,24 @@ class ShapenetTextEncoder(nn.Module):
         #################
         # recurrent
         ################# 
-        h = self.init_h(conved.mean(1)).unsqueeze(0)
-        if h.is_cuda:
-            c = torch.zeros(1, h.size(1), 512).cuda()
-        else:
-            c = torch.zeros(1, h.size(1), 512)
-        _, (encoded, _) = self.lstm(conved, (h, c))
+        encoded, _ = self.lstm(conved, None)
+        # if inputs.is_cuda:
+        #     h = torch.zeros(inputs.size(0), 512).cuda()
+        #     c = torch.zeros(inputs.size(0), 512).cuda()
+        # else:
+        #     h = torch.zeros(inputs.size(0), 512)
+        #     c = torch.zeros(inputs.size(0), 512)
+        
+        # for i in range(conved.size(1)):
+        #     lstm_inputs = conved[:, i, :]
+        #     h, c = self.lstm(lstm_inputs, (h, c))
+        
+        # encoded = h
 
         #################
         # outputs
         #################
-        outputs = self.outputs(encoded.squeeze())
+        outputs = self.outputs(encoded[:, -1, :].squeeze())
+        # outputs = self.outputs(encoded)
 
         return outputs

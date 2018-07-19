@@ -508,3 +508,105 @@ class AttentionDecoder3D(nn.Module):
             outputs.append(best)
         
         return outputs
+
+
+# pipeline for pretrained encoder-decoder pipeline
+# same pipeline for both 2d and 3d
+class EncoderDecoder():
+    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
+        if cuda_flag:
+            self.encoder = torch.load(encoder_path).cuda()
+            self.decoder = torch.load(decoder_path).cuda()
+        else:
+            self.encoder = torch.load(encoder_path)
+            self.decoder = torch.load(decoder_path)
+        # set mode
+        self.encoder.eval()
+        self.decoder.eval()
+
+    def generate_text(self, image_inputs, dictionary, max_length):
+        inputs = self.encoder.extract(image_inputs).unsqueeze(1)
+        states = None
+        # sample text indices via greedy search
+        sampled = []
+        for _ in range(max_length):
+            outputs, states = self.decoder.lstm_layer(inputs, states)
+            outputs = self.decoder.output_layer(outputs[0])
+            predicted = outputs.max(1)[1]
+            sampled.append(predicted.view(-1, 1))
+            inputs = self.decoder.embedding(predicted).unsqueeze(1)
+        sampled = torch.cat(sampled, 1)
+        # decoder indices to words
+        captions = []
+        for sequence in sampled.cpu().numpy():
+            caption = []
+            for index in sequence:
+                word = dictionary[index]
+                caption.append(word)
+                if word == '<END>':
+                    break
+            captions.append(" ".join(caption))
+
+        return captions
+
+# for encoder-decoder pipeline with attention
+class AttentionEncoderDecoder():
+    def __init__(self, encoder_path, decoder_path, cuda_flag=True):
+        if cuda_flag:
+            self.encoder = torch.load(encoder_path).cuda()
+            self.decoder = torch.load(decoder_path).cuda()
+        else:
+            self.encoder = torch.load(encoder_path)
+            self.decoder = torch.load(decoder_path)
+        # set mode
+        self.encoder.eval()
+        self.decoder.eval()
+
+    def generate_text(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+        caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(int(dict_word2idx["<START>"])), (1)))).cuda()
+        visual_contexts = self.encoder(image_inputs)
+        # sample text indices via greedy search
+        sampled = []
+        states = self.decoder.init_hidden(visual_contexts[0])
+        for _ in range(max_length):
+            outputs, states, _ = self.decoder.sample(visual_contexts, caption_inputs, states)
+            # outputs = (1, 1, input_size)
+            predicted = outputs.max(2)[1]
+            # predicted = (1, 1)
+            sampled.append(predicted)
+            caption_inputs = predicted.view(1)
+            if dict_idx2word[caption_inputs[-1].view(1).cpu().numpy()[0]] == '<END>':
+                break
+        sampled = torch.cat(sampled)
+        # decoder indices to words
+        caption = ['<START>']
+        for index in sampled.cpu().numpy():
+            word = dict_idx2word[index[0]]
+            caption.append(word)
+            if word == '<END>':
+                break
+
+        return caption
+
+    # image_inputs = (1, visual_channels, visual_size, visual_size)
+    # caption_inputs = (1)
+    def visual_attention(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+        caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(int(dict_word2idx["<START>"])), (1)))).cuda()
+        visual_contexts = self.encoder(image_inputs)
+        # sample text indices via greedy search
+        pairs = []
+        states = self.decoder.init_hidden(visual_contexts[0])
+        for _ in range(max_length):
+            outputs, states, attention_weights = self.decoder.sample(visual_contexts, caption_inputs, states)
+            # attentions = (visual_size, visual_size)
+            predicted = outputs.max(2)[1]
+            # predicted = (1, 1)
+            caption_inputs = predicted.view(1)
+            word = dict_idx2word[str(predicted.cpu().numpy()[0][0])]
+            # up_weights = F.upsample(attention_weights.view(1, 1, visual_contexts[0].size(2), visual_contexts[0].size(2)), size=(configs.COCO_SIZE, configs.COCO_SIZE), mode='bilinear')
+            # pairs.append((word, attention_weights.view(self.size, self.size), up_weights.view(configs.COCO_SIZE, configs.COCO_SIZE), states[0][0]))
+            pairs.append((word, None, attention_weights, states[0][0]))
+            if word == '<END>':
+                break
+
+        return pairs

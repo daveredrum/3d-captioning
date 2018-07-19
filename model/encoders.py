@@ -55,7 +55,7 @@ class AttentionEncoder(nn.Module):
         area_features = self.area_mapping(area_features).permute(0, 4, 1, 2, 3).contiguous()
         area_features = self.area_bn(area_features).view(batch_size, 512, -1)
         # (batch_size, 512)
-        global_features = self.avg_pool(original_features).squeeze()
+        global_features = self.avg_pool(original_features).view(-1, 256)
         global_features = self.global_mapping(global_features)
         global_features = self.global_bn(global_features)
 

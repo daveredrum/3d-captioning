@@ -17,7 +17,7 @@ import lib.capeval.rouge.rouge as caprouge
 from lib.data_pretrained import *
 from model.encoders import *
 from model.decoders import *
-from lib.solver_encdec import *
+from lib.solver_caption import *
 import matplotlib.pyplot as plt
 
 
