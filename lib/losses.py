@@ -18,7 +18,6 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
-        self.loss = nn.BCEWithLogitsLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -41,14 +40,13 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a).log()
 
-        return -self.weight * targets.mul(1e-8 * inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 + inputs).sum(1).mean()
 
 
 class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
-        self.loss = nn.BCEWithLogitsLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -72,7 +70,7 @@ class AssociationLoss(nn.Module):
         else:
             targets = torch.FloatTensor(1, inputs.size(1)).fill_(1. / inputs.size(1))
 
-        return -self.weight * targets.mul(1e-8 * inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 + inputs).sum(1).mean()
 
 
 class MetricLoss(nn.Module):

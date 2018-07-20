@@ -37,14 +37,6 @@ def main(args):
     # setting
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    print("\n[settings]")
-    print("train_size:", train_size)
-    print("learning_rate:", learning_rate)
-    print("weight_decay:", weight_decay)
-    print("epoch:", epoch)
-    print("batch_size:", batch_size)
-    print("verbose:", verbose)
-    print("gpu:", gpu)
 
     # prepare data
     print("\npreparing data...\n")
@@ -62,9 +54,19 @@ def main(args):
     )
     dataset = ShapenetDataset(shapenet.train_data)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet)
+    
+    # report settings
+    print("[settings]")
+    print("train_size:", len(shapenet.train_data))
+    print("learning_rate:", learning_rate)
+    print("weight_decay:", weight_decay)
+    print("epoch:", epoch)
+    print("batch_size:", batch_size)
+    print("verbose:", verbose)
+    print("gpu:", gpu)
 
     # initialize models
-    print("initializing models...\n")
+    print("\ninitializing models...\n")
     shape_encoder = ShapenetShapeEncoder().cuda()
     text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
     shape_encoder.train()
@@ -81,7 +83,8 @@ def main(args):
         'metric_st': MetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    solver = EmbeddingSolver(criterion, optimizer) 
+    settings = "trs{}_lr{}_wd{}_e{}_bs{}".format(train_size, learning_rate, weight_decay, epoch, batch_size)
+    solver = EmbeddingSolver(criterion, optimizer, settings) 
 
     # training
     print("start training...\n")
