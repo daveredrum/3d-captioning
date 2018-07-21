@@ -21,7 +21,7 @@ class EmbeddingSolver():
         log = {
             'forward': [],
             'backward': [],
-            'epoch_time': []
+            'iter_time': []
         }
         best = {
             'train_loss': np.inf,
@@ -34,10 +34,9 @@ class EmbeddingSolver():
             'shape_encoder': None,
             'text_encoder': None
         }
+        total_iter = len(dataloader) * epoch
+        iter_count = 0
         for epoch_id in range(epoch):
-            start = time.time()
-            print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
-            total_iter = len(dataloader)
             loss = {
                 'train_loss': [],
                 'walker_loss_tst': [],
@@ -49,6 +48,7 @@ class EmbeddingSolver():
                 
             }
             for iter_id, (_, shapes, texts, _, labels) in enumerate(dataloader):
+                start = time.time()
                 # load
                 shapes = shapes.cuda()
                 texts = texts.cuda()
@@ -95,44 +95,41 @@ class EmbeddingSolver():
                 loss['metric_loss_ss'].append(metric_loss_ss.item())
                 loss['metric_loss_st'].append(metric_loss_st.item())
                 loss['train_loss'].append(train_loss.item())
+                iter_count += 1
 
+                # compute ETA
+                log['iter_time'].append(time.time() - start)
+                exetime_s = np.mean(log['iter_time'])
+                eta_s = exetime_s * (total_iter - iter_count)
+                eta_m = math.floor(eta_s / 60)
+                
                 # report
-                if (iter_id+1) % verbose == 0:
-                    print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {}".format(
-                        epoch_id+1,
-                        epoch,
-                        iter_id+1, 
-                        total_iter, 
+                if (iter_count + 1) % verbose == 0:
+                    print("---------------------------Iter: [{}/{}]---------------------------".format(iter_count, total_iter))
+                    print("[Loss] train_loss: %f" % (
                         np.mean(loss['train_loss'])
                     ))
-
-            
-            # epoch report
-            log['epoch_time'].append(time.time() - start)
-            exetime_s = np.mean(log['epoch_time'])
-            eta_s = exetime_s * (epoch - (epoch_id + 1))
-            eta_m = math.floor(eta_s / 60)
-            print("----------------------summary-----------------------")
-            print("[Loss] train_loss: %f" % (
-                np.mean(loss['train_loss'])
-            ))
-            print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
-                np.mean(loss['walker_loss_tst']),
-                np.mean(loss['walker_loss_sts'])
-            ))
-            print("[Loss] visit_loss_ts: %f, visit_loss_st: %f" % (
-                np.mean(loss['visit_loss_ts']),
-                np.mean(loss['visit_loss_st'])
-            ))
-            print("[Loss] metric_loss_ss: %f, metric_loss_st: %f" % (
-                np.mean(loss['metric_loss_ss']),
-                np.mean(loss['metric_loss_st'])
-            ))
-            print("[Info] time_per_epoch: %fs\n[Info] ETA: %dm %ds\n\n" % ( 
-                np.mean(log['epoch_time']),
-                eta_m,
-                eta_s - eta_m * 60
-            ))
+                    print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
+                        np.mean(loss['walker_loss_tst']),
+                        np.mean(loss['walker_loss_sts'])
+                    ))
+                    print("[Loss] visit_loss_ts: %f, visit_loss_st: %f" % (
+                        np.mean(loss['visit_loss_ts']),
+                        np.mean(loss['visit_loss_st'])
+                    ))
+                    print("[Loss] metric_loss_ss: %f, metric_loss_st: %f" % (
+                        np.mean(loss['metric_loss_ss']),
+                        np.mean(loss['metric_loss_st'])
+                    ))
+                    print("[Info] forward: %fs\n[Info] backward: %fs" % ( 
+                        np.mean(log['forward']),
+                        np.mean(log['backward'])
+                    ))
+                    print("[Info] time_per_iter: %fs\n[Info] ETA: %dm %ds\n\n" % ( 
+                        np.mean(log['iter_time']),
+                        eta_m,
+                        eta_s - eta_m * 60
+                    ))
 
             # best
             if np.mean(loss['train_loss']) < best['train_loss']:

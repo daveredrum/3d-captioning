@@ -16,13 +16,13 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 import torchvision
 import torchvision.models as torchmodels
-from lib.data_encoder import *
+from lib.data_embedding import *
 import nrrd
 import lib.configs as configs
 from model.encoder_text import *
 from model.encoder_shape import *
 from lib.losses import *
-from lib.solver_encoder import *
+from lib.solver_embedding import *
 
 def main(args):
     # parse args

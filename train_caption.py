@@ -14,7 +14,7 @@ import lib.capeval.bleu.bleu as capbleu
 import lib.capeval.cider.cider as capcider
 import lib.capeval.meteor.meteor as capmeteor
 import lib.capeval.rouge.rouge as caprouge
-from lib.data_pretrained import *
+from lib.data_caption import *
 from model.encoders import *
 from model.decoders import *
 from lib.solver_caption import *
