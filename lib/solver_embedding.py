@@ -104,8 +104,8 @@ class EmbeddingSolver():
                 eta_m = math.floor(eta_s / 60)
                 
                 # report
-                if (iter_count + 1) % verbose == 0:
-                    print("---------------------------Iter: [{}/{}]---------------------------".format(iter_count, total_iter))
+                if iter_count % verbose == 0:
+                    print("------------------------Iter: [{}/{}]------------------------".format(iter_count, total_iter))
                     print("[Loss] train_loss: %f" % (
                         np.mean(loss['train_loss'])
                     ))
