@@ -68,12 +68,12 @@ class EmbeddingSolver():
                 metric_loss_st = self.criterion['metric_st'](s, t, labels)
 
                 # rescale the loss
-                walker_loss_tst[walker_loss_tst.item() == float("Inf") or walker_loss_tst.item() == float("Nan")] = 0.
-                walker_loss_sts[walker_loss_sts.item() == float("Inf") or walker_loss_sts.item() == float("Nan")] = 0.
-                visit_loss_ts[visit_loss_ts.item() == float("Inf") or visit_loss_ts.item() == float("Nan")] = 0.
-                visit_loss_st[visit_loss_st.item() == float("Inf") or visit_loss_st.item() == float("Nan")] = 0.
-                metric_loss_ss[metric_loss_ss.item() == float("Inf") or metric_loss_ss.item() == float("Nan")] = 0.
-                metric_loss_st[metric_loss_st.item() == float("Inf") or metric_loss_st.item() == float("Nan")] = 0.
+                walker_loss_tst[walker_loss_tst == float("Inf") or walker_loss_tst == float("Nan")] = 0.
+                walker_loss_sts[walker_loss_sts == float("Inf") or walker_loss_sts == float("Nan")] = 0.
+                visit_loss_ts[visit_loss_ts == float("Inf") or visit_loss_ts == float("Nan")] = 0.
+                visit_loss_st[visit_loss_st == float("Inf") or visit_loss_st == float("Nan")] = 0.
+                metric_loss_ss[metric_loss_ss == float("Inf") or metric_loss_ss == float("Nan")] = 0.
+                metric_loss_st[metric_loss_st == float("Inf") or metric_loss_st == float("Nan")] = 0.
 
                 # accumulate loss
                 train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + configs.METRIC_MULTIPLIER * metric_loss_ss + 2. * configs.METRIC_MULTIPLIER * metric_loss_st
@@ -143,11 +143,16 @@ class EmbeddingSolver():
                 best['shape_encoder'] = shape_encoder
                 best['text_encoder'] = text_encoder
 
+                # save the best models
+                print("saving models...")
+                torch.save(best['shape_encoder'], "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
+                torch.save(best['text_encoder'], "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
+
         # report best
         print("----------------------best-----------------------")
         print("[Loss] train_loss: %f" % (
             best['train_loss']
-        ))
+        )), 
         print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
             best['walker_loss_tst'],
             best['walker_loss_sts']
@@ -160,10 +165,5 @@ class EmbeddingSolver():
             best['metric_loss_ss'],
             best['metric_loss_st']
         ))
-
-        # save the best models
-        print("saving models...")
-        torch.save(best['shape_encoder'], "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
-        torch.save(best['text_encoder'], "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
 
         return best['shape_encoder'], best['text_encoder']
