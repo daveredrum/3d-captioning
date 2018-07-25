@@ -12,10 +12,11 @@ import lib.configs as configs
 from torch.nn.utils import clip_grad_value_
 
 class EmbeddingSolver():
-    def __init__(self, criterion, optimizer, settings):
+    def __init__(self, criterion, optimizer, settings, reduce_step):
         self.criterion = criterion
         self.optimizer = optimizer
         self.settings = settings
+        self.reduce_step = reduce_step
 
     def train(self, shape_encoder, text_encoder, dataloader, epoch, verbose):
         log = {
@@ -36,7 +37,9 @@ class EmbeddingSolver():
         }
         total_iter = len(dataloader) * epoch
         iter_count = 0
+        scheduler = StepLR(self.optimizer, step_size=self.reduce_step, gamma=0.8)
         for epoch_id in range(epoch):
+            scheduler.step()
             loss = {
                 'train_loss': [],
                 'walker_loss_tst': [],
@@ -130,7 +133,7 @@ class EmbeddingSolver():
                         eta_m,
                         eta_s - eta_m * 60
                     ))
-
+                
             # best
             if np.mean(loss['train_loss']) < best['train_loss']:
                 best['train_loss'] = np.mean(loss['train_loss'])
@@ -149,7 +152,7 @@ class EmbeddingSolver():
                 torch.save(best['text_encoder'], "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
 
         # report best
-        print("----------------------best-----------------------")
+        print("------------------------best------------------------")
         print("[Loss] train_loss: %f" % (
             best['train_loss']
         )), 
@@ -166,4 +169,4 @@ class EmbeddingSolver():
             best['metric_loss_st']
         ))
 
-        return best['shape_encoder'], best['text_encoder']
+        # return best['shape_encoder'], best['text_encoder']

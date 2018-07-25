@@ -12,15 +12,14 @@ from PIL import Image
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+import torch.multiprocessing as mp
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import torchvision
-import torchvision.models as torchmodels
 from lib.data_embedding import *
 import nrrd
 import lib.configs as configs
-from model.encoder_text import *
-from model.encoder_shape import *
+from model.encoder_shape import ShapenetShapeEncoder
+from model.encoder_text import ShapenetTextEncoder
 from lib.losses import *
 from lib.solver_embedding import *
 
@@ -84,16 +83,16 @@ def main(args):
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
     settings = "trs{}_lr{}_wd{}_e{}_bs{}".format(train_size, learning_rate, weight_decay, epoch, batch_size)
-    solver = EmbeddingSolver(criterion, optimizer, settings) 
+    solver = EmbeddingSolver(criterion, optimizer, settings, 3) 
 
     # training
     print("start training...\n")
-    shape_encoder, text_encoder = solver.train(shape_encoder, text_encoder, dataloader, epoch, verbose)
+    solver.train(shape_encoder, text_encoder, dataloader, epoch, verbose)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_size", type=int, default=100, help="train size for input captions")
+    parser.add_argument("--train_size", type=int, default=100, help="train size")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
     parser.add_argument("--verbose", type=int, default=1, help="show report")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")

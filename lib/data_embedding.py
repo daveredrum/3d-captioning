@@ -105,7 +105,7 @@ def collate_shapenet(data):
         5D tensor of voxels
         2D tensor of transformed captions
         lengths of transformed captions
-        labels, table is 0 and chair is 1
+        labels, table is -1 and chair is 1
     '''
     # Sort a data list by caption length (descending order)
     data.sort(key=lambda x: x[3], reverse=True)
