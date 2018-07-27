@@ -1,7 +1,7 @@
 
 # path for shapenet
 DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
-SHAPE_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_128_solid" # TODO mofidy this
+SHAPE_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
 
 # nrrd

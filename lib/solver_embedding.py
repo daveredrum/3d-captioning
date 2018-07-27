@@ -18,22 +18,12 @@ class EmbeddingSolver():
         self.settings = settings
         self.reduce_step = reduce_step
 
-    def train(self, shape_encoder, text_encoder, rank, best_loss, lock, dataloader, epoch, verbose):
+    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose):
+        print("[{}] starting...\n".format(rank))
         log = {
             'forward': [],
             'backward': [],
             'iter_time': []
-        }
-        best = {
-            'train_loss': np.inf,
-            'walker_loss_tst': np.inf,
-            'walker_loss_sts': np.inf,
-            'visit_loss_ts': np.inf,
-            'visit_loss_st': np.inf,
-            'metric_loss_ss': np.inf,
-            'metric_loss_st': np.inf,
-            'shape_encoder': None,
-            'text_encoder': None
         }
         total_iter = len(dataloader) * epoch
         iter_count = 0
@@ -136,37 +126,22 @@ class EmbeddingSolver():
                 
             # best
             with lock:
-                if np.mean(loss['train_loss']) < best_loss:
-                    best_loss.value = np.mean(loss['train_loss'])
-                    best['train_loss'] = np.mean(loss['train_loss'])
-                    best['walker_loss_tst'] = np.mean(loss['walker_loss_tst'])
-                    best['walker_loss_sts'] = np.mean(loss['walker_loss_sts'])
-                    best['visit_loss_ts'] = np.mean(loss['visit_loss_ts'])
-                    best['visit_loss_st'] = np.mean(loss['visit_loss_st'])
-                    best['metric_loss_ss'] = np.mean(loss['metric_loss_ss'])
-                    best['metric_loss_st'] = np.mean(loss['metric_loss_st'])
+                if np.mean(loss['train_loss']) < best['train_loss'].value:
+                    best['train_loss'].value = float(np.mean(loss['train_loss']))
+                    best['walker_loss_tst'].value = float(np.mean(loss['walker_loss_tst']))
+                    best['walker_loss_sts'].value = float(np.mean(loss['walker_loss_sts']))
+                    best['visit_loss_ts'].value = float(np.mean(loss['visit_loss_ts']))
+                    best['visit_loss_st'].value = float(np.mean(loss['visit_loss_st']))
+                    best['metric_loss_ss'].value = float(np.mean(loss['metric_loss_ss']))
+                    best['metric_loss_st'].value = float(np.mean(loss['metric_loss_st']))
 
                     # save the best models
-                    print("saving models...")
+                    print("[{}]best_loss achieved: {}".format(rank, best['train_loss'].value))
+                    print("[{}]saving models...\n".format(rank))
                     torch.save(shape_encoder, "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
                     torch.save(text_encoder, "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
 
-        # report best
-        print("------------------------best------------------------")
-        print("[Loss] train_loss: %f" % (
-            best['train_loss']
-        )), 
-        print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
-            best['walker_loss_tst'],
-            best['walker_loss_sts']
-        ))
-        print("[Loss] visit_loss_ts: %f, visit_loss_st: %f" % (
-            best['visit_loss_ts'],
-            best['visit_loss_st']
-        ))
-        print("[Loss] metric_loss_ss: %f, metric_loss_st: %f\n" % (
-            best['metric_loss_ss'],
-            best['metric_loss_st']
-        ))
+        # done
+        print("[{}] done...\n".format(rank))
 
         # return best['shape_encoder'], best['text_encoder']

@@ -76,18 +76,19 @@ class Shapenet():
             setattr(self, "{}_data".format(phase), transformed)
 
 class ShapenetDataset(Dataset):
-    def __init__(self, shapenet_data):
+    def __init__(self, shapenet_data, resolution):
         '''
         param: shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
         '''
         self.shapenet_data = shapenet_data
+        self.resolution = resolution
 
     def __len__(self):
         return len(self.shapenet_data)
 
     def __getitem__(self, idx):
         model_id = self.shapenet_data[idx][0]
-        model_path = os.path.join(configs.SHAPE_ROOT, configs.SHAPENET_NRRD.format(model_id, model_id))
+        model_path = os.path.join(configs.SHAPE_ROOT.format(self.resolution), configs.SHAPENET_NRRD.format(model_id, model_id))
         voxel = torch.FloatTensor(nrrd.read(model_path)[0])
         voxel /= 255.
         caption = self.shapenet_data[idx][2]
