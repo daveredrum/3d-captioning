@@ -164,13 +164,16 @@ class MetricLoss(nn.Module):
 
             neg_i = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[0]]
             neg_j = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[1]]
-            neg_ik = Dexpm.take(torch.Tensor(neg_i)).sum()
-            neg_jl = Dexpm.take(torch.Tensor(neg_j)).sum()
-            Dissim = neg_ik + neg_jl
             if a.is_cuda:
+                neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
+                neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
+                Dissim = neg_ik + neg_jl
                 J_ij = torch.log(Dissim).cuda() + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
             else:
+                neg_ik = Dexpm.take(torch.LongTensor(neg_i)).sum()
+                neg_jl = Dexpm.take(torch.LongTensor(neg_j)).sum()
+                Dissim = neg_ik + neg_jl
                 J_ij = torch.log(Dissim) + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
             
