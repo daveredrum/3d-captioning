@@ -148,7 +148,7 @@ class MetricLoss(nn.Module):
         Dsq = torch.sum(torch.pow(Xa - Xb, 2), dim=2)
         D = torch.sqrt(Dsq)
         Dexpm = torch.exp(self.margin - D)
-        global_comp = [0.] * len([pos])
+        global_comp = [0.] * len(pos)
         for pos_id, pos_pair in enumerate(pos):
             neg_i = [item for item in neg if item[0] == pos_pair[0]]
             neg_j = [item for item in neg if item[0] == pos_pair[1]]
