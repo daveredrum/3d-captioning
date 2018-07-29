@@ -150,19 +150,30 @@ class MetricLoss(nn.Module):
         Dexpm = torch.exp(self.margin - D)
         global_comp = [0.] * len(pos)
         for pos_id, pos_pair in enumerate(pos):
-            neg_i = [item for item in neg if item[0] == pos_pair[0]]
-            neg_j = [item for item in neg if item[0] == pos_pair[1]]
-            neg_ik = np.sum([Dexpm[item].item() for item in neg_i])
-            neg_jl = np.sum([Dexpm[item].item() for item in neg_j])
+            # neg_i = [item for item in neg if item[0] == pos_pair[0]]
+            # neg_j = [item for item in neg if item[0] == pos_pair[1]]
+            # neg_ik = np.sum([Dexpm[item].item() for item in neg_i])
+            # neg_jl = np.sum([Dexpm[item].item() for item in neg_j])
+            # Dissim = neg_ik + neg_jl
+            # if a.is_cuda:
+            #     J_ij = torch.log(torch.FloatTensor([Dissim])[0]).cuda() + D[pos_pair]
+            #     max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
+            # else:
+            #     J_ij = torch.log(torch.FloatTensor([Dissim])[0]) + D[pos_pair]
+            #     max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
+
+            neg_i = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[0]]
+            neg_j = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[1]]
+            neg_ik = Dexpm.take(torch.Tensor(neg_i)).sum()
+            neg_jl = Dexpm.take(torch.Tensor(neg_j)).sum()
             Dissim = neg_ik + neg_jl
             if a.is_cuda:
-                J_ij = torch.log(torch.FloatTensor([Dissim])[0]).cuda() + D[pos_pair]
+                J_ij = torch.log(Dissim).cuda() + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
             else:
-                J_ij = torch.log(torch.FloatTensor([Dissim])[0]) + D[pos_pair]
+                J_ij = torch.log(Dissim) + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
             
-            # print("sim: {}, dis: {}, max: {}".format(D[pos_pair].item(), Dissim.item(), max_ij.item()))
             global_comp[pos_id] = max_ij.unsqueeze(0)
         
         outputs = torch.cat(global_comp).sum().div(2 * len(pos))
