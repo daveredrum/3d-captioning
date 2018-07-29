@@ -103,7 +103,7 @@ def main(args):
         'metric_st': MetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = "trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
+    settings = "v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(voxel, len(shapenet.train_data), learning_rate, weight_decay, epoch, batch_size, num_worker)
     solver = EmbeddingSolver(criterion, optimizer, settings, 3) 
 
     # training
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate for optimizer")
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty on the optimizer")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
-    parser.add_argument("--num_worker", type=int, default=10, help="number of workers")
+    parser.add_argument("--num_worker", type=int, default=10, help="number of workers") 
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     args = parser.parse_args()
     main(args)

@@ -9,6 +9,7 @@
 '''
 
 import itertools
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -147,22 +148,22 @@ class MetricLoss(nn.Module):
         Dsq = torch.sum(torch.pow(Xa - Xb, 2), dim=2)
         D = torch.sqrt(Dsq)
         Dexpm = torch.exp(self.margin - D)
-        global_comp = []
-        for pos_pair in pos:
+        global_comp = [0.] * len([pos])
+        for pos_id, pos_pair in enumerate(pos):
             neg_i = [item for item in neg if item[0] == pos_pair[0]]
             neg_j = [item for item in neg if item[0] == pos_pair[1]]
-            neg_ik = torch.sum(torch.FloatTensor([Dexpm[item] for item in neg_i]))
-            neg_jl = torch.sum(torch.FloatTensor([Dexpm[item] for item in neg_j]))
+            neg_ik = np.sum([Dexpm[item].item() for item in neg_i])
+            neg_jl = np.sum([Dexpm[item].item() for item in neg_j])
             Dissim = neg_ik + neg_jl
             if a.is_cuda:
-                J_ij = torch.log(Dissim).cuda() + D[pos_pair]
+                J_ij = torch.log(torch.FloatTensor([Dissim])[0]).cuda() + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
             else:
-                J_ij = torch.log(Dissim) + D[pos_pair]
+                J_ij = torch.log(torch.FloatTensor([Dissim])[0]) + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
             
             # print("sim: {}, dis: {}, max: {}".format(D[pos_pair].item(), Dissim.item(), max_ij.item()))
-            global_comp.append(max_ij.unsqueeze(0))
+            global_comp[pos_id] = max_ij.unsqueeze(0)
         
         outputs = torch.cat(global_comp).sum().div(2 * len(pos))
         if a.is_cuda:
