@@ -30,8 +30,11 @@ class RoundTripLoss(nn.Module):
             loss: a positive value of cross entropy loss 
         '''
         
-        # build target 
-        targets = (labels.unsqueeze(1).matmul(labels.unsqueeze(0)) == 1).float()
+        # build target
+        targets = torch.zeros(labels.size(0), labels.size(0)).cuda()
+        for i in range(labels.size(0)):
+            targets[i][labels == labels[i]] = 1.
+
         targets /= targets.sum(1)
         # similarity
         sim = a.matmul(b.transpose(1, 0).contiguous())
@@ -66,10 +69,7 @@ class AssociationLoss(nn.Module):
         # build inputs
         inputs = a2b.mean(0, keepdim=True).log()
         # build targets
-        if inputs.is_cuda:
-            targets = torch.FloatTensor(1, inputs.size(1)).fill_(1. / inputs.size(1)).cuda()
-        else:
-            targets = torch.FloatTensor(1, inputs.size(1)).fill_(1. / inputs.size(1))
+        targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
         return -self.weight * targets.mul(1e-8 + inputs).sum(1).mean()
 
@@ -149,38 +149,20 @@ class MetricLoss(nn.Module):
         D = torch.sqrt(Dsq)
         Dexpm = torch.exp(self.margin - D)
         global_comp = [0.] * len(pos)
-        for pos_id, pos_pair in enumerate(pos):
-            neg_i = [item for item in neg if item[0] == pos_pair[0]]
-            neg_j = [item for item in neg if item[0] == pos_pair[1]]
-            neg_ik = np.sum([Dexpm[item].item() for item in neg_i])
-            neg_jl = np.sum([Dexpm[item].item() for item in neg_j])
-            Dissim = neg_ik + neg_jl
-            if a.is_cuda:
-                J_ij = torch.log(torch.FloatTensor([Dissim])[0]).cuda() + D[pos_pair]
+        if pos:
+            for pos_id, pos_pair in enumerate(pos):
+                neg_i = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[0]]
+                neg_j = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[1]]
+                neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
+                neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
+                Dissim = neg_ik + neg_jl
+                J_ij = torch.log(Dissim).cuda() + D[pos_pair]
                 max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
-            else:
-                J_ij = torch.log(torch.FloatTensor([Dissim])[0]) + D[pos_pair]
-                max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
-
-            # neg_i = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[0]]
-            # neg_j = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[1]]
-            # if a.is_cuda:
-            #     neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
-            #     neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
-            #     Dissim = neg_ik + neg_jl
-            #     J_ij = torch.log(Dissim).cuda() + D[pos_pair]
-            #     max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
-            # else:
-            #     neg_ik = Dexpm.take(torch.LongTensor(neg_i)).sum()
-            #     neg_jl = Dexpm.take(torch.LongTensor(neg_j)).sum()
-            #     Dissim = neg_ik + neg_jl
-            #     J_ij = torch.log(Dissim) + D[pos_pair]
-            #     max_ij = torch.max(J_ij, torch.zeros(J_ij.size())).pow(2)
+                
+                global_comp[pos_id] = max_ij.unsqueeze(0)
             
-            global_comp[pos_id] = max_ij.unsqueeze(0)
-        
-        outputs = torch.cat(global_comp).sum().div(2 * len(pos))
-        if a.is_cuda:
-            outputs.cuda()
-
+            outputs = torch.cat(global_comp).sum().div(2 * len(pos))
+        else:
+            outputs = torch.FloatTensor([0.]).cuda()[0]
+            
         return outputs

@@ -36,7 +36,7 @@ class EmbeddingSolver():
                 'walker_loss_sts': [],
                 'visit_loss_ts': [],
                 'visit_loss_st': [],
-                'metric_loss_ss': [],
+                'metric_loss_ts': [],
                 'metric_loss_st': [],
                 
             }
@@ -57,19 +57,11 @@ class EmbeddingSolver():
                 walker_loss_sts = self.criterion['walker_sts'](s, t, labels)
                 visit_loss_ts = self.criterion['visit_ts'](t, s, labels)
                 visit_loss_st = self.criterion['visit_st'](s, t, labels)
-                metric_loss_ss = self.criterion['metric_ss'](s, s, labels)
+                metric_loss_ts = self.criterion['metric_ts'](t, s, labels)
                 metric_loss_st = self.criterion['metric_st'](s, t, labels)
 
-                # rescale the loss
-                walker_loss_tst[walker_loss_tst == float("Inf") or walker_loss_tst == float("Nan")] = 0.
-                walker_loss_sts[walker_loss_sts == float("Inf") or walker_loss_sts == float("Nan")] = 0.
-                visit_loss_ts[visit_loss_ts == float("Inf") or visit_loss_ts == float("Nan")] = 0.
-                visit_loss_st[visit_loss_st == float("Inf") or visit_loss_st == float("Nan")] = 0.
-                metric_loss_ss[metric_loss_ss == float("Inf") or metric_loss_ss == float("Nan")] = 0.
-                metric_loss_st[metric_loss_st == float("Inf") or metric_loss_st == float("Nan")] = 0.
-
                 # accumulate loss
-                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + configs.METRIC_MULTIPLIER * metric_loss_ss + 2. * configs.METRIC_MULTIPLIER * metric_loss_st
+                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + configs.METRIC_MULTIPLIER * metric_loss_ts + configs.METRIC_MULTIPLIER * metric_loss_st
                 log['forward'].append(time.time() - forward_since)
 
                 # back prop
@@ -85,7 +77,7 @@ class EmbeddingSolver():
                 loss['walker_loss_sts'].append(walker_loss_sts.item())
                 loss['visit_loss_ts'].append(visit_loss_ts.item())
                 loss['visit_loss_st'].append(visit_loss_st.item())
-                loss['metric_loss_ss'].append(metric_loss_ss.item())
+                loss['metric_loss_ts'].append(metric_loss_ts.item())
                 loss['metric_loss_st'].append(metric_loss_st.item())
                 loss['train_loss'].append(train_loss.item())
                 iter_count += 1
@@ -110,8 +102,8 @@ class EmbeddingSolver():
                         np.mean(loss['visit_loss_ts']),
                         np.mean(loss['visit_loss_st'])
                     ))
-                    print("[Loss] metric_loss_ss: %f, metric_loss_st: %f" % (
-                        np.mean(loss['metric_loss_ss']),
+                    print("[Loss] metric_loss_ts: %f, metric_loss_st: %f" % (
+                        np.mean(loss['metric_loss_ts']),
                         np.mean(loss['metric_loss_st'])
                     ))
                     print("[Info] forward: %fs\n[Info] backward: %fs" % ( 
@@ -127,17 +119,18 @@ class EmbeddingSolver():
             # best
             with lock:
                 if np.mean(loss['train_loss']) < best['train_loss'].value:
+                    best['epoch'].value = epoch_id
                     best['train_loss'].value = float(np.mean(loss['train_loss']))
                     best['walker_loss_tst'].value = float(np.mean(loss['walker_loss_tst']))
                     best['walker_loss_sts'].value = float(np.mean(loss['walker_loss_sts']))
                     best['visit_loss_ts'].value = float(np.mean(loss['visit_loss_ts']))
                     best['visit_loss_st'].value = float(np.mean(loss['visit_loss_st']))
-                    best['metric_loss_ss'].value = float(np.mean(loss['metric_loss_ss']))
+                    best['metric_loss_ts'].value = float(np.mean(loss['metric_loss_ts']))
                     best['metric_loss_st'].value = float(np.mean(loss['metric_loss_st']))
 
                     # save the best models
-                    print("[{}]best_loss achieved: {}".format(rank, best['train_loss'].value))
-                    print("[{}]saving models...\n".format(rank))
+                    print("[{}] best_loss achieved: {}".format(rank, best['train_loss'].value))
+                    print("[{}] saving models...\n".format(rank))
                     torch.save(shape_encoder, "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
                     torch.save(text_encoder, "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
 

@@ -27,9 +27,9 @@ import sys
 
 mp.set_start_method('spawn', force=True)
 
-def get_dataset(data, size, resolution):
+def get_dataset(data, idx2label, size, resolution):
     for i in range(0, len(data), size):
-        yield ShapenetDataset(data[i:i+size], resolution)
+        yield ShapenetDataset(data[i:i+size], idx2label, resolution)
 
 def get_dataloader(train_size, batch_size, resolution, num_worker):
     shapenet = Shapenet(
@@ -44,8 +44,8 @@ def get_dataloader(train_size, batch_size, resolution, num_worker):
             0
         ]
     )
-    dataset = {x: y for x, y in zip(range(num_worker), list(get_dataset(shapenet.train_data, len(shapenet.train_data) // num_worker, resolution)))}
-    dataloader = {i: DataLoader(dataset[i], batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet) for i in range(num_worker)}
+    dataset = {x: y for x, y in zip(range(num_worker), list(get_dataset(shapenet.train_data, shapenet.idx2label, len(shapenet.train_data) // num_worker, resolution)))}
+    dataloader = {i: DataLoader(dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet) for i in range(num_worker)}
     for _, ds in dataset.items():
         if len(ds) % batch_size == 1:
             sys.exit('invalid batch size, try a bigger or smaller one, terminating...')
@@ -99,7 +99,7 @@ def main(args):
         'walker_sts': RoundTripLoss(weight=configs.WALKER_WEIGHT),
         'visit_ts': AssociationLoss(weight=configs.VISIT_WEIGHT),
         'visit_st': AssociationLoss(weight=configs.VISIT_WEIGHT),
-        'metric_ss': MetricLoss(margin=configs.METRIC_MARGIN),
+        'metric_ts': MetricLoss(margin=configs.METRIC_MARGIN),
         'metric_st': MetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
@@ -111,12 +111,13 @@ def main(args):
     shape_encoder.share_memory()
     text_encoder.share_memory()
     best = {
+        'epoch': mp.Value('i', 0),
         'train_loss': mp.Value(ctypes.c_float, float("inf")),
         'walker_loss_tst': mp.Value(ctypes.c_float, float("inf")),
         'walker_loss_sts': mp.Value(ctypes.c_float, float("inf")),
         'visit_loss_ts': mp.Value(ctypes.c_float, float("inf")),
         'visit_loss_st': mp.Value(ctypes.c_float, float("inf")),
-        'metric_loss_ss': mp.Value(ctypes.c_float, float("inf")),
+        'metric_loss_ts': mp.Value(ctypes.c_float, float("inf")),
         'metric_loss_st': mp.Value(ctypes.c_float, float("inf")),
     }
     lock = mp.Lock()
@@ -130,6 +131,9 @@ def main(args):
     
     # report best
     print("------------------------[{}]best------------------------".format(rank))
+    print("[Loss] epoch: %d" % (
+        best['epoch'].value
+    ))
     print("[Loss] train_loss: %f" % (
         best['train_loss'].value
     ))
@@ -141,8 +145,8 @@ def main(args):
         best['visit_loss_ts'].value,
         best['visit_loss_st'].value
     ))
-    print("[Loss] metric_loss_ss: %f, metric_loss_st: %f\n" % (
-        best['metric_loss_ss'].value,
+    print("[Loss] metric_loss_ts: %f, metric_loss_st: %f\n" % (
+        best['metric_loss_ts'].value,
         best['metric_loss_st'].value
     ))
 

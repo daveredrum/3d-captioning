@@ -23,9 +23,21 @@ class Shapenet():
 
         self.dict_idx2word, self.dict_word2idx = {}, {}
         self.train_data, self.val_data, self.test_data = [], [], []
-        self.cat2label = {'table': -1, 'chair': 1}
+        self._build_mapping()
         self._build_dict()
         self._transform()
+
+    def _build_mapping(self):
+        setattr(self, "cat2label", {'table': -1, 'chair': 1})
+        idx2label = {}
+        for label, item in enumerate(getattr(self, "shapenet_split_train")):
+            model_id = item[0]
+            if model_id not in idx2label.keys():
+                idx2label[model_id] = str(label)
+        
+        label2idx = {label: idx for idx, label in idx2label.items()}
+        setattr(self, "idx2label", idx2label)
+        setattr(self, "label2idx", label2idx)
 
     def _build_dict(self):
         split_data = self.shapenet_split_train
@@ -76,11 +88,12 @@ class Shapenet():
             setattr(self, "{}_data".format(phase), transformed)
 
 class ShapenetDataset(Dataset):
-    def __init__(self, shapenet_data, resolution):
+    def __init__(self, shapenet_data, idx2label, resolution):
         '''
         param: shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
         '''
         self.shapenet_data = shapenet_data
+        self.idx2label = idx2label
         self.resolution = resolution
 
     def __len__(self):
@@ -93,7 +106,7 @@ class ShapenetDataset(Dataset):
         voxel /= 255.
         caption = self.shapenet_data[idx][2]
         length = len(caption)
-        label = self.shapenet_data[idx][1]
+        label = int(self.idx2label[self.shapenet_data[idx][0]])
 
         return model_id, voxel, caption, length, label
 
