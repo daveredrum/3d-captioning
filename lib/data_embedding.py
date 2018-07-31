@@ -29,15 +29,16 @@ class Shapenet():
 
     def _build_mapping(self):
         setattr(self, "cat2label", {'table': -1, 'chair': 1})
-        idx2label = {}
-        for label, item in enumerate(getattr(self, "shapenet_split_train")):
-            model_id = item[0]
-            if model_id not in idx2label.keys():
-                idx2label[model_id] = str(label)
-        
-        label2idx = {label: idx for idx, label in idx2label.items()}
-        setattr(self, "idx2label", idx2label)
-        setattr(self, "label2idx", label2idx)
+        for phase in ["train", "val", "test"]:
+            idx2label = {}
+            for label, item in enumerate(getattr(self, "shapenet_split_{}".format(phase))):
+                model_id = item[0]
+                if model_id not in idx2label.keys():
+                    idx2label[model_id] = str(label)
+            
+            label2idx = {label: idx for idx, label in idx2label.items()}
+            setattr(self, "{}_idx2label".format(phase), idx2label)
+            setattr(self, "{}_label2idx".format(phase), label2idx)
 
     def _build_dict(self):
         split_data = self.shapenet_split_train

@@ -19,6 +19,7 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
+        # self.klloss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -42,15 +43,17 @@ class RoundTripLoss(nn.Module):
         a2b = F.softmax(sim, dim=1)
         b2a = F.softmax(sim.transpose(1, 0), dim=1)
         # build inputs
-        inputs = a2b.matmul(b2a).log()
+        inputs = a2b.matmul(b2a)
 
-        return -self.weight * targets.mul(1e-8 + inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 + inputs.log()).sum(1).mean()
+        # return self.weight * self.klloss(inputs.log(), targets)
 
 
 class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
+        # self.klloss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -67,11 +70,12 @@ class AssociationLoss(nn.Module):
         # visit
         a2b = F.softmax(sim, dim=1)
         # build inputs
-        inputs = a2b.mean(0, keepdim=True).log()
+        inputs = a2b.mean(0, keepdim=True)
         # build targets
         targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
-        return -self.weight * targets.mul(1e-8 + inputs).sum(1).mean()
+        return -self.weight * targets.mul(1e-8 + inputs.log()).sum(1).mean()
+        # return self.weight * self.klloss(inputs.log(), targets)
 
 
 class MetricLoss(nn.Module):

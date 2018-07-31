@@ -26,11 +26,11 @@ class ShapenetTextEncoder(nn.Module):
         )
 
         # recurrent block
-        self.lstm = nn.LSTM(256, 512, batch_first=True)
+        self.lstm = nn.LSTM(256, 256, batch_first=True)
 
         # output block
         self.outputs = nn.Sequential(
-            nn.Linear(512, 256),
+            nn.Linear(256, 256),
             nn.ReLU(),
             nn.Linear(256, 128)
         )
@@ -47,18 +47,6 @@ class ShapenetTextEncoder(nn.Module):
         # recurrent
         ################# 
         encoded, _ = self.lstm(conved, None)
-        # if inputs.is_cuda:
-        #     h = torch.zeros(inputs.size(0), 512).cuda()
-        #     c = torch.zeros(inputs.size(0), 512).cuda()
-        # else:
-        #     h = torch.zeros(inputs.size(0), 512)
-        #     c = torch.zeros(inputs.size(0), 512)
-        
-        # for i in range(conved.size(1)):
-        #     lstm_inputs = conved[:, i, :]
-        #     h, c = self.lstm(lstm_inputs, (h, c))
-        
-        # encoded = h
 
         #################
         # outputs
