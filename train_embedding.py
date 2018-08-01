@@ -25,8 +25,6 @@ import torch.multiprocessing as mp
 import ctypes
 import sys
 
-mp.set_start_method('spawn', force=True)
-
 def get_dataset(data, idx2label, size, resolution):
     for i in range(0, len(data), size):
         yield ShapenetDataset(data[i:i+size], idx2label, resolution)
@@ -55,8 +53,8 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
     check_dataset(val_dataset, batch_size)
     dataloader = {
         i: {
-            'train': DataLoader(train_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet),
-            'val': DataLoader(val_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
+            'train': DataLoader(train_dataset[i], batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet),
+            'val': DataLoader(val_dataset[i], batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet)
         } for i in range(num_worker)
     }
     
@@ -80,6 +78,7 @@ def main(args):
     # setting
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+    mp.set_start_method('spawn', force=True)
 
     # prepare data
     print("\npreparing data...\n")
@@ -112,12 +111,12 @@ def main(args):
         'walker_sts': RoundTripLoss(weight=configs.WALKER_WEIGHT),
         'visit_ts': AssociationLoss(weight=configs.VISIT_WEIGHT),
         'visit_st': AssociationLoss(weight=configs.VISIT_WEIGHT),
-        'metric_tt': MetricLoss(margin=configs.METRIC_MARGIN),
-        'metric_ts': MetricLoss(margin=configs.METRIC_MARGIN)
+        'metric_st': InstanceMetricLoss(margin=configs.METRIC_MARGIN),
+        'metric_tt': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
     settings = "v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(voxel, len(shapenet.train_data), learning_rate, weight_decay, epoch, batch_size, num_worker)
-    solver = EmbeddingSolver(criterion, optimizer, settings, 3) 
+    solver = EmbeddingSolver(criterion, optimizer, settings, configs.REDUCE_STEP) 
 
     # training
     print("start training...\n")
@@ -131,8 +130,8 @@ def main(args):
         'walker_loss_sts': mp.Value(ctypes.c_float, float("inf")),
         'visit_loss_ts': mp.Value(ctypes.c_float, float("inf")),
         'visit_loss_st': mp.Value(ctypes.c_float, float("inf")),
+        'metric_loss_st': mp.Value(ctypes.c_float, float("inf")),
         'metric_loss_tt': mp.Value(ctypes.c_float, float("inf")),
-        'metric_loss_ts': mp.Value(ctypes.c_float, float("inf")),
     }
     lock = mp.Lock()
     processes = []
@@ -159,9 +158,9 @@ def main(args):
         best['visit_loss_ts'].value,
         best['visit_loss_st'].value
     ))
-    print("[Loss] metric_loss_tt: %f, metric_loss_ts: %f\n" % (
-        best['metric_loss_tt'].value,
-        best['metric_loss_ts'].value
+    print("[Loss] metric_loss_st: %f, metric_loss_tt: %f\n" % (
+        best['metric_loss_st'].value,
+        best['metric_loss_tt'].value
     ))
 
 

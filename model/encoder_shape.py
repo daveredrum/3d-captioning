@@ -27,13 +27,12 @@ class ShapenetShapeEncoder(nn.Module):
             nn.BatchNorm3d(128),
             nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
-            nn.BatchNorm3d(256),
-            nn.AvgPool3d(4),
+            nn.BatchNorm3d(256)
         )
         self.outputs = nn.Linear(256, 128)
 
     def forward(self, inputs):
-        conved = self.conv(inputs)
+        conved = self.conv(inputs).view(inputs.size(0), 256, -1).mean(2)
         outputs = self.outputs(conved.view(conved.size(0), -1))
 
         return outputs

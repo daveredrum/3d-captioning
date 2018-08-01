@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import lib.configs as configs
 
 
 class RoundTripLoss(nn.Module):
@@ -45,7 +46,7 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a)
 
-        return -self.weight * targets.mul(1e-8 + inputs.log()).sum(1).mean()
+        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
         # return self.weight * self.klloss(inputs.log(), targets)
 
 
@@ -74,99 +75,86 @@ class AssociationLoss(nn.Module):
         # build targets
         targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
-        return -self.weight * targets.mul(1e-8 + inputs.log()).sum(1).mean()
+        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
         # return self.weight * self.klloss(inputs.log(), targets)
 
 
-class MetricLoss(nn.Module):
+class InstanceMetricLoss(nn.Module):
     def __init__(self, margin=1.):
-        super(MetricLoss, self).__init__()
+        super(InstanceMetricLoss, self).__init__()
         self.margin = margin
     
-    def _build_pairs(self, labels):
-        '''
-        params:
-            labels: 1D tensor, labels of samples
-        
-        return:
-            pos: indices of positive set
-            neg: indices of negative set
-        '''
-        pos, neg = [], []
-        for pair in itertools.permutations(range(labels.size(0)), 2):
-            if labels[pair[0]] == labels[pair[1]]:
-                pos.append(pair)
+    def _get_distance(self, a, b):
+        # transform
+        batch_size = a.size(0)
+        mask = torch.ByteTensor([[1], [0]]).repeat(batch_size, 128).cuda()
+        inverted_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size, 128).cuda()
+        masked_a = torch.zeros(2 * batch_size, 128).cuda().masked_scatter(mask, a)
+        masked_b = torch.zeros(2 * batch_size, 128).cuda().masked_scatter(inverted_mask, b)
+        inputs = masked_a + masked_b
+
+        # get distance
+        if configs.COSINE_DISTANCE:
+            D = inputs.matmul(inputs.transpose(1, 0))
+            if configs.INVERTED_LOSS:
+                D /= 128.
             else:
-                neg.append(pair)
+                D = 1. - D
+        else:
+            Xa = inputs.unsqueeze(0)
+            Xb = inputs.unsqueeze(1)
+            Dsq = torch.sum(torch.pow(Xa - Xb, 2), dim=2)
+            D = torch.sqrt(Dsq)
 
-        return pos, neg
+        # get exponential distance
+        if configs.INVERTED_LOSS:
+            Dexpm = torch.exp(self.margin + D)
+        else:
+            Dexpm = torch.exp(self.margin - D)
 
-    # def forward(self, a, b, labels):
-    #     '''
-    #     param:
-    #         a: 2D embedding tensor, either text embeddings or shape embeddings
-    #         b: 2D embedding tensor, either text embeddings or shape embeddings
-    #         labels: 1D tensor, labels of samples
+        return D, Dexpm
         
-    #     return:
-    #         metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.3
-    #     '''
-    #     pos, neg = self._build_pairs(labels)
-    #     global_comp = []
-    #     for pos_pair in pos:
-    #         neg_i = [item for item in neg if item[0] == pos_pair[0]]
-    #         neg_j = [item for item in neg if item[0] == pos_pair[1]]
-    #         if a.is_cuda:
-    #             V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i])).cuda()
-    #             V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j])).cuda()
-    #             max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])
-    #             # print("sim: {}, dis: {}, max: {}".format(a[pos_pair[0]].dot(b[pos_pair[1]]), (V_i + V_j).log(), max_ij))
-    #             max_ij = torch.max(max_ij, torch.zeros(max_ij.size()).cuda())
-    #         else:
-    #             V_i = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_i]))
-    #             V_j = torch.sum(torch.FloatTensor([(self.margin + a[item[0]].dot(b[item[1]])).exp() for item in neg_j]))
-    #             max_ij = (V_i + V_j).log() - a[pos_pair[0]].dot(b[pos_pair[1]])  
-    #             max_ij = torch.max(max_ij, torch.zeros(max_ij.size()))
-                
-    #         local_comp = max_ij.pow(2)
-    #         global_comp.append(local_comp.unsqueeze(0))
-    #     outputs = torch.cat(global_comp).sum().div(2 * len(pos))
-    #     if a.is_cuda:
-    #         outputs.cuda()
-        
-    #     return outputs
 
-    def forward(self, a, b, labels):
+    def forward(self, a, b):
         '''
+        instance-level metric learning loss, assuming all inputs are from different catagories
+        labels are not needed
+
         param:
             a: 2D embedding tensor, either text embeddings or shape embeddings
             b: 2D embedding tensor, either text embeddings or shape embeddings
-            labels: 1D tensor, labels of samples
         
         return:
-            metric_loss: see https://arxiv.org/pdf/1511.06452.pdf Sec.4
+            instance-level metric_loss: see https://arxiv.org/pdf/1511.06452.pdf Sec.4.2
         '''
-        pos, neg = self._build_pairs(labels)
-        Xa = a.clone().unsqueeze(0)
-        Xb = b.clone().unsqueeze(1)
-        Dsq = torch.sum(torch.pow(Xa - Xb, 2), dim=2)
-        D = torch.sqrt(Dsq)
-        Dexpm = torch.exp(self.margin - D)
-        global_comp = [0.] * len(pos)
-        if pos:
-            for pos_id, pos_pair in enumerate(pos):
-                neg_i = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[0]]
-                neg_j = [item[0] * D.size(1) + item[1] for item in neg if item[0] == pos_pair[1]]
-                neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
-                neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
-                Dissim = neg_ik + neg_jl
-                J_ij = torch.log(Dissim).cuda() + D[pos_pair]
-                max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)
-                
-                global_comp[pos_id] = max_ij.unsqueeze(0)
-            
-            outputs = torch.cat(global_comp).sum().div(2 * len(pos))
-        else:
-            outputs = torch.FloatTensor([0.]).cuda()[0]
-            
+
+        assert a.size() == b.size()
+        batch_size = a.size(0)
+        
+        # get distance
+        D, Dexpm = self._get_distance(a, b)
+
+        # compute pair-wise loss
+        global_comp = [0.] * batch_size
+        for pos_id in range(batch_size):
+            pos_i = pos_id * 2
+            pos_j = pos_id * 2 + 1
+            pos_pair = (pos_i, pos_j)
+            neg_i = [pos_i * batch_size + k for k in range(2 * batch_size) if k != pos_i and k != pos_j]
+            neg_j = [pos_j * batch_size + l for l in range(2 * batch_size) if l != pos_i and l != pos_j]
+            neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
+            neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
+            Dissim = neg_ik + neg_jl
+
+            if configs.INVERTED_LOSS:
+                J_ij = torch.log(1e-8 + Dissim).cuda() - D[pos_pair]
+            else:
+                J_ij = torch.log(1e-8 + Dissim).cuda() + D[pos_pair]
+
+            max_ij = torch.max(J_ij, torch.zeros(J_ij.size()).cuda()).pow(2)            
+            global_comp[pos_id] = max_ij.unsqueeze(0)
+        
+        # accumulate
+        outputs = torch.cat(global_comp).sum().div(2 * batch_size)
+
         return outputs

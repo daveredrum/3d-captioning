@@ -23,9 +23,14 @@ PRIMITIVE_EMBEDDING = "outputs/embedding/primitive_embeddings_{}.p" # split
 # max length of captions
 MAX_LENGTH = 18
 
-# parameters of joint encoding
+# parameters of training
+REDUCE_STEP = 10
 WALKER_WEIGHT = 1.
 VISIT_WEIGHT = 0.25
 METRIC_MULTIPLIER = 1.
 METRIC_MARGIN = 0.5
 CLIP_VALUE = 5.
+
+# parameters of metric learning
+COSINE_DISTANCE = True
+INVERTED_LOSS = True
