@@ -45,13 +45,13 @@ class EmbeddingSolver():
             t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
             selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(s.size(0) // 2)]).cuda())
             selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
-            masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter(s_mask, selected_s)
-            masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, selected_t)
+            masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
+            masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
             embedding = masked_s + masked_t
             metric_loss_st = self.criterion['metric_st'](embedding, 'ST')
             # flip t
             flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
-            flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, flipped_t)
+            flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
             embedding = masked_s + flipped_masked_t
             metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
 
@@ -197,13 +197,13 @@ class EmbeddingSolver():
                 t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
                 selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(s.size(0) // 2)]).cuda())
                 selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
-                masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter(s_mask, selected_s)
-                masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, selected_t)
+                masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
+                masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
                 embedding = masked_s + masked_t
                 metric_loss_st = self.criterion['metric_st'](embedding, 'ST')
                 # flip t
                 flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
-                flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, flipped_t)
+                flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
                 embedding = masked_s + flipped_masked_t
                 metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
                 
