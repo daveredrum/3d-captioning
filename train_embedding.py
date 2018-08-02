@@ -31,7 +31,7 @@ def get_dataset(data, idx2label, size, resolution):
 
 def check_dataset(dataset, batch_size):
     for _, ds in dataset.items():
-        if len(ds) % batch_size == 1:
+        if len(ds) % batch_size <= 2:
             sys.exit('invalid batch size, try a bigger or smaller one, terminating...')
 
 def get_dataloader(split_size, batch_size, resolution, num_worker):

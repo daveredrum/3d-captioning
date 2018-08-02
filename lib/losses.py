@@ -33,9 +33,9 @@ class RoundTripLoss(nn.Module):
         '''
         
         # build target
-        targets = torch.zeros(labels.size(0), labels.size(0)).cuda()
-        for i in range(labels.size(0)):
-            targets[i][labels == labels[i]] = 1.
+        targets = labels.unsqueeze(0).expand(labels.size(0), labels.size(0)).eq(
+            labels.unsqueeze(1).expand(labels.size(0), labels.size(0))
+        ).float() / configs.N_CAPTION_PER_MODEL
 
         targets /= targets.sum(1)
         # similarity

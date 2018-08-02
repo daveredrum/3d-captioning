@@ -100,6 +100,7 @@ class Shapenet():
                 # load into result
                 transformed.append((model_id, label, indices))
             setattr(self, "{}_data".format(phase), transformed)
+            setattr(self, "{}_size".format(phase), len(transformed))
     
     def _aggregate(self):
         '''
@@ -122,7 +123,7 @@ class Shapenet():
             # get all combinations
             data_comb = []
             for key in data_agg.keys():
-                data_comb.extend(list(combinations(data_agg[key], 2)))
+                data_comb.extend(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL)))
 
             # aggregate batch
             data = []
@@ -135,7 +136,7 @@ class Shapenet():
                 if idx2label[idx] in chosen_idx:
                     continue
                 else:
-                    data.extend([data_comb[idx][0], data_comb[idx][1]])
+                    data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
                     chosen_idx.append(idx)
             
             setattr(self, "{}_data".format(phase), data)
