@@ -30,9 +30,12 @@ def get_dataset(data, idx2label, size, resolution):
         yield ShapenetDataset(data[i:i+size], idx2label, resolution)
 
 def check_dataset(dataset, batch_size):
+    flag = False
     for _, ds in dataset.items():
         if len(ds) % batch_size <= 2:
-            sys.exit('invalid batch size, try a bigger or smaller one, terminating...')
+            flag = True
+    
+    return flag
 
 def get_dataloader(split_size, batch_size, resolution, num_worker):
     shapenet = Shapenet(
@@ -48,14 +51,34 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
         ],
         batch_size
     )
-    train_dataset = {x: y for x, y in zip(range(num_worker), list(get_dataset(shapenet.train_data, shapenet.train_idx2label, len(shapenet.train_data) // num_worker, resolution)))}
-    check_dataset(train_dataset, batch_size)
-    val_dataset = {x: y for x, y in zip(range(num_worker), list(get_dataset(shapenet.val_data, shapenet.val_idx2label, len(shapenet.val_data) // num_worker, resolution)))}
-    check_dataset(val_dataset, batch_size)
+    train_dataset = {
+        x: y for x, y in zip(
+            range(num_worker), 
+            list(get_dataset(shapenet.train_data, shapenet.train_idx2label, len(shapenet.train_data) // num_worker, resolution))
+        )
+    }
+    val_dataset = {
+        x: y for x, y in zip(
+            range(num_worker), 
+            list(get_dataset(shapenet.val_data, shapenet.val_idx2label, len(shapenet.val_data) // num_worker, resolution))
+        )
+    }
     dataloader = {
         i: {
-            'train': DataLoader(train_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet),
-            'val': DataLoader(val_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
+            'train': DataLoader(
+                train_dataset[i], 
+                batch_size=batch_size, 
+                shuffle=False, 
+                collate_fn=collate_shapenet, 
+                drop_last=check_dataset(train_dataset, batch_size)
+            ),
+            'val': DataLoader(
+                val_dataset[i], 
+                batch_size=batch_size, 
+                shuffle=False, 
+                collate_fn=collate_shapenet, 
+                drop_last=check_dataset(val_dataset, batch_size)
+            )
         } for i in range(num_worker)
     }
     
