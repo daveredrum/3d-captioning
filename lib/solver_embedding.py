@@ -177,8 +177,8 @@ class EmbeddingSolver():
                 # ST
                 mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
                 inverted_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
-                masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter(mask, s)
-                masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter(inverted_mask, t)
+                masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter(mask, s)
+                masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(inverted_mask, t)
                 embedding = masked_s + masked_t
                 metric_loss_st = self.criterion['metric_st'](embedding)
                 
