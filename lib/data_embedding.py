@@ -1,17 +1,20 @@
 import os
+import numpy as np
 import torch
 import pickle
 from torch.utils.data import Dataset
 import lib.configs as configs
 import nrrd
+from itertools import combinations
 
 class Shapenet():
-    def __init__(self, shapenet_split, size_split):
+    def __init__(self, shapenet_split, size_split, batch_size):
         '''
         param: shapenet_split: [shapenet_split_train, shapenet_split_val, shapenet_split_test]
         '''
         self.shapenet_split_train, self.shapenet_split_val, self.shapenet_split_test = shapenet_split
         self.train_size, self.val_size, self.test_size = size_split
+        self.batch_size = batch_size
 
         # select sets
         if self.train_size != -1:
@@ -26,8 +29,12 @@ class Shapenet():
         self._build_mapping()
         self._build_dict()
         self._transform()
+        self._aggregate()
 
     def _build_mapping(self):
+        '''
+        create mapping between model_ids and labels
+        '''
         setattr(self, "cat2label", {'table': -1, 'chair': 1})
         for phase in ["train", "val", "test"]:
             idx2label = {}
@@ -41,6 +48,9 @@ class Shapenet():
             setattr(self, "{}_label2idx".format(phase), label2idx)
 
     def _build_dict(self):
+        '''
+        create dictionaries
+        '''
         split_data = self.shapenet_split_train
         word_count = {}
         for item in split_data:
@@ -64,6 +74,9 @@ class Shapenet():
         self.dict_idx2word[str(3)] = "<END>"
     
     def _transform(self):
+        '''
+        tokenize captions
+        '''
         for phase in ["train", "val", "test"]:
             split_data = getattr(self, "shapenet_split_{}".format(phase))
             transformed = []
@@ -87,6 +100,47 @@ class Shapenet():
                 # load into result
                 transformed.append((model_id, label, indices))
             setattr(self, "{}_data".format(phase), transformed)
+    
+    def _aggregate(self):
+        '''
+        aggregate data pairs such that:
+        1. they are not the same caption.
+        2. they correspond to the same model.
+        3. there are no other captions in the batch that corresopnd to the same model.
+        '''
+        for phase in ["train", "val", "test"]:
+            split_data = getattr(self, "{}_data".format(phase))
+            
+            # aggregate by model_id
+            data_agg = {}
+            for item in split_data:
+                if item[0] in data_agg.keys():
+                    data_agg[item[0]].append(item)
+                else:
+                    data_agg[item[0]] = [item]
+
+            # get all combinations
+            data_comb = []
+            for key in data_agg.keys():
+                data_comb.extend(list(combinations(data_agg[key], 2)))
+
+            # aggregate batch
+            data = []
+            idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
+            chosen_idx = []
+            while len(data) < 2 * len(data_comb):
+                if len(chosen_idx) == self.batch_size:
+                    chosen_idx = []
+                idx = np.random.randint(len(data_comb))
+                if idx2label[idx] in chosen_idx:
+                    continue
+                else:
+                    data.extend([data_comb[idx][0], data_comb[idx][1]])
+                    chosen_idx.append(idx)
+            
+            setattr(self, "{}_data".format(phase), data)
+
+
 
 class ShapenetDataset(Dataset):
     def __init__(self, shapenet_data, idx2label, resolution):
@@ -122,8 +176,8 @@ def collate_shapenet(data):
         lengths of transformed captions
         labels, table is -1 and chair is 1
     '''
-    # Sort a data list by caption length (descending order)
-    data.sort(key=lambda x: x[3], reverse=True)
+    # # Sort a data list by caption length (descending order)
+    # data.sort(key=lambda x: x[3], reverse=True)
 
     # Merge voxels (from tuple of 4D tensor to 5D tensor)
     model_ids, voxels, captions, lengths, labels = zip(*data)
