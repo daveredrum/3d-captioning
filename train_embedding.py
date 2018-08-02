@@ -45,7 +45,8 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
             split_size[0],
             split_size[1],
             0
-        ]
+        ],
+        batch_size
     )
     train_dataset = {x: y for x, y in zip(range(num_worker), list(get_dataset(shapenet.train_data, shapenet.train_idx2label, len(shapenet.train_data) // num_worker, resolution)))}
     check_dataset(train_dataset, batch_size)
@@ -53,8 +54,8 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
     check_dataset(val_dataset, batch_size)
     dataloader = {
         i: {
-            'train': DataLoader(train_dataset[i], batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet),
-            'val': DataLoader(val_dataset[i], batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet)
+            'train': DataLoader(train_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet),
+            'val': DataLoader(val_dataset[i], batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
         } for i in range(num_worker)
     }
     
