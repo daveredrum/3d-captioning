@@ -88,8 +88,8 @@ def main(args):
     # report settings
     print("[settings]")
     print("voxel:", voxel)
-    print("train_size:", len(shapenet.train_data))
-    print("val_size:", len(shapenet.val_data))
+    print("train_size: {} -> {}".format(shapenet.train_size, len(shapenet.train_data)))
+    print("val_size: {} -> {}".format(shapenet.val_size, len(shapenet.val_data)))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
