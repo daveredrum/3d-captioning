@@ -129,7 +129,7 @@ class Shapenet():
             data = []
             idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
             chosen_idx = []
-            while len(data) < 2 * len(data_comb):
+            while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
                 if len(chosen_idx) == self.batch_size:
                     chosen_idx = []
                 idx = np.random.randint(len(data_comb))
