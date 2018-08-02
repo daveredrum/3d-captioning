@@ -48,7 +48,7 @@ class EmbeddingSolver():
             embedding = masked_s + masked_t
             metric_loss_st = self.criterion['metric_st'](embedding)
             # flip t
-            inverted_t = t.index_select(0, torch.Tensor([i * 2 for i in range(t.size(0) // 2)]))
+            inverted_t = t.index_select(0, torch.Tensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
             inverted_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, inverted_t)
             embedding = masked_s + inverted_masked_t
             metric_loss_st += self.criterion['metric_st'](embedding)
@@ -197,7 +197,7 @@ class EmbeddingSolver():
                 embedding = masked_s + masked_t
                 metric_loss_st = self.criterion['metric_st'](embedding)
                 # flip t
-                inverted_t = t.index_select(0, torch.Tensor([i * 2 for i in range(t.size(0) // 2)]))
+                inverted_t = t.index_select(0, torch.Tensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
                 inverted_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter(t_mask, inverted_t)
                 embedding = masked_s + inverted_masked_t
                 metric_loss_st += self.criterion['metric_st'](embedding)
