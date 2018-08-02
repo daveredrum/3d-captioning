@@ -54,7 +54,8 @@ class EmbeddingSolver():
             metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
 
             # accumulate loss
-            val_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + configs.METRIC_MULTIPLIER * metric_loss_st + configs.METRIC_MULTIPLIER * metric_loss_tt
+            val_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st
+            val_loss += configs.METRIC_MULTIPLIER * (metric_loss_st + metric_loss_tt)
 
             # record
             val_log['iter_time'].append(time.time() - start)
@@ -203,7 +204,8 @@ class EmbeddingSolver():
                 metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
                 
                 # accumulate loss
-                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + configs.METRIC_MULTIPLIER * metric_loss_st + configs.METRIC_MULTIPLIER * metric_loss_tt
+                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st 
+                train_loss += configs.METRIC_MULTIPLIER * (metric_loss_st + metric_loss_tt)
                 train_log['forward'].append(time.time() - forward_since)
 
                 # back prop
