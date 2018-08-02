@@ -169,9 +169,19 @@ class EmbeddingSolver():
                 walker_loss_sts = self.criterion['walker_sts'](s, t, labels)
                 visit_loss_ts = self.criterion['visit_ts'](t, s, labels)
                 visit_loss_st = self.criterion['visit_st'](s, t, labels)
-                metric_loss_st = self.criterion['metric_st'](s, t)
-                metric_loss_tt = self.criterion['metric_tt'](t, t)
 
+                # ML
+                # TT
+                embedding = t
+                metric_loss_tt = self.criterion['metric_tt'](embedding)
+                # ST
+                mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
+                inverted_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
+                masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter(mask, s)
+                masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter(inverted_mask, t)
+                embedding = masked_s + masked_t
+                metric_loss_st = self.criterion['metric_st'](embedding)
+                
                 # accumulate loss
                 train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st + 2 * configs.METRIC_MULTIPLIER * metric_loss_st + configs.METRIC_MULTIPLIER * metric_loss_tt
                 train_log['forward'].append(time.time() - forward_since)

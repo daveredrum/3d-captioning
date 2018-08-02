@@ -84,15 +84,7 @@ class InstanceMetricLoss(nn.Module):
         super(InstanceMetricLoss, self).__init__()
         self.margin = margin
     
-    def _get_distance(self, a, b):
-        # transform
-        batch_size = a.size(0)
-        mask = torch.ByteTensor([[1], [0]]).repeat(batch_size, 128).cuda()
-        inverted_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size, 128).cuda()
-        masked_a = torch.zeros(2 * batch_size, 128).cuda().masked_scatter(mask, a)
-        masked_b = torch.zeros(2 * batch_size, 128).cuda().masked_scatter(inverted_mask, b)
-        inputs = masked_a + masked_b
-
+    def _get_distance(self, inputs):
         # get distance
         if configs.COSINE_DISTANCE:
             D = inputs.matmul(inputs.transpose(1, 0))
@@ -115,7 +107,7 @@ class InstanceMetricLoss(nn.Module):
         return D, Dexpm
         
 
-    def forward(self, a, b):
+    def forward(self, inputs):
         '''
         instance-level metric learning loss, assuming all inputs are from different catagories
         labels are not needed
@@ -128,20 +120,19 @@ class InstanceMetricLoss(nn.Module):
             instance-level metric_loss: see https://arxiv.org/pdf/1511.06452.pdf Sec.4.2
         '''
 
-        assert a.size() == b.size()
-        batch_size = a.size(0)
+        batch_size = inputs.size(0)
         
         # get distance
-        D, Dexpm = self._get_distance(a, b)
+        D, Dexpm = self._get_distance(inputs)
 
         # compute pair-wise loss
-        global_comp = [0.] * batch_size
-        for pos_id in range(batch_size):
+        global_comp = [0.] * (batch_size // 2)
+        for pos_id in range(batch_size // 2):
             pos_i = pos_id * 2
             pos_j = pos_id * 2 + 1
             pos_pair = (pos_i, pos_j)
-            neg_i = [pos_i * batch_size + k * 2 + 1 for k in range(batch_size) if k * 2 + 1 !=  pos_j]
-            neg_j = [pos_j * batch_size + l * 2 for l in range(batch_size) if l * 2 != pos_i]
+            neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
+            neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
             neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
             neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
             Dissim = neg_ik + neg_jl
