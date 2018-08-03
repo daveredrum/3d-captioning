@@ -31,15 +31,15 @@ class EmbeddingSolver():
             t = text_encoder(texts)
 
             # compute loss
-            walker_loss_tst = self.criterion['walker_tst'](t, s, labels)
-            walker_loss_sts = self.criterion['walker_sts'](s, t, labels)
-            visit_loss_ts = self.criterion['visit_ts'](t, s, labels)
-            visit_loss_st = self.criterion['visit_st'](s, t, labels)
+            walker_loss_tst = self.criterion['walker'](t, s, labels)
+            walker_loss_sts = self.criterion['walker'](s, t, labels)
+            visit_loss_ts = self.criterion['visit'](t, s, labels)
+            visit_loss_st = self.criterion['visit'](s, t, labels)
 
             # ML
             # TT
             embedding = t
-            metric_loss_tt = self.criterion['metric_tt'](embedding, 'TT')
+            metric_loss_tt = self.criterion['metric'](embedding, 'TT')
             # ST
             s_mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
             t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
@@ -48,16 +48,21 @@ class EmbeddingSolver():
             masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
             masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
             embedding = masked_s + masked_t
-            metric_loss_st = self.criterion['metric_st'](embedding, 'ST')
+            metric_loss_st = self.criterion['metric'](embedding, 'ST')
             # flip t
             flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
             flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
             embedding = masked_s + flipped_masked_t
-            metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
+            metric_loss_st += self.criterion['metric'](embedding, 'ST')
+
+            # add norm penalty
+            shape_norm_penalty = self._norm_penalty(s)
+            text_norm_penalty = self._norm_penalty(t)
 
             # accumulate loss
             val_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st
             val_loss += configs.METRIC_MULTIPLIER * (metric_loss_st + metric_loss_tt)
+            val_loss += (configs.SHAPE_NORM_MULTIPLIER * shape_norm_penalty + configs.TEXT_NORM_MULTIPLIER * text_norm_penalty)
 
             # record
             val_log['iter_time'].append(time.time() - start)
@@ -68,8 +73,159 @@ class EmbeddingSolver():
             val_log['visit_loss_st'].append(visit_loss_st.item())
             val_log['metric_loss_st'].append(metric_loss_st.item())
             val_log['metric_loss_tt'].append(metric_loss_tt.item())
+            val_log['shape_norm_penalty'].append(shape_norm_penalty.item())
+            val_log['text_norm_penalty'].append(text_norm_penalty.item())
 
         return val_log
+
+    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose):
+        print("[{}] starting...\n".format(rank))
+        total_iter = len(dataloader['train']) * epoch
+        iter_count = 0
+        scheduler = StepLR(self.optimizer, step_size=self.reduce_step, gamma=0.8)
+        for epoch_id in range(epoch):
+            print("[{}] epoch [{}/{}] starting...\n".format(rank, epoch_id+1, epoch))
+            scheduler.step()
+            train_log = {
+                'forward': [],
+                'backward': [],
+                'iter_time': [],
+                'train_loss': [],
+                'walker_loss_tst': [],
+                'walker_loss_sts': [],
+                'visit_loss_ts': [],
+                'visit_loss_st': [],
+                'metric_loss_st': [],
+                'metric_loss_tt': [],
+                'shape_norm_penalty': [],
+                'text_norm_penalty': []
+            }
+            val_log = {
+                'iter_time': [],
+                'val_loss': [],
+                'walker_loss_tst': [],
+                'walker_loss_sts': [],
+                'visit_loss_ts': [],
+                'visit_loss_st': [],
+                'metric_loss_st': [],
+                'metric_loss_tt': [],
+                'shape_norm_penalty': [],
+                'text_norm_penalty': []
+                
+            }
+            for iter_id, (_, shapes, texts, _, labels) in enumerate(dataloader['train']):
+                start = time.time()
+                # load
+                shapes = shapes.cuda()
+                texts = texts.cuda()
+                labels = labels.cuda()
+                
+                # forward pass
+                forward_since = time.time()
+                s = shape_encoder(shapes)
+                t = text_encoder(texts)
+                
+                # compute train_log
+                walker_loss_tst = self.criterion['walker'](t, s, labels)
+                walker_loss_sts = self.criterion['walker'](s, t, labels)
+                visit_loss_ts = self.criterion['visit'](t, s, labels)
+                visit_loss_st = self.criterion['visit'](s, t, labels)
+
+                # ML
+                # TT
+                embedding = t
+                metric_loss_tt = self.criterion['metric'](embedding, 'TT')
+                # ST
+                s_mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
+                t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
+                selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(s.size(0) // 2)]).cuda())
+                selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
+                masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
+                masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
+                embedding = masked_s + masked_t
+                metric_loss_st = self.criterion['metric'](embedding, 'ST')
+                # flip t
+                flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
+                flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
+                embedding = masked_s + flipped_masked_t
+                metric_loss_st += self.criterion['metric'](embedding, 'ST')
+                
+                # add norm penalty
+                shape_norm_penalty = self._norm_penalty(s)
+                text_norm_penalty = self._norm_penalty(t)
+
+                # accumulate loss
+                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st 
+                train_loss += configs.METRIC_MULTIPLIER * (metric_loss_st + metric_loss_tt)
+                train_loss += (configs.SHAPE_NORM_MULTIPLIER * shape_norm_penalty + configs.TEXT_NORM_MULTIPLIER * text_norm_penalty)
+                train_log['forward'].append(time.time() - forward_since)
+
+                # back prop
+                self.optimizer.zero_grad()
+                backward_since = time.time()
+                train_loss.backward()
+                clip_grad_value_(list(shape_encoder.parameters()) + list(text_encoder.parameters()), configs.CLIP_VALUE)
+                self.optimizer.step()
+                train_log['backward'].append(time.time() - backward_since)
+
+                # record
+                train_log['train_loss'].append(train_loss.item())
+                train_log['walker_loss_tst'].append(walker_loss_tst.item())
+                train_log['walker_loss_sts'].append(walker_loss_sts.item())
+                train_log['visit_loss_ts'].append(visit_loss_ts.item())
+                train_log['visit_loss_st'].append(visit_loss_st.item())
+                train_log['metric_loss_st'].append(metric_loss_st.item())
+                train_log['metric_loss_tt'].append(metric_loss_tt.item())
+                train_log['shape_norm_penalty'].append(shape_norm_penalty.item())
+                train_log['text_norm_penalty'].append(text_norm_penalty.item())
+                train_log['iter_time'].append(time.time() - start)
+                iter_count += 1
+
+                # report
+                if iter_count % verbose == 0:
+                    self._iter_report(train_log, rank, iter_count, total_iter)
+
+            # evaluate
+            val_log = self.evaluate(shape_encoder, text_encoder, dataloader, val_log)
+            
+            # epoch report
+            self._epoch_report(train_log, val_log, rank, epoch_id, epoch)
+            
+            # best
+            with lock:
+                if np.mean(val_log['val_loss']) < best['loss'].value:
+                    # report best
+                    print("[{}] best_loss achieved: {}".format(rank, np.mean(val_log['val_loss'])))
+                    best['rank'].value = rank
+                    best['epoch'].value = epoch_id
+                    best['loss'].value = float(np.mean(val_log['val_loss']))
+                    best['walker_loss_tst'].value = float(np.mean(val_log['walker_loss_tst']))
+                    best['walker_loss_sts'].value = float(np.mean(val_log['walker_loss_sts']))
+                    best['visit_loss_ts'].value = float(np.mean(val_log['visit_loss_ts']))
+                    best['visit_loss_st'].value = float(np.mean(val_log['visit_loss_st']))
+                    best['metric_loss_st'].value = float(np.mean(val_log['metric_loss_st']))
+                    best['metric_loss_tt'].value = float(np.mean(val_log['metric_loss_tt']))
+                    best['shape_norm_penalty'].value = float(np.mean(val_log['shape_norm_penalty']))
+                    best['text_norm_penalty'].value = float(np.mean(val_log['text_norm_penalty']))
+
+                    # save the best models
+                    print("[{}] saving models...\n".format(rank))
+                    torch.save(shape_encoder, "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
+                    torch.save(text_encoder, "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
+
+        # done
+        print("[{}] done...\n".format(rank))
+
+        # return best['shape_encoder'], best['text_encoder']
+
+    def _norm_penalty(self, embedding):
+        '''
+        added penalty to the loss if embedding's loss exceeds the threshold
+        '''
+        norm = torch.norm(embedding, p=2, dim=1)
+        penalty = torch.max(torch.zeros(norm.size()).cuda(), norm - configs.MAX_NORM).mean()
+
+        return penalty
 
     def _iter_report(self, log, rank, iter_count, total_iter):
         # compute ETA
@@ -93,6 +249,10 @@ class EmbeddingSolver():
         print("[loss] metric_loss_st: %f, metric_loss_tt: %f" % (
             np.mean(log['metric_loss_st']),
             np.mean(log['metric_loss_tt'])
+        ))
+        print("[loss] shape_norm_penalty: %f, text_norm_penalty: %f" % (
+            np.mean(log['shape_norm_penalty']),
+            np.mean(log['text_norm_penalty'])
         ))
         print("[info] forward_per_iter: %fs\n[info] backward_per_iter: %fs" % ( 
             np.mean(log['forward']),
@@ -134,134 +294,15 @@ class EmbeddingSolver():
             np.mean(train_log['metric_loss_st']),
             np.mean(train_log['metric_loss_tt'])
         ))
-        print("[val]   metric_loss_st: %f, metric_loss_tt: %f\n" % (
+        print("[val]   metric_loss_st: %f, metric_loss_tt: %f" % (
             np.mean(val_log['metric_loss_st']),
             np.mean(val_log['metric_loss_tt'])
         ))
-
-    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose):
-        print("[{}] starting...\n".format(rank))
-        total_iter = len(dataloader['train']) * epoch
-        iter_count = 0
-        scheduler = StepLR(self.optimizer, step_size=self.reduce_step, gamma=0.8)
-        for epoch_id in range(epoch):
-            print("[{}] epoch [{}/{}] starting...\n".format(rank, epoch_id+1, epoch))
-            scheduler.step()
-            train_log = {
-                'forward': [],
-                'backward': [],
-                'iter_time': [],
-                'train_loss': [],
-                'walker_loss_tst': [],
-                'walker_loss_sts': [],
-                'visit_loss_ts': [],
-                'visit_loss_st': [],
-                'metric_loss_st': [],
-                'metric_loss_tt': [],
-            }
-            val_log = {
-                'iter_time': [],
-                'val_loss': [],
-                'walker_loss_tst': [],
-                'walker_loss_sts': [],
-                'visit_loss_ts': [],
-                'visit_loss_st': [],
-                'metric_loss_st': [],
-                'metric_loss_tt': [],
-                
-            }
-            for iter_id, (_, shapes, texts, _, labels) in enumerate(dataloader['train']):
-                start = time.time()
-                # load
-                shapes = shapes.cuda()
-                texts = texts.cuda()
-                labels = labels.cuda()
-                
-                # forward pass
-                forward_since = time.time()
-                s = shape_encoder(shapes)
-                t = text_encoder(texts)
-                
-                # compute train_log
-                walker_loss_tst = self.criterion['walker_tst'](t, s, labels)
-                walker_loss_sts = self.criterion['walker_sts'](s, t, labels)
-                visit_loss_ts = self.criterion['visit_ts'](t, s, labels)
-                visit_loss_st = self.criterion['visit_st'](s, t, labels)
-
-                # ML
-                # TT
-                embedding = t
-                metric_loss_tt = self.criterion['metric_tt'](embedding, 'TT')
-                # ST
-                s_mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
-                t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
-                selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(s.size(0) // 2)]).cuda())
-                selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
-                masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
-                masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
-                embedding = masked_s + masked_t
-                metric_loss_st = self.criterion['metric_st'](embedding, 'ST')
-                # flip t
-                flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
-                flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
-                embedding = masked_s + flipped_masked_t
-                metric_loss_st += self.criterion['metric_st'](embedding, 'ST')
-                
-                # accumulate loss
-                train_loss = walker_loss_tst + walker_loss_sts + visit_loss_ts + visit_loss_st 
-                train_loss += configs.METRIC_MULTIPLIER * (metric_loss_st + metric_loss_tt)
-                train_log['forward'].append(time.time() - forward_since)
-
-                # back prop
-                self.optimizer.zero_grad()
-                backward_since = time.time()
-                train_loss.backward()
-                clip_grad_value_(list(shape_encoder.parameters()) + list(text_encoder.parameters()), configs.CLIP_VALUE)
-                self.optimizer.step()
-                train_log['backward'].append(time.time() - backward_since)
-
-                # record
-                train_log['walker_loss_tst'].append(walker_loss_tst.item())
-                train_log['walker_loss_sts'].append(walker_loss_sts.item())
-                train_log['visit_loss_ts'].append(visit_loss_ts.item())
-                train_log['visit_loss_st'].append(visit_loss_st.item())
-                train_log['metric_loss_st'].append(metric_loss_st.item())
-                train_log['metric_loss_tt'].append(metric_loss_tt.item())
-                train_log['train_loss'].append(train_loss.item())
-                train_log['iter_time'].append(time.time() - start)
-                iter_count += 1
-
-                # report
-                if iter_count % verbose == 0:
-                    self._iter_report(train_log, rank, iter_count, total_iter)
-
-            # evaluate
-            val_log = self.evaluate(shape_encoder, text_encoder, dataloader, val_log)
-            
-            # epoch report
-            self._epoch_report(train_log, val_log, rank, epoch_id, epoch)
-            
-            # best
-            with lock:
-                if np.mean(val_log['val_loss']) < best['loss'].value:
-                    # report best
-                    print("[{}] best_loss achieved: {}".format(rank, np.mean(val_log['val_loss'])))
-                    best['rank'].value = rank
-                    best['epoch'].value = epoch_id
-                    best['loss'].value = float(np.mean(val_log['val_loss']))
-                    best['walker_loss_tst'].value = float(np.mean(val_log['walker_loss_tst']))
-                    best['walker_loss_sts'].value = float(np.mean(val_log['walker_loss_sts']))
-                    best['visit_loss_ts'].value = float(np.mean(val_log['visit_loss_ts']))
-                    best['visit_loss_st'].value = float(np.mean(val_log['visit_loss_st']))
-                    best['metric_loss_st'].value = float(np.mean(val_log['metric_loss_st']))
-                    best['metric_loss_tt'].value = float(np.mean(val_log['metric_loss_tt']))
-
-                    # save the best models
-                    print("[{}] saving models...\n".format(rank))
-                    torch.save(shape_encoder, "outputs/models/embeddings/shape_encoder_{}.pth".format(self.settings))
-                    torch.save(text_encoder, "outputs/models/embeddings/text_encoder_{}.pth".format(self.settings))
-
-        # done
-        print("[{}] done...\n".format(rank))
-
-        # return best['shape_encoder'], best['text_encoder']
+        print("[train] shape_norm_penalty: %f, text_norm_penalty: %f" % (
+            np.mean(train_log['shape_norm_penalty']),
+            np.mean(train_log['text_norm_penalty'])
+        ))
+        print("[val]   shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
+            np.mean(val_log['shape_norm_penalty']),
+            np.mean(val_log['text_norm_penalty'])
+        ))

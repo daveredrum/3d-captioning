@@ -37,7 +37,9 @@ def main(args):
             train_size,
             val_size,
             test_size
-        ]
+        ],
+        batch_size,
+        False
     )
     dataloader = {}
     for phase in ["train", "val", "test"]:
@@ -62,7 +64,7 @@ def main(args):
     # extract
     for phase in ["train", "val", "test"]:
         print("extracting {} set...\n".format(phase))
-        data = [None] * len(getattr(shapenet, "{}_data".format(phase)))
+        data = {}
         with open(configs.SHAPENET_EMBEDDING.format(phase), 'wb') as database:
             offset = 0
             total_iter = len(dataloader[phase])
@@ -79,12 +81,23 @@ def main(args):
                 # append
                 for i in range(len(model_id)):
                     cap = " ".join([shapenet.dict_idx2word[str(idx.item())] for idx in text[i] if idx.item() != 0])
-                    data[offset + i] = (
-                        model_id[i], 
-                        cap,
-                        shape_embedding[i].data.cpu().numpy(),
-                        text_embedding[i].data.cpu().numpy()
-                    )
+                    if model_id[i] in data.keys():
+                        data[model_id[i]]['text_embedding'].append(
+                            (
+                                cap,
+                                text_embedding[i].data.cpu().numpy()
+                            )
+                        ) 
+                    else:
+                        data[model_id[i]] = {
+                            'shape_embedding': shape_embedding[i].data.cpu().numpy(),
+                            'text_embedding': [
+                                (
+                                    cap,
+                                    text_embedding[i].data.cpu().numpy()
+                                )
+                            ]
+                        }
 
                 # report
                 offset += len(model_id)

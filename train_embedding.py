@@ -49,7 +49,8 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
             split_size[1],
             0
         ],
-        batch_size
+        batch_size,
+        True
     )
     train_dataset = {
         x: y for x, y in zip(
@@ -60,22 +61,20 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
     val_dataset = {
         x: y for x, y in zip(
             range(num_worker), 
-            list(get_dataset(shapenet.val_data, shapenet.val_idx2label, len(shapenet.val_data) // num_worker, resolution))
+            [ShapenetDataset(shapenet.val_data, shapenet.val_idx2label, resolution) for _ in range(num_worker)]
         )
     }
     dataloader = {
         i: {
             'train': DataLoader(
                 train_dataset[i], 
-                batch_size=batch_size, 
-                shuffle=False, 
+                batch_size=batch_size,  
                 collate_fn=collate_shapenet, 
                 drop_last=check_dataset(train_dataset, batch_size)
             ),
             'val': DataLoader(
                 val_dataset[i], 
                 batch_size=batch_size, 
-                shuffle=False, 
                 collate_fn=collate_shapenet, 
                 drop_last=check_dataset(val_dataset, batch_size)
             )
@@ -111,8 +110,8 @@ def main(args):
     # report settings
     print("[settings]")
     print("voxel:", voxel)
-    print("train_size: {} -> {}".format(shapenet.train_size, len(shapenet.train_data)))
-    print("val_size: {} -> {}".format(shapenet.val_size, len(shapenet.val_data)))
+    print("train_size: {} -> {}, {} per worker".format(shapenet.train_size, len(shapenet.train_data), len(shapenet.train_data) // num_worker))
+    print("val_size: {} -> {}, {} per worker".format(shapenet.val_size, len(shapenet.val_data), len(shapenet.val_data)))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
@@ -131,15 +130,12 @@ def main(args):
     # initialize optimizer
     print("initializing optimizer...\n")
     criterion = {
-        'walker_tst': RoundTripLoss(weight=configs.WALKER_WEIGHT),
-        'walker_sts': RoundTripLoss(weight=configs.WALKER_WEIGHT),
-        'visit_ts': AssociationLoss(weight=configs.VISIT_WEIGHT),
-        'visit_st': AssociationLoss(weight=configs.VISIT_WEIGHT),
-        'metric_st': InstanceMetricLoss(margin=configs.METRIC_MARGIN),
-        'metric_tt': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
+        'walker': RoundTripLoss(weight=configs.WALKER_WEIGHT),
+        'visit': AssociationLoss(weight=configs.VISIT_WEIGHT),
+        'metric': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = "v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(voxel, len(shapenet.train_data), learning_rate, weight_decay, epoch, batch_size, num_worker)
+    settings = "v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
     solver = EmbeddingSolver(criterion, optimizer, settings, configs.REDUCE_STEP) 
 
     # training
@@ -156,6 +152,8 @@ def main(args):
         'visit_loss_st': mp.Value(ctypes.c_float, float("inf")),
         'metric_loss_st': mp.Value(ctypes.c_float, float("inf")),
         'metric_loss_tt': mp.Value(ctypes.c_float, float("inf")),
+        'shape_norm_penalty': mp.Value(ctypes.c_float, float("inf")),
+        'text_norm_penalty': mp.Value(ctypes.c_float, float("inf")),
     }
     lock = mp.Lock()
     processes = []
@@ -171,7 +169,7 @@ def main(args):
     print("[Loss] epoch: %d" % (
         best['epoch'].value
     ))
-    print("[Loss] train_loss: %f" % (
+    print("[Loss] val_loss: %f" % (
         best['loss'].value
     ))
     print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (

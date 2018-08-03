@@ -8,7 +8,7 @@ import nrrd
 from itertools import combinations
 
 class Shapenet():
-    def __init__(self, shapenet_split, size_split, batch_size):
+    def __init__(self, shapenet_split, size_split, batch_size, is_training):
         '''
         param: shapenet_split: [shapenet_split_train, shapenet_split_val, shapenet_split_test]
         '''
@@ -29,7 +29,8 @@ class Shapenet():
         self._build_mapping()
         self._build_dict()
         self._transform()
-        self._aggregate()
+        if is_training:
+            self._aggregate()
 
     def _build_mapping(self):
         '''
@@ -108,6 +109,8 @@ class Shapenet():
         1. they are not the same caption.
         2. they correspond to the same model.
         3. there are no other captions in the batch that corresopnd to the same model.
+
+        this method is only performed in training/validation step
         '''
         for phase in ["train", "val", "test"]:
             split_data = getattr(self, "{}_data".format(phase))

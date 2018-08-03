@@ -20,7 +20,8 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
-        # self.klloss = nn.KLDivLoss()
+        # self.loss = nn.BCELoss()
+        self.loss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -46,15 +47,17 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a)
 
-        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        # return self.weight * self.klloss(inputs.log(), targets)
+        # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
+        # return self.weight * self.loss(1e-8 + inputs, targets)
+        return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
 class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
-        # self.klloss = nn.KLDivLoss()
+        # self.loss = nn.BCELoss()
+        self.loss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -75,8 +78,9 @@ class AssociationLoss(nn.Module):
         # build targets
         targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
-        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        # return self.weight * self.klloss(inputs.log(), targets)
+        # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
+        # return self.weight * self.loss(1e-8 + inputs, targets)
+        return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
 class InstanceMetricLoss(nn.Module):
@@ -131,12 +135,17 @@ class InstanceMetricLoss(nn.Module):
             pos_i = pos_id * 2
             pos_j = pos_id * 2 + 1
             pos_pair = (pos_i, pos_j)
+
             if mode == 'TT':
                 neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
                 neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
             else:
                 neg_i = [pos_i * batch_size + k * 2 + 1 for k in range(batch_size // 2) if k != pos_j]
                 neg_j = [pos_j * batch_size + l * 2 for l in range(batch_size // 2) if l != pos_i]
+
+            # neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
+            # neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
+
             neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
             neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
             Dissim = neg_ik + neg_jl
