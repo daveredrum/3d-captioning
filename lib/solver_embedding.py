@@ -32,9 +32,9 @@ class EmbeddingSolver():
 
             # compute loss
             walker_loss_tst = self.criterion['walker'](t, s, labels)
-            walker_loss_sts = self.criterion['walker'](s, t, labels)
+            walker_loss_sts = self.criterion['walker'](s, t, labels) / 2.
             visit_loss_ts = self.criterion['visit'](t, s, labels)
-            visit_loss_st = self.criterion['visit'](s, t, labels)
+            visit_loss_st = self.criterion['visit'](s, t, labels) / 2.
 
             # ML
             # TT
@@ -56,7 +56,7 @@ class EmbeddingSolver():
             metric_loss_st += self.criterion['metric'](embedding, 'ST')
 
             # add norm penalty
-            shape_norm_penalty = self._norm_penalty(s)
+            shape_norm_penalty = self._norm_penalty(s) / 2.
             text_norm_penalty = self._norm_penalty(t)
 
             # accumulate loss
@@ -127,9 +127,9 @@ class EmbeddingSolver():
                 
                 # compute train_log
                 walker_loss_tst = self.criterion['walker'](t, s, labels)
-                walker_loss_sts = self.criterion['walker'](s, t, labels)
+                walker_loss_sts = self.criterion['walker'](s, t, labels) / 2.
                 visit_loss_ts = self.criterion['visit'](t, s, labels)
-                visit_loss_st = self.criterion['visit'](s, t, labels)
+                visit_loss_st = self.criterion['visit'](s, t, labels) / 2.
 
                 # ML
                 # TT
@@ -151,7 +151,7 @@ class EmbeddingSolver():
                 metric_loss_st += self.criterion['metric'](embedding, 'ST')
                 
                 # add norm penalty
-                shape_norm_penalty = self._norm_penalty(s)
+                shape_norm_penalty = self._norm_penalty(s) / 2.
                 text_norm_penalty = self._norm_penalty(t)
 
                 # accumulate loss

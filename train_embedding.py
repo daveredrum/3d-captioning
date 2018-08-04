@@ -180,9 +180,13 @@ def main(args):
         best['visit_loss_ts'].value,
         best['visit_loss_st'].value
     ))
-    print("[Loss] metric_loss_st: %f, metric_loss_tt: %f\n" % (
+    print("[Loss] metric_loss_st: %f, metric_loss_tt: %f" % (
         best['metric_loss_st'].value,
         best['metric_loss_tt'].value
+    ))
+    print("[Loss] shape_norm_penalty: %f, text_norm_penalty: %f" % (
+        best['shape_norm_penalty'].value,
+        best['text_norm_penalty'].value
     ))
 
 
