@@ -20,7 +20,6 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
-        # self.loss = nn.BCELoss()
         self.loss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
@@ -48,7 +47,6 @@ class RoundTripLoss(nn.Module):
         inputs = a2b.matmul(b2a)
 
         # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        # return self.weight * self.loss(1e-8 + inputs, targets)
         return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
@@ -56,10 +54,9 @@ class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
-        # self.loss = nn.BCELoss()
         self.loss = nn.KLDivLoss()
     
-    def forward(self, a, b, labels):
+    def forward(self, a, b):
         '''
         params: 
             a: 2D embedding tensor, either text embeddings or shape embeddings
@@ -79,7 +76,6 @@ class AssociationLoss(nn.Module):
         targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
         # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        # return self.weight * self.loss(1e-8 + inputs, targets)
         return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
@@ -159,6 +155,6 @@ class InstanceMetricLoss(nn.Module):
             global_comp[pos_id] = max_ij.unsqueeze(0)
         
         # accumulate
-        outputs = torch.cat(global_comp).sum().div(2 * batch_size)
+        outputs = torch.cat(global_comp).sum().div(batch_size)
 
         return outputs

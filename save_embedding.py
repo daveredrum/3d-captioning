@@ -13,8 +13,9 @@ from model.encoder_shape import *
 
 def main(args):
     # parse args
-    shape_encoder = os.path.join("outputs/models/embeddings", args.shape_encoder)
-    text_encoder = os.path.join("outputs/models/embeddings", args.text_encoder)
+    root = os.path.join(configs.OUTPUT_EMBEDDING, args.path)
+    shape_encoder = os.path.join(root, "models/shape_encoder.pth")
+    text_encoder = os.path.join(root, "models/text_encoder.pth")
     train_size = args.train_size
     val_size = args.val_size
     test_size = args.test_size
@@ -29,9 +30,9 @@ def main(args):
     print("\npreparing data...\n")
     shapenet = Shapenet(
         [
-            pickle.load(open("pretrained/shapenet_split_train.p", 'rb')),
-            pickle.load(open("pretrained/shapenet_split_val.p", 'rb')),
-            pickle.load(open("pretrained/shapenet_split_test.p", 'rb'))
+            pickle.load(open("data/shapenet_split_train.p", 'rb')),
+            pickle.load(open("data/shapenet_split_val.p", 'rb')),
+            pickle.load(open("data/shapenet_split_test.p", 'rb'))
         ],
         [
             train_size,
@@ -62,10 +63,12 @@ def main(args):
     text_encoder.eval()
 
     # extract
+    if not os.path.exists(os.path.join(root, "embeddings")):
+        os.mkdir(os.path.join(root, "embeddings"))
     for phase in ["train", "val", "test"]:
         print("extracting {} set...\n".format(phase))
         data = {}
-        with open(configs.SHAPENET_EMBEDDING.format(phase), 'wb') as database:
+        with open(os.path.join(root, "embeddings", "{}.p".format(phase)), 'wb') as database:
             offset = 0
             total_iter = len(dataloader[phase])
             for iter_id, (model_id, shape, text, _, _) in enumerate(dataloader[phase]):
@@ -116,8 +119,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--shape_encoder", type=str, default=None, help="path to the pretrained shape encoder")
-    parser.add_argument("--text_encoder", type=str, default=None, help="path to the pretrained text encoder")
+    parser.add_argument("--path", type=str, default=None, help="path to the pretrained encoders")
     parser.add_argument("--train_size", type=int, default=100, help="train size")
     parser.add_argument("--val_size", type=int, default=100, help="val size")
     parser.add_argument("--test_size", type=int, default=100, help="test size")

@@ -12,6 +12,10 @@ SHAPENET_NRRD = "{}/{}.nrrd" # model_id
 SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
 SPLIT_NAME = "processed_captions_{}.p"
 
+# output path
+OUTPUT_EMBEDDING = "outputs/embedding/"
+OUTPUT_CAPTION = "outputs/caption/"
+
 # path to pretrained embeddings
 SHAPENET_PRETRAINED = "pretrained/shapenet_embeddings_{}.p" # split
 PRIMITIVE_PRETRAINED = "pretrained/primitive_embeddings_{}.p" # split
@@ -24,6 +28,7 @@ PRIMITIVE_EMBEDDING = "outputs/embedding/primitive_embeddings_{}.p" # split
 MAX_LENGTH = 18
 
 # parameters of training
+SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}" # mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process
 N_CAPTION_PER_MODEL = 2
 REDUCE_STEP = 10
 WALKER_WEIGHT = 1.

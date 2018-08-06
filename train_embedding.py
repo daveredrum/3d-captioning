@@ -40,9 +40,9 @@ def check_dataset(dataset, batch_size):
 def get_dataloader(split_size, batch_size, resolution, num_worker):
     shapenet = Shapenet(
         [
-            pickle.load(open("pretrained/shapenet_split_train.p", 'rb')),
-            pickle.load(open("pretrained/shapenet_split_val.p", 'rb')),
-            pickle.load(open("pretrained/shapenet_split_test.p", 'rb'))
+            pickle.load(open("data/shapenet_split_train.p", 'rb')),
+            pickle.load(open("data/shapenet_split_val.p", 'rb')),
+            pickle.load(open("data/shapenet_split_test.p", 'rb'))
         ],
         [
             split_size[0],
@@ -105,7 +105,7 @@ def main(args):
 
     # prepare data
     print("\npreparing data...\n")
-    shapenet, dataloader = get_dataloader([train_size, val_size], batch_size, voxel, num_worker)
+    shapenet, dataloader = get_dataloader([train_size, val_size], batch_size * configs.N_CAPTION_PER_MODEL, voxel, num_worker)
     
     # report settings
     print("[settings]")
@@ -135,8 +135,10 @@ def main(args):
         'metric': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = "v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}".format(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
-    solver = EmbeddingSolver(criterion, optimizer, settings, configs.REDUCE_STEP) 
+    settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
+    solver = EmbeddingSolver(criterion, optimizer, settings, configs.REDUCE_STEP)
+    if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, settings)):
+        os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, settings))
 
     # training
     print("start training...\n")
