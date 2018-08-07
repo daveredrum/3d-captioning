@@ -117,7 +117,7 @@ def main(args):
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
-    print("batch_size: {} shapes per batch, {} text per batch".format(unique_batch_size, unique_batch_size * configs.N_CAPTION_PER_MODEL))
+    print("batch_size: {} shapes per batch, {} texts per batch".format(unique_batch_size, unique_batch_size * configs.N_CAPTION_PER_MODEL))
     print("num_worker:", num_worker)
     print("verbose:", verbose)
     print("gpu:", gpu)
@@ -137,7 +137,7 @@ def main(args):
         'metric': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
+    settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, num_worker)
     solver = EmbeddingSolver(criterion, optimizer, settings)
     if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, settings)):
         os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, settings))
