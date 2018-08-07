@@ -12,17 +12,17 @@ import lib.configs as configs
 from torch.nn.utils import clip_grad_value_
 
 class EmbeddingSolver():
-    def __init__(self, criterion, optimizer, settings, reduce_step):
+    def __init__(self, criterion, optimizer, settings):
         self.criterion = criterion
         self.optimizer = optimizer
         self.settings = settings
-        self.reduce_step = reduce_step
 
     def forward(self, shape_encoder, text_encoder, shapes, texts, labels):
         # load
-        shapes = shapes.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(shapes.size(0) // 2)]).cuda())
+        batch_size = shapes.size(0)
+        shapes = shapes.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
         texts = texts.cuda()
-        shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(labels.size(0) // 2)]).cuda())
+        shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
         text_labels = labels.cuda()
         
         # forward pass
@@ -40,17 +40,17 @@ class EmbeddingSolver():
         embedding = t
         metric_loss_tt = self.criterion['metric'](embedding, 'TT')
         # ST
-        s_mask = torch.ByteTensor([[1], [0]]).repeat(t.size(0) // 2, 128).cuda()
-        t_mask = torch.ByteTensor([[0], [1]]).repeat(t.size(0) // 2, 128).cuda()
+        s_mask = torch.ByteTensor([[1], [0]]).repeat(batch_size // 2, 128).cuda()
+        t_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size // 2, 128).cuda()
         selected_s = s
-        selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(t.size(0) // 2)]).cuda())
-        masked_s = torch.zeros(t.size(0), 128).cuda().masked_scatter_(s_mask, selected_s)
-        masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, selected_t)
+        selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+        masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+        masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
         embedding = masked_s + masked_t
         metric_loss_st = self.criterion['metric'](embedding, 'ST')
         # flip t
-        flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(t.size(0) // 2)]).cuda())
-        flipped_masked_t = torch.zeros(t.size(0), 128).cuda().masked_scatter_(t_mask, flipped_t)
+        flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+        flipped_masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, flipped_t)
         embedding = masked_s + flipped_masked_t
         metric_loss_st += self.criterion['metric'](embedding, 'ST')
         
@@ -101,7 +101,7 @@ class EmbeddingSolver():
         print("[{}] starting...\n".format(rank))
         total_iter = len(dataloader['train']) * epoch
         iter_count = 0
-        scheduler = StepLR(self.optimizer, step_size=self.reduce_step, gamma=0.8)
+        scheduler = StepLR(self.optimizer, step_size=configs.REDUCE_STEP, gamma=configs.REDUCE_FACTOR)
         for epoch_id in range(epoch):
             print("[{}] epoch [{}/{}] starting...\n".format(rank, epoch_id+1, epoch))
             scheduler.step()

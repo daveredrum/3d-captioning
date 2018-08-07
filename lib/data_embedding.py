@@ -15,6 +15,7 @@ class Shapenet():
         self.shapenet_split_train, self.shapenet_split_val, self.shapenet_split_test = shapenet_split
         self.train_size, self.val_size, self.test_size = size_split
         self.batch_size = batch_size
+        self.bad_ids = pickle.load(open(configs.PROBLEMATIC, 'rb'))
 
         # select sets
         if self.train_size != -1:
@@ -41,7 +42,7 @@ class Shapenet():
             idx2label = {}
             for label, item in enumerate(getattr(self, "shapenet_split_{}".format(phase))):
                 model_id = item[0]
-                if model_id not in idx2label.keys():
+                if model_id not in idx2label.keys() and model_id not in self.bad_ids:
                     idx2label[model_id] = str(label)
             
             label2idx = {label: idx for idx, label in idx2label.items()}
@@ -84,6 +85,8 @@ class Shapenet():
             for item in split_data:
                 # get model_id
                 model_id = item[0]
+                if model_id in self.bad_ids:
+                    continue
                 # get label
                 label = self.cat2label[item[1]]
                 # truncate long captions
@@ -131,16 +134,16 @@ class Shapenet():
             # aggregate batch
             data = []
             idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
-            chosen_idx = []
+            chosen_label = []
             while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
-                if len(chosen_idx) == self.batch_size:
-                    chosen_idx = []
+                if len(chosen_label) == self.batch_size:
+                    chosen_label = []
                 idx = np.random.randint(len(data_comb))
-                if idx2label[idx] in chosen_idx:
+                if idx2label[idx] in chosen_label:
                     continue
                 else:
                     data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
-                    chosen_idx.append(idx)
+                    chosen_label.append(idx2label[idx])
             
             setattr(self, "{}_data".format(phase), data)
 

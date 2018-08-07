@@ -7,6 +7,7 @@ PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
 
 # nrrd
 SHAPENET_NRRD = "{}/{}.nrrd" # model_id
+PROBLEMATIC = "data/shapenet_problematic.p"
 
 # path to split
 SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
@@ -31,6 +32,7 @@ MAX_LENGTH = 18
 SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}" # mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process
 N_CAPTION_PER_MODEL = 2
 REDUCE_STEP = 10
+REDUCE_FACTOR = 0.95
 WALKER_WEIGHT = 1.
 VISIT_WEIGHT = 0.25
 CLIP_VALUE = 5.

@@ -20,7 +20,7 @@ class RoundTripLoss(nn.Module):
     def __init__(self, weight=1.):
         super(RoundTripLoss, self).__init__()
         self.weight = weight
-        self.loss = nn.KLDivLoss()
+        # self.loss = nn.KLDivLoss()
     
     def forward(self, a, b, labels):
         '''
@@ -46,15 +46,15 @@ class RoundTripLoss(nn.Module):
         # build inputs
         inputs = a2b.matmul(b2a)
 
-        # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
+        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
+        # return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
 class AssociationLoss(nn.Module):
     def __init__(self, weight=1.):
         super(AssociationLoss, self).__init__()
         self.weight = weight
-        self.loss = nn.KLDivLoss()
+        # self.loss = nn.KLDivLoss()
     
     def forward(self, a, b):
         '''
@@ -75,8 +75,8 @@ class AssociationLoss(nn.Module):
         # build targets
         targets = torch.FloatTensor(inputs.size()).fill_(1. / inputs.size(1)).cuda()
 
-        # return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
-        return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
+        return -self.weight * targets.mul(torch.log(1e-8 + inputs)).sum(1).mean()
+        # return self.weight * self.loss(torch.log(1e-8 + inputs), targets)
 
 
 class InstanceMetricLoss(nn.Module):

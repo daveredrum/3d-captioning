@@ -32,12 +32,12 @@ def get_dataset(data, idx2label, size, resolution):
 def check_dataset(dataset, batch_size):
     flag = False
     for _, ds in dataset.items():
-        if len(ds) % batch_size <= 2:
+        if len(ds) % (batch_size * configs.N_CAPTION_PER_MODEL) != 0:
             flag = True
     
     return flag
 
-def get_dataloader(split_size, batch_size, resolution, num_worker):
+def get_dataloader(split_size, unique_batch_size, resolution, num_worker):
     shapenet = Shapenet(
         [
             pickle.load(open("data/shapenet_split_train.p", 'rb')),
@@ -49,7 +49,7 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
             split_size[1],
             0
         ],
-        batch_size,
+        unique_batch_size,
         True
     )
     train_dataset = {
@@ -68,15 +68,15 @@ def get_dataloader(split_size, batch_size, resolution, num_worker):
         i: {
             'train': DataLoader(
                 train_dataset[i], 
-                batch_size=batch_size,  
+                batch_size=unique_batch_size * configs.N_CAPTION_PER_MODEL,  
                 collate_fn=collate_shapenet, 
-                drop_last=check_dataset(train_dataset, batch_size)
+                drop_last=check_dataset(train_dataset, unique_batch_size * configs.N_CAPTION_PER_MODEL)
             ),
             'val': DataLoader(
                 val_dataset[i], 
-                batch_size=batch_size, 
+                batch_size=unique_batch_size * configs.N_CAPTION_PER_MODEL, 
                 collate_fn=collate_shapenet, 
-                drop_last=check_dataset(val_dataset, batch_size)
+                drop_last=check_dataset(val_dataset, unique_batch_size * configs.N_CAPTION_PER_MODEL)
             )
         } for i in range(num_worker)
     }
@@ -93,7 +93,7 @@ def main(args):
     learning_rate = args.learning_rate
     weight_decay = args.weight_decay
     epoch = args.epoch
-    batch_size = args.batch_size
+    unique_batch_size = args.batch_size
     num_worker = args.num_worker
     verbose = args.verbose
     gpu = args.gpu
@@ -105,17 +105,19 @@ def main(args):
 
     # prepare data
     print("\npreparing data...\n")
-    shapenet, dataloader = get_dataloader([train_size, val_size], batch_size * configs.N_CAPTION_PER_MODEL, voxel, num_worker)
+    shapenet, dataloader = get_dataloader([train_size, val_size], unique_batch_size, voxel, num_worker)
     
     # report settings
     print("[settings]")
     print("voxel:", voxel)
-    print("train_size: {} -> {}, {} per worker".format(shapenet.train_size, len(shapenet.train_data), len(shapenet.train_data) // num_worker))
-    print("val_size: {} -> {}, {} per worker".format(shapenet.val_size, len(shapenet.val_data), len(shapenet.val_data)))
+    print("train_size: {} samples -> {} pairs in total, {} pairs per worker".format(
+        shapenet.train_size, len(shapenet.train_data), len(dataloader[0]['train']) * unique_batch_size * configs.N_CAPTION_PER_MODEL))
+    print("val_size: {} samples -> {} pairs in total, {} pairs per worker".format(
+        shapenet.val_size, len(shapenet.val_data), len(dataloader[0]['val']) * unique_batch_size * configs.N_CAPTION_PER_MODEL))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
-    print("batch_size:", batch_size)
+    print("batch_size: {} shapes per batch, {} text per batch".format(unique_batch_size, unique_batch_size * configs.N_CAPTION_PER_MODEL))
     print("num_worker:", num_worker)
     print("verbose:", verbose)
     print("gpu:", gpu)
@@ -136,7 +138,7 @@ def main(args):
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
     settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, batch_size, num_worker)
-    solver = EmbeddingSolver(criterion, optimizer, settings, configs.REDUCE_STEP)
+    solver = EmbeddingSolver(criterion, optimizer, settings)
     if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, settings)):
         os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, settings))
 
