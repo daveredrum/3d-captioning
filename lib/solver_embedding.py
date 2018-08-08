@@ -29,16 +29,27 @@ class EmbeddingSolver():
         s = shape_encoder(shapes)
         t = text_encoder(texts)
         
-        # compute train_log
-        walker_loss_tst = self.criterion['walker'](t, s, text_labels)
-        walker_loss_sts = self.criterion['walker'](s, t, shape_labels)
+        # LBA
+        # TST
+        # build target
+        text_targets = text_labels.unsqueeze(0).expand(text_labels.size(0), text_labels.size(0)).eq(
+            text_labels.unsqueeze(1).expand(text_labels.size(0), text_labels.size(0))
+        ).float()
+        text_targets /= text_targets.sum(1)
+        walker_loss_tst = self.criterion['walker'](t, s, text_targets)
         visit_loss_ts = self.criterion['visit'](t, s)
+        # TST
+        # build target
+        shape_targets = shape_labels.unsqueeze(0).expand(shape_labels.size(0), shape_labels.size(0)).eq(
+            shape_labels.unsqueeze(1).expand(shape_labels.size(0), shape_labels.size(0))
+        ).float()
+        walker_loss_sts = self.criterion['walker'](s, t, shape_targets)
         visit_loss_st = self.criterion['visit'](s, t)
 
         # ML
         # TT
         embedding = t
-        metric_loss_tt = self.criterion['metric'](embedding, 'TT')
+        metric_loss_tt = self.criterion['metric'](embedding)
         # ST
         s_mask = torch.ByteTensor([[1], [0]]).repeat(batch_size // 2, 128).cuda()
         t_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size // 2, 128).cuda()
@@ -47,12 +58,12 @@ class EmbeddingSolver():
         masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
         masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
         embedding = masked_s + masked_t
-        metric_loss_st = self.criterion['metric'](embedding, 'ST')
+        metric_loss_st = self.criterion['metric'](embedding)
         # flip t
         flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
         flipped_masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, flipped_t)
         embedding = masked_s + flipped_masked_t
-        metric_loss_st += self.criterion['metric'](embedding, 'ST')
+        metric_loss_st += self.criterion['metric'](embedding)
         
         # add norm penalty
         shape_norm_penalty = self._norm_penalty(s)
@@ -84,7 +95,7 @@ class EmbeddingSolver():
             losses = self.forward(shape_encoder, text_encoder, shapes, texts, labels)
 
             # record
-            val_log['val_loss'].append(losses['loss'].item())
+            val_log['total_loss'].append(losses['loss'].item())
             val_log['walker_loss_tst'].append(losses['walker_loss_tst'].item())
             val_log['walker_loss_sts'].append(losses['walker_loss_sts'].item())
             val_log['visit_loss_ts'].append(losses['visit_loss_ts'].item())
@@ -97,11 +108,35 @@ class EmbeddingSolver():
 
         return val_log
 
-    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose):
+    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose, return_log):
         print("[{}] starting...\n".format(rank))
         total_iter = len(dataloader['train']) * epoch
         iter_count = 0
         scheduler = StepLR(self.optimizer, step_size=configs.REDUCE_STEP, gamma=configs.REDUCE_FACTOR)
+        log = {
+            'train': {
+                'total_loss': [],
+                'walker_loss_tst': [],
+                'walker_loss_sts': [],
+                'visit_loss_ts': [],
+                'visit_loss_st': [],
+                'metric_loss_st': [],
+                'metric_loss_tt': [],
+                'shape_norm_penalty': [],
+                'text_norm_penalty': []
+            },
+            'val': {
+                'total_loss': [],
+                'walker_loss_tst': [],
+                'walker_loss_sts': [],
+                'visit_loss_ts': [],
+                'visit_loss_st': [],
+                'metric_loss_st': [],
+                'metric_loss_tt': [],
+                'shape_norm_penalty': [],
+                'text_norm_penalty': []
+            }
+        }
         for epoch_id in range(epoch):
             print("[{}] epoch [{}/{}] starting...\n".format(rank, epoch_id+1, epoch))
             scheduler.step()
@@ -109,7 +144,7 @@ class EmbeddingSolver():
                 'forward': [],
                 'backward': [],
                 'iter_time': [],
-                'train_loss': [],
+                'total_loss': [],
                 'walker_loss_tst': [],
                 'walker_loss_sts': [],
                 'visit_loss_ts': [],
@@ -121,7 +156,7 @@ class EmbeddingSolver():
             }
             val_log = {
                 'iter_time': [],
-                'val_loss': [],
+                'total_loss': [],
                 'walker_loss_tst': [],
                 'walker_loss_sts': [],
                 'visit_loss_ts': [],
@@ -139,7 +174,7 @@ class EmbeddingSolver():
                 losses = self.forward(shape_encoder, text_encoder, shapes, texts, labels)
                 train_log['forward'].append(time.time() - forward_since)
                 # record
-                train_log['train_loss'].append(losses['loss'].item())
+                train_log['total_loss'].append(losses['loss'].item())
                 train_log['walker_loss_tst'].append(losses['walker_loss_tst'].item())
                 train_log['walker_loss_sts'].append(losses['walker_loss_sts'].item())
                 train_log['visit_loss_ts'].append(losses['visit_loss_ts'].item())
@@ -173,12 +208,12 @@ class EmbeddingSolver():
             
             # best
             with lock:
-                if np.mean(val_log['val_loss']) < best['loss'].value:
+                if np.mean(val_log['total_loss']) < best['total_loss'].value:
                     # report best
-                    print("[{}] best_loss achieved: {}".format(rank, np.mean(val_log['val_loss'])))
+                    print("[{}] best_loss achieved: {}".format(rank, np.mean(val_log['total_loss'])))
                     best['rank'].value = rank
                     best['epoch'].value = epoch_id
-                    best['loss'].value = float(np.mean(val_log['val_loss']))
+                    best['total_loss'].value = float(np.mean(val_log['total_loss']))
                     best['walker_loss_tst'].value = float(np.mean(val_log['walker_loss_tst']))
                     best['walker_loss_sts'].value = float(np.mean(val_log['walker_loss_sts']))
                     best['visit_loss_ts'].value = float(np.mean(val_log['visit_loss_ts']))
@@ -195,8 +230,30 @@ class EmbeddingSolver():
                     torch.save(shape_encoder, os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
                     torch.save(text_encoder, os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
 
+            # epoch log
+            log['train']['total_loss'].append(np.mean(train_log['total_loss']))
+            log['train']['walker_loss_tst'].append(np.mean(train_log['walker_loss_tst']))
+            log['train']['walker_loss_sts'].append(np.mean(train_log['walker_loss_sts']))
+            log['train']['visit_loss_ts'].append(np.mean(train_log['visit_loss_ts']))
+            log['train']['visit_loss_st'].append(np.mean(train_log['visit_loss_st']))
+            log['train']['metric_loss_st'].append(np.mean(train_log['metric_loss_st']))
+            log['train']['metric_loss_tt'].append(np.mean(train_log['metric_loss_tt']))
+            log['train']['shape_norm_penalty'].append(np.mean(train_log['shape_norm_penalty']))
+            log['train']['text_norm_penalty'].append(np.mean(train_log['text_norm_penalty']))
+            log['val']['total_loss'].append(np.mean(val_log['total_loss']))
+            log['val']['walker_loss_tst'].append(np.mean(val_log['walker_loss_tst']))
+            log['val']['walker_loss_sts'].append(np.mean(val_log['walker_loss_sts']))
+            log['val']['visit_loss_ts'].append(np.mean(val_log['visit_loss_ts']))
+            log['val']['visit_loss_st'].append(np.mean(val_log['visit_loss_st']))
+            log['val']['metric_loss_st'].append(np.mean(val_log['metric_loss_st']))
+            log['val']['metric_loss_tt'].append(np.mean(val_log['metric_loss_tt']))
+            log['val']['shape_norm_penalty'].append(np.mean(val_log['shape_norm_penalty']))
+            log['val']['text_norm_penalty'].append(np.mean(val_log['text_norm_penalty']))
+
         # done
         print("[{}] done...\n".format(rank))
+        with lock:
+            return_log.put(log)
 
         # return best['shape_encoder'], best['text_encoder']
 
@@ -217,8 +274,8 @@ class EmbeddingSolver():
         
         # show report
         print("----------------------[{}]iter: [{}/{}]----------------------".format(rank, iter_count, total_iter))
-        print("[loss] loss: %f" % (
-            np.mean(log['train_loss'])
+        print("[loss] total_loss: %f" % (
+            np.mean(log['total_loss'])
         ))
         print("[loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
             np.mean(log['walker_loss_tst']),
@@ -250,11 +307,11 @@ class EmbeddingSolver():
         # show report
         print("[{}] epoch [{}/{}] done...".format(rank, epoch_id+1, epoch))
         print("------------------------summary------------------------")
-        print("[train] loss: %f" % (
-            np.mean(train_log['train_loss'])
+        print("[train] total_loss: %f" % (
+            np.mean(train_log['total_loss'])
         ))
-        print("[val]   loss: %f" % (
-            np.mean(val_log['val_loss'])
+        print("[val]   total_loss: %f" % (
+            np.mean(val_log['total_loss'])
         ))
         print("[train] walker_loss_tst: %f, walker_loss_sts: %f" % (
             np.mean(train_log['walker_loss_tst']),

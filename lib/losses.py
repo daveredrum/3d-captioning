@@ -22,7 +22,7 @@ class RoundTripLoss(nn.Module):
         self.weight = weight
         # self.loss = nn.KLDivLoss()
     
-    def forward(self, a, b, labels):
+    def forward(self, a, b, targets):
         '''
         params: 
             a: 2D embedding tensor, either text embeddings or shape embeddings
@@ -32,12 +32,6 @@ class RoundTripLoss(nn.Module):
             loss: a positive value of cross entropy loss 
         '''
         
-        # build target
-        targets = labels.unsqueeze(0).expand(labels.size(0), labels.size(0)).eq(
-            labels.unsqueeze(1).expand(labels.size(0), labels.size(0))
-        ).float() / configs.N_CAPTION_PER_MODEL
-
-        targets /= targets.sum(1)
         # similarity
         sim = a.matmul(b.transpose(1, 0).contiguous())
         # walk
@@ -107,7 +101,7 @@ class InstanceMetricLoss(nn.Module):
         return D, Dexpm
         
 
-    def forward(self, inputs, mode):
+    def forward(self, inputs):
         '''
         instance-level metric learning loss, assuming all inputs are from different catagories
         labels are not needed
@@ -117,7 +111,7 @@ class InstanceMetricLoss(nn.Module):
             b: 2D embedding tensor, either text embeddings or shape embeddings
         
         return:
-            instance-level metric_loss: see https://arxiv.org/pdf/1511.06452.pdf Sec.4.2
+            instance-level metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.2
         '''
 
         batch_size = inputs.size(0)
@@ -132,12 +126,8 @@ class InstanceMetricLoss(nn.Module):
             pos_j = pos_id * 2 + 1
             pos_pair = (pos_i, pos_j)
 
-            if mode == 'TT':
-                neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
-                neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
-            else:
-                neg_i = [pos_i * batch_size + k * 2 + 1 for k in range(batch_size // 2) if k != pos_j]
-                neg_j = [pos_j * batch_size + l * 2 for l in range(batch_size // 2) if l != pos_i]
+            neg_i = [pos_i * batch_size + k * 2 + 1 for k in range(batch_size // 2) if k != pos_j]
+            neg_j = [pos_j * batch_size + l * 2 for l in range(batch_size // 2) if l != pos_i]
 
             # neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
             # neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]

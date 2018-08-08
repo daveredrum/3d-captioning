@@ -24,6 +24,7 @@ from lib.solver_embedding import *
 import torch.multiprocessing as mp
 import ctypes
 import sys
+from lib.utils import decode_log_embedding, draw_curves_embedding
 
 def get_dataset(data, idx2label, size, resolution):
     for i in range(0, len(data), size):
@@ -149,7 +150,7 @@ def main(args):
     best = {
         'rank': mp.Value('i', 0),
         'epoch': mp.Value('i', 0),
-        'loss': mp.Value(ctypes.c_float, float("inf")),
+        'total_loss': mp.Value(ctypes.c_float, float("inf")),
         'walker_loss_tst': mp.Value(ctypes.c_float, float("inf")),
         'walker_loss_sts': mp.Value(ctypes.c_float, float("inf")),
         'visit_loss_ts': mp.Value(ctypes.c_float, float("inf")),
@@ -160,9 +161,10 @@ def main(args):
         'text_norm_penalty': mp.Value(ctypes.c_float, float("inf")),
     }
     lock = mp.Lock()
+    return_log = mp.Queue()
     processes = []
     for rank in range(num_worker):
-        p = mp.Process(target=solver.train, args=(shape_encoder, text_encoder, rank, best, lock, dataloader[rank], epoch, verbose))
+        p = mp.Process(target=solver.train, args=(shape_encoder, text_encoder, rank, best, lock, dataloader[rank], epoch, verbose, return_log))
         p.start()
         processes.append(p)
     for p in processes:
@@ -173,8 +175,8 @@ def main(args):
     print("[Loss] epoch: %d" % (
         best['epoch'].value
     ))
-    print("[Loss] val_loss: %f" % (
-        best['loss'].value
+    print("[Loss] total_loss: %f" % (
+        best['total_loss'].value
     ))
     print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
         best['walker_loss_tst'].value,
@@ -188,10 +190,14 @@ def main(args):
         best['metric_loss_st'].value,
         best['metric_loss_tt'].value
     ))
-    print("[Loss] shape_norm_penalty: %f, text_norm_penalty: %f" % (
+    print("[Loss] shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
         best['shape_norm_penalty'].value,
         best['text_norm_penalty'].value
     ))
+
+    # draw curves
+    train_log, val_log = decode_log_embedding(return_log)
+    draw_curves_embedding(train_log, val_log, os.path.join(configs.OUTPUT_EMBEDDING, settings))
 
 
 if __name__ == '__main__':
