@@ -75,7 +75,7 @@ class EmbeddingSolver():
         loss += (configs.SHAPE_NORM_MULTIPLIER * shape_norm_penalty + configs.TEXT_NORM_MULTIPLIER * text_norm_penalty)
 
         losses = {
-            'loss': loss,
+            'total_loss': loss,
             'walker_loss_tst': walker_loss_tst,
             'walker_loss_sts': walker_loss_sts,
             'visit_loss_ts': visit_loss_ts,
@@ -174,7 +174,7 @@ class EmbeddingSolver():
                 losses = self.forward(shape_encoder, text_encoder, shapes, texts, labels)
                 train_log['forward'].append(time.time() - forward_since)
                 # record
-                train_log['total_loss'].append(losses['loss'].item())
+                train_log['total_loss'].append(losses['total_loss'].item())
                 train_log['walker_loss_tst'].append(losses['walker_loss_tst'].item())
                 train_log['walker_loss_sts'].append(losses['walker_loss_sts'].item())
                 train_log['visit_loss_ts'].append(losses['visit_loss_ts'].item())
@@ -187,7 +187,7 @@ class EmbeddingSolver():
                 # back prop
                 self.optimizer.zero_grad()
                 backward_since = time.time()
-                losses['loss'].backward()
+                losses['total_loss'].backward()
                 clip_grad_value_(list(shape_encoder.parameters()) + list(text_encoder.parameters()), configs.CLIP_VALUE)
                 self.optimizer.step()
                 train_log['backward'].append(time.time() - backward_since)

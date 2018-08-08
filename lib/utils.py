@@ -97,6 +97,7 @@ def decode_log_embedding(return_log):
     }
     while not return_log.empty():
         data = return_log.get()
+        print(data.keys())
         train_log['total_loss'].append(data['train']['total_loss'])
         train_log['walker_loss_tst'].append(data['train']['walker_loss_tst'])
         train_log['walker_loss_sts'].append(data['train']['walker_loss_sts'])
