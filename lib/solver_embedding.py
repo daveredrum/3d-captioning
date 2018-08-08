@@ -211,6 +211,7 @@ class EmbeddingSolver():
                 if np.mean(train_log['total_loss']) < best['total_loss'].value:
                     # report best
                     print("[{}] best_loss achieved: {}".format(rank, np.mean(train_log['total_loss'])))
+                    print("[{}] current val_loss: {}".format(rank, np.mean(val_log['total_loss'])))
                     best['rank'].value = rank
                     best['epoch'].value = epoch_id
                     best['total_loss'].value = float(np.mean(train_log['total_loss']))
