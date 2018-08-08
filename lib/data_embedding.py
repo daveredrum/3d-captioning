@@ -141,26 +141,26 @@ class Shapenet():
             for key in data_agg.keys():
                 comb = list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL))
                 if comb:
-                    # data_comb.extend(comb)
-                    data_comb.extend(random.choice(comb))
+                    data_comb.extend(comb)
+                    # data_comb.extend(random.choice(comb))
             
-            setattr(self, "{}_data".format(phase), data_comb)
+            # setattr(self, "{}_data".format(phase), data_comb)
 
-            # # aggregate batch
-            # data = []
-            # idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
-            # chosen_label = []
-            # while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
-            #     if len(chosen_label) == self.batch_size:
-            #         chosen_label = []
-            #     idx = np.random.randint(len(data_comb))
-            #     if idx2label[idx] in chosen_label:
-            #         continue
-            #     else:
-            #         data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
-            #         chosen_label.append(idx2label[idx])
+            # aggregate batch
+            data = []
+            idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
+            chosen_label = []
+            while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
+                if len(chosen_label) == self.batch_size:
+                    chosen_label = []
+                idx = np.random.randint(len(data_comb))
+                if idx2label[idx] in chosen_label:
+                    continue
+                else:
+                    data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
+                    chosen_label.append(idx2label[idx])
             
-            # setattr(self, "{}_data".format(phase), data)
+            setattr(self, "{}_data".format(phase), data)
 
 
 

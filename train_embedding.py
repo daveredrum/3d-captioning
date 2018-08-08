@@ -112,9 +112,15 @@ def main(args):
     print("[settings]")
     print("voxel:", voxel)
     print("train_size: {} samples -> {} pairs in total, {} pairs per worker".format(
-        shapenet.train_size, len(shapenet.train_data), len(dataloader[0]['train']) * unique_batch_size * configs.N_CAPTION_PER_MODEL))
+        shapenet.train_size, 
+        len(shapenet.train_data) * unique_batch_size * configs.N_CAPTION_PER_MODEL * num_worker, 
+        len(dataloader[0]['train']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
+    ))
     print("val_size: {} samples -> {} pairs in total, {} pairs per worker".format(
-        shapenet.val_size, len(shapenet.val_data), len(dataloader[0]['val']) * unique_batch_size * configs.N_CAPTION_PER_MODEL))
+        shapenet.val_size, 
+        len(shapenet.val_data) * unique_batch_size * configs.N_CAPTION_PER_MODEL * num_worker, 
+        len(dataloader[0]['val']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
+    ))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
