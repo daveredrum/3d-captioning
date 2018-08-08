@@ -210,7 +210,7 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=0.001, help="learepoch for optimizer")
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty oepochimizer")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
-    parser.add_argument("--num_worker", type=int, default=10, help="number of workers") 
+    parser.add_argument("--num_worker", type=int, default=1, help="number of workers") 
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     args = parser.parse_args()
     main(args)

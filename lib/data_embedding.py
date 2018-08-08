@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 import lib.configs as configs
 import nrrd
 from itertools import combinations
+import random
 
 class Shapenet():
     def __init__(self, shapenet_split, size_split, batch_size, is_training):
@@ -129,7 +130,8 @@ class Shapenet():
             # get all combinations
             data_comb = []
             for key in data_agg.keys():
-                data_comb.extend(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL)))
+                # data_comb.extend(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL)))
+                data_comb.extend(random.choice(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL))))
 
             # aggregate batch
             data = []

@@ -95,7 +95,7 @@ class EmbeddingSolver():
             losses = self.forward(shape_encoder, text_encoder, shapes, texts, labels)
 
             # record
-            val_log['total_loss'].append(losses['loss'].item())
+            val_log['total_loss'].append(losses['total_loss'].item())
             val_log['walker_loss_tst'].append(losses['walker_loss_tst'].item())
             val_log['walker_loss_sts'].append(losses['walker_loss_sts'].item())
             val_log['visit_loss_ts'].append(losses['visit_loss_ts'].item())
