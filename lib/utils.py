@@ -97,7 +97,6 @@ def decode_log_embedding(return_log):
     }
     while not return_log.empty():
         data = return_log.get()
-        print(data.keys())
         train_log['total_loss'].append(data['train']['total_loss'])
         train_log['walker_loss_tst'].append(data['train']['walker_loss_tst'])
         train_log['walker_loss_sts'].append(data['train']['walker_loss_sts'])
@@ -148,7 +147,6 @@ def draw_curves_embedding(train_log, val_log, root):
     plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
-    print(train_log['total_loss'])
     epochs = train_log['total_loss'].shape[0]
 
     # plot total loss

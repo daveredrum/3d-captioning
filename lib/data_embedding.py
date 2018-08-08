@@ -83,6 +83,7 @@ class Shapenet():
         for phase in ["train", "val", "test"]:
             split_data = getattr(self, "shapenet_split_{}".format(phase))
             transformed = []
+            data_agg = {}
             for item in split_data:
                 # get model_id
                 model_id = item[0]
@@ -104,8 +105,16 @@ class Shapenet():
                 indices = [int(self.dict_word2idx["<START>"])] + indices + [int(self.dict_word2idx["<END>"])]
                 # load into result
                 transformed.append((model_id, label, indices))
+
+                # aggregate by key
+                if model_id in data_agg.keys():
+                    data_agg[model_id].append((label, indices))
+                else:
+                    data_agg[model_id] = [(label, indices)]
+
             setattr(self, "{}_data".format(phase), transformed)
-            setattr(self, "{}_size".format(phase), len(transformed))
+            setattr(self, "{}_data_agg".format(phase), data_agg)
+            setattr(self, "{}_size".format(phase), len(data_agg.keys()))
     
     def _aggregate(self):
         '''
