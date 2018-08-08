@@ -130,9 +130,10 @@ class Shapenet():
             # get all combinations
             data_comb = []
             for key in data_agg.keys():
-                if data_agg[key]:
-                    # data_comb.extend(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL)))
-                    data_comb.extend(random.choice(list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL))))
+                comb = list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL))
+                if comb:
+                    # data_comb.extend(comb)
+                    data_comb.extend(random.choice(comb))
 
             # aggregate batch
             data = []
