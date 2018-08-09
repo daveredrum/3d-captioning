@@ -267,7 +267,7 @@ def compute_pr_at_k(indices, labels, n_neighbors, num_embeddings, fit_labels=Non
     precision_at_k = np.sum(num_correct/np.arange(1,n_neighbors+1), axis=0) / num_embeddings
     #print('recall_at_k shape:', recall_at_k.shape)
     print('     k: precision recall recall_rate ndcg')
-    for k in [1, 5]:
+    for k in [0, 4]:
         print('pr @ {}: {:.5f} {:.5f} {:.5f} {:.5f}'.format(k + 1, precision_at_k[k], recall_at_k[k], recall_rate_at_k[k], ave_ndcg_at_k[k]))
     Metrics = collections.namedtuple('Metrics', 'precision recall recall_rate ndcg')
     return Metrics(precision_at_k, recall_at_k, recall_rate_at_k, ave_ndcg_at_k)
