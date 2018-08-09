@@ -324,7 +324,7 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
         embeddings_dict,
         mode
     )
-    print_model_id_info(model_id_to_label)
+    # print_model_id_info(model_id_to_label)
 
     n_neighbors = 20
 
