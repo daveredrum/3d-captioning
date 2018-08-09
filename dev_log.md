@@ -12,39 +12,39 @@ __progress:__
     <td colspan=3 align="center">Text-Shape</td>
   </tr>
   <tr>
-    <td>RR@1</td>
-    <td>RR@5</td>
-    <td>NDCG@5</td>
-    <td>RR@1</td>
-    <td>RR@5</td>
-    <td>NDCG@5</td>
+    <td align="center">RR@1</td>
+    <td align="center">RR@5</td>
+    <td align="center">NDCG@5</td>
+    <td align="center">RR@1</td>
+    <td align="center">RR@5</td>
+    <td align="center">NDCG@5</td>
   </tr>
   <tr>
     <td>Baseline</td>
-    <td>0.07</td>
-    <td>0.34</td>
-    <td>0.06</td>
-    <td>0.11</td>
-    <td>0.35</td>
-    <td>0.23</td>
+    <td align="center">0.07</td>
+    <td align="center">0.34</td>
+    <td align="center">0.06</td>
+    <td align="center">0.11</td>
+    <td align="center">0.35</td>
+    <td align="center">0.23</td>
   </tr>
   <tr>
     <td>Text2Shape</td>
-    <td>0.83</td>
-    <td>3.37</td>
-    <td>0.73</td>
-    <td>0.40</td>
-    <td>2.37</td>
-    <td>1.35</td>
+    <td align="center">0.83</td>
+    <td align="center">3.37</td>
+    <td align="center">0.73</td>
+    <td align="center">0.40</td>
+    <td align="center">2.37</td>
+    <td align="center">1.35</td>
   </tr>
   <tr>
     <td><b>ours</b></td>
-    <td>0.67</td>
-    <td>2.29</td>
-    <td>0.62</td>
-    <td><b>0.63</b></td>
-    <td>2.30</td>
-    <td><b>1.44</b></td>
+    <td align="center">0.67</td>
+    <td align="center">2.29</td>
+    <td align="center">0.62</td>
+    <td align="center"><b>0.63</b></td>
+    <td align="center">2.30</td>
+    <td align="center"><b>1.44</b></td>
   </tr>
 </table>
 
