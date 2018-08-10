@@ -1,9 +1,9 @@
 
 # path for shapenet
-VOXEL = 32
 DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
 SHAPE_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
+SHAPE_IMG = "{}/{}.png" # model_id
 
 # nrrd
 SHAPENET_NRRD = "{}/{}.nrrd" # model_id
@@ -31,11 +31,16 @@ MAX_LENGTH = 18
 # parameters of training
 SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}" # mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process
 N_CAPTION_PER_MODEL = 2
+RANDOM_SAMPLE = False
 REDUCE_STEP = 10
 REDUCE_FACTOR = 0.95
 WALKER_WEIGHT = 1.
 VISIT_WEIGHT = 0.25
 CLIP_VALUE = 5.
+EVAL_DATASET = 'val'
+EVAL_FREQ = 1000
+EVAL_MODE = 's2t'
+EVAL_METRIC = 'cosine'
 
 # parameters of ML
 COSINE_DISTANCE = True

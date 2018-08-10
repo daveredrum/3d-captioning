@@ -10,6 +10,17 @@ import numpy as np
 import os
 import pickle
 import sys
+import torch
+import torch.nn as nn
+from PIL import Image
+import random
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
+# HACK
+import sys
+sys.path.append(".")
+import lib.configs as configs
 
 
 def construct_embeddings_matrix(dataset, embedding, mode):
@@ -269,6 +280,7 @@ def compute_pr_at_k(indices, labels, n_neighbors, num_embeddings, fit_labels=Non
     print('     k: precision recall recall_rate ndcg')
     for k in [0, 4]:
         print('pr @ {}: {:.5f} {:.5f} {:.5f} {:.5f}'.format(k + 1, precision_at_k[k], recall_at_k[k], recall_rate_at_k[k], ave_ndcg_at_k[k]))
+    print()
     Metrics = collections.namedtuple('Metrics', 'precision recall recall_rate ndcg')
     return Metrics(precision_at_k, recall_at_k, recall_rate_at_k, ave_ndcg_at_k)
 
@@ -343,21 +355,120 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
 
     return pr_at_k
 
+def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
+    # settings
+    plt.switch_backend("agg")
+    fig = plt.gcf()
+    fig.set_size_inches(16, 24)
+
+    # plot
+    for i in range(num):
+        plt.subplot(num, 1, i + 1)
+        img = Image.open(os.path.join(configs.SHAPE_ROOT.format(voxel), configs.SHAPE_IMG.format(keys[chosen[i]], keys[chosen[i]])))
+        plt.imshow(img.resize((224, 224)))
+        plt.text(240, 60, text_raw[results[chosen[i]][0].item()], fontsize=14)
+        plt.text(240, 90, text_raw[results[chosen[i]][1].item()], fontsize=14)
+        plt.text(240, 120, text_raw[results[chosen[i]][2].item()], fontsize=14)
+        plt.text(240, 150, text_raw[results[chosen[i]][3].item()], fontsize=14)
+        plt.text(240, 180, text_raw[results[chosen[i]][4].item()], fontsize=14)
+        plt.axis('off')
+    
+    plt.savefig(os.path.join(root, 'retrieval', 'shape-to-text.png'), bbox_inches="tight")
+
+def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
+    # settings
+    plt.switch_backend("agg")
+    fig = plt.gcf()
+    fig.set_size_inches(15, 9)
+    outer = gridspec.GridSpec(3, 1, wspace=0.2, hspace=0.5)
+
+    # plot
+    for i in range(3):
+        inner = gridspec.GridSpecFromSubplotSpec(1, 5,subplot_spec=outer[i], wspace=0.1, hspace=0.1)
+        ax = plt.Subplot(fig, outer[i])
+        ax.set_title(text_raw[chosen[i]], fontsize=14)
+        ax.axis('off')
+        fig.add_subplot(ax)
+
+        for j in range(5):
+            ax = plt.Subplot(fig, inner[j])
+            img = Image.open(os.path.join(configs.SHAPE_ROOT.format(voxel), configs.SHAPE_IMG.format(keys[results[chosen[i]][j]], keys[results[chosen[i]][j]])))
+            ax.imshow(img.resize((224, 224)))
+            ax.axis('off')
+            fig.add_subplot(ax)
+
+    plt.savefig(os.path.join(root, 'retrieval', 'text-to-shape.png'), bbox_inches="tight")
+
+def show_retrieval(embedding, root, voxel, num=3):
+    # decode embeddings
+    keys = list(embedding.keys())
+    shape_embedding = []
+    text_embedding = []
+    shape_label = []
+    text_label = []
+    text_raw = []
+    for idx, key in enumerate(keys):
+        emb = embedding[key]
+        shape_embedding.append(emb['shape_embedding'].reshape(1, -1))
+        shape_label.append(idx)
+        text_embedding.extend([emb['text_embedding'][i][1].reshape(1, -1) for i in range(len(emb['text_embedding']))])
+        text_raw.extend([emb['text_embedding'][i][0] for i in range(len(emb['text_embedding']))])
+        text_label.extend([idx for _ in range(len(emb['text_embedding']))])
+
+    shape_embedding = np.concatenate(shape_embedding)
+    text_embedding = np.concatenate(text_embedding)
+
+    shape_gt = torch.LongTensor(shape_label)
+    text_gt = torch.LongTensor(text_label)
+
+    s2t_gt = shape_gt.unsqueeze(1).expand(shape_gt.size(0), text_gt.size(0)).eq(text_gt.unsqueeze(0).expand(shape_gt.size(0), text_gt.size(0))).float()
+    s2t_gt /= s2t_gt.sum(1, keepdim=True)
+
+    t2s_gt = text_gt.unsqueeze(1).expand(text_gt.size(0), shape_gt.size(0)).eq(shape_gt.unsqueeze(0).expand(text_gt.size(0), shape_gt.size(0))).float()
+    t2s_gt /= t2s_gt.sum(1, keepdim=True)
+
+    # retrieval
+    s2t = shape_embedding.dot(text_embedding.T)
+    s2t = nn.Softmax(dim=1)(torch.FloatTensor(s2t))
+    t2s = text_embedding.dot(shape_embedding.T)
+    t2s = nn.Softmax(dim=1)(torch.FloatTensor(t2s))
+
+    # show shape2text
+    if not os.path.exists(os.path.join(root, 'retrieval')):
+        os.mkdir(os.path.join(root, 'retrieval'))
+        
+    print("plotting shape-to-text retrieval results...")
+    results = torch.abs(s2t_gt - s2t).topk(5)[1]
+    chosen = random.choices(np.arange(results.size(0)), k=num)
+    show_s2t(results, keys, chosen, text_raw, num, root, voxel)
+
+    # show text2shape
+    print("plotting text-to-shape retrieval results...")
+    results = torch.abs(t2s_gt - t2s).topk(5)[1]
+    chosen = random.choices(np.arange(results.size(0)), k=num)
+    show_t2s(results, keys, chosen, text_raw, num, root, voxel)
+
 
 def main():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
     parser.add_argument('--dataset', help='dataset (''shapenet'', ''primitives'')')
     parser.add_argument('--embedding', help='path to the root folder containing embeddings')
     parser.add_argument('--phase', help='train/val/test')
     parser.add_argument('--mode', help='t2t/t2s/s2t', type=str)
+    parser.add_argument('--plot', help='true/false', type=str, default='false')
     args = parser.parse_args()
 
-    with open("outputs/embedding/{}/embeddings/{}.p".format(args.embedding, args.phase), 'rb') as f:
+    root = "outputs/embedding/{}/".format(args.embedding)
+    with open(os.path.join(root, "embeddings/{}.p".format(args.phase)), 'rb') as f:
         embedding = pickle.load(f)
 
     np.random.seed(1234)
     compute_metrics(args.dataset, embedding, mode=args.mode, metric='cosine')
+
+    if args.plot == 'true':
+        show_retrieval(embedding, root, args.voxel)
 
 
 if __name__ == '__main__':

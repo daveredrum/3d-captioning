@@ -10,6 +10,8 @@ from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from tensorboardX import SummaryWriter
 import lib.configs as configs 
 from torch.nn.utils import clip_grad_value_
+from lib.save_embedding import extract
+from lib.eval_embedding import compute_metrics
 
 class EmbeddingSolver():
     def __init__(self, criterion, optimizer, settings):
@@ -88,7 +90,7 @@ class EmbeddingSolver():
 
         return losses
 
-    def evaluate(self, shape_encoder, text_encoder, dataloader, val_log):
+    def validate(self, shape_encoder, text_encoder, dataloader, val_log):
         for _, (_, shapes, texts, _, labels) in enumerate(dataloader['val']):
             start = time.time()
             # forward pass
@@ -108,7 +110,17 @@ class EmbeddingSolver():
 
         return val_log
 
-    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, epoch, verbose, return_log):
+    def evaluate(self, shape_encoder, text_encoder, eval_dataloader, rank):
+        # extract embedding
+        print("[{}] extracting...\n".format(rank))
+        embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
+
+        # evaluate
+        print("[{}] evaluating...\n".format(rank))
+        compute_metrics("shapenet", embedding, mode=configs.EVAL_MODE, metric=configs.EVAL_METRIC)
+
+
+    def train(self, shape_encoder, text_encoder, rank, best, lock, dataloader, eval_dataloader, epoch, verbose, return_log):
         print("[{}] starting...\n".format(rank))
         total_iter = len(dataloader['train']) * epoch
         iter_count = 0
@@ -200,8 +212,13 @@ class EmbeddingSolver():
                 if iter_count % verbose == 0:
                     self._iter_report(train_log, rank, iter_count, total_iter)
 
-            # evaluate
-            val_log = self.evaluate(shape_encoder, text_encoder, dataloader, val_log)
+                # evaluate
+                if iter_count % configs.EVAL_FREQ == 0:
+                    with lock:
+                        self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
+
+            # validate
+            val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
             
             # epoch report
             self._epoch_report(train_log, val_log, rank, epoch_id, epoch)
@@ -228,8 +245,8 @@ class EmbeddingSolver():
                     print("[{}] saving models...\n".format(rank))
                     if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models")):
                         os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models"))
-                    torch.save(shape_encoder, os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
-                    torch.save(text_encoder, os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
+                    torch.save(shape_encoder.state_dict(), os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
+                    torch.save(text_encoder.state_dict(), os.path.join(configs.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
 
             # epoch log
             log['train']['total_loss'].append(np.mean(train_log['total_loss']))
@@ -255,6 +272,7 @@ class EmbeddingSolver():
         print("[{}] done...\n".format(rank))
         with lock:
             return_log.put(log)
+            self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
         # return best['shape_encoder'], best['text_encoder']
 

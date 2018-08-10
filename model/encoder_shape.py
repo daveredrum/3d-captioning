@@ -5,18 +5,19 @@ class ShapenetShapeEncoder(nn.Module):
     def __init__(self):
         super(ShapenetShapeEncoder, self).__init__()
         # self.conv = nn.Sequential(
-        #     nn.Conv3d(4, 32, 3, stride=2, padding=1), 
-        #     nn.ReLU(),
-        #     nn.Conv3d(32, 64, 3, stride=2, padding=1), 
+        #     nn.Conv3d(4, 32, 3, stride=1, padding=1), 
         #     nn.ReLU(),
         #     nn.AvgPool3d(2),
-        #     nn.BatchNorm3d(256),
+        #     nn.BatchNorm3d(32),
+        #     nn.Conv3d(32, 64, 3, stride=1, padding=1), 
+        #     nn.ReLU(),
+        #     nn.AvgPool3d(2),
+        #     nn.BatchNorm3d(64),
         #     nn.Conv3d(64, 128, 3, stride=2, padding=1),
         #     nn.ReLU(),
-        #     nn.Conv3d(128, 256, 3, stride=2, padding=1),
+        #     nn.Conv3d(128, 128, 3, stride=2, padding=1),
         #     nn.ReLU(),
-        #     nn.AvgPool3d(2),
-        #     nn.BatchNorm3d(256)
+        #     nn.BatchNorm3d(128)
         # )
         self.conv = nn.Sequential(
             nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False), 
@@ -32,7 +33,7 @@ class ShapenetShapeEncoder(nn.Module):
         self.outputs = nn.Linear(256, 128)
 
     def forward(self, inputs):
-        conved = self.conv(inputs).view(inputs.size(0), 256, -1).mean(2)
+        conved = self.conv(inputs).view(inputs.size(0), 256, -1).contiguous().mean(2)
         outputs = self.outputs(conved.view(conved.size(0), -1))
 
         return outputs

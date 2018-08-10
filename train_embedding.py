@@ -26,9 +26,9 @@ import ctypes
 import sys
 from lib.utils import decode_log_embedding, draw_curves_embedding
 
-def get_dataset(data, idx2label, size, resolution):
+def split_dataset(data, idx2label, size, voxel):
     for i in range(0, len(data), size):
-        yield ShapenetDataset(data[i:i+size], idx2label, resolution)
+        yield ShapenetDataset(data[i:i+size], idx2label, voxel)
 
 def check_dataset(dataset, batch_size):
     flag = False
@@ -38,7 +38,8 @@ def check_dataset(dataset, batch_size):
     
     return flag
 
-def get_dataloader(split_size, unique_batch_size, resolution, num_worker):
+def get_dataset(split_size, unique_batch_size, voxel, num_worker):
+    # for training
     shapenet = Shapenet(
         [
             pickle.load(open("data/shapenet_split_train.p", 'rb')),
@@ -56,15 +57,27 @@ def get_dataloader(split_size, unique_batch_size, resolution, num_worker):
     train_dataset = {
         x: y for x, y in zip(
             range(num_worker), 
-            list(get_dataset(shapenet.train_data, shapenet.train_idx2label, len(shapenet.train_data) // num_worker, resolution))
+            list(split_dataset(shapenet.train_data_agg, shapenet.train_idx2label, len(shapenet.train_data_agg) // num_worker, voxel))
         )
     }
     val_dataset = {
         x: y for x, y in zip(
             range(num_worker), 
-            [ShapenetDataset(shapenet.val_data, shapenet.val_idx2label, resolution) for _ in range(num_worker)]
+            [ShapenetDataset(shapenet.val_data_agg, shapenet.val_idx2label, voxel) for _ in range(num_worker)]
         )
     }
+    # for training
+    eval_dataset = ShapenetDataset(
+        getattr(shapenet, "{}_data".format(configs.EVAL_DATASET)),
+        getattr(shapenet, "{}_idx2label".format(configs.EVAL_DATASET)), 
+        voxel
+    )
+
+    return shapenet, train_dataset, val_dataset, eval_dataset
+
+
+def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel, num_worker):
+    # for training
     dataloader = {
         i: {
             'train': DataLoader(
@@ -81,9 +94,15 @@ def get_dataloader(split_size, unique_batch_size, resolution, num_worker):
             )
         } for i in range(num_worker)
     }
-    
+    # for evaluation
+    eval_dataset = ShapenetDataset(
+        getattr(shapenet, "{}_data".format(configs.EVAL_DATASET)),
+        getattr(shapenet, "{}_idx2label".format(configs.EVAL_DATASET)), 
+        voxel
+    )
+    eval_dataloader = DataLoader(eval_dataset, batch_size=unique_batch_size, collate_fn=collate_shapenet)
 
-    return shapenet, dataloader
+    return dataloader, eval_dataloader
 
 
 def main(args):
@@ -106,7 +125,8 @@ def main(args):
 
     # prepare data
     print("\npreparing data...\n")
-    shapenet, dataloader = get_dataloader([train_size, val_size], unique_batch_size, voxel, num_worker)
+    shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel, num_worker)
+    dataloader, eval_dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel, num_worker)
     train_per_worker = len(dataloader[0]['train']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
     val_per_worker = len(dataloader[0]['val']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
     
@@ -120,9 +140,10 @@ def main(args):
     ))
     print("val_size: {} samples -> {} pairs in total, {} pairs per worker".format(
         shapenet.val_size, 
-        val_per_worker * num_worker, 
+        val_per_worker, 
         val_per_worker
     ))
+    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), configs.EVAL_DATASET))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
@@ -147,6 +168,8 @@ def main(args):
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
     settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, num_worker)
+    if configs.RANDOM_SAMPLE:
+        settings += "_rand"
     solver = EmbeddingSolver(criterion, optimizer, settings)
     if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, settings)):
         os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, settings))
@@ -172,7 +195,7 @@ def main(args):
     return_log = mp.Queue()
     processes = []
     for rank in range(num_worker):
-        p = mp.Process(target=solver.train, args=(shape_encoder, text_encoder, rank, best, lock, dataloader[rank], epoch, verbose, return_log))
+        p = mp.Process(target=solver.train, args=(shape_encoder, text_encoder, rank, best, lock, dataloader[rank], eval_dataloader, epoch, verbose, return_log))
         p.start()
         processes.append(p)
     for p in processes:

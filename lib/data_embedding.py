@@ -3,16 +3,26 @@ import numpy as np
 import torch
 import pickle
 from torch.utils.data import Dataset
-import lib.configs as configs
 import nrrd
 from itertools import combinations
 import random
 
+# HACK
+import sys
+sys.path.append(".")
+import lib.configs as configs
+
 class Shapenet():
     def __init__(self, shapenet_split, size_split, batch_size, is_training):
         '''
-        param: shapenet_split: [shapenet_split_train, shapenet_split_val, shapenet_split_test]
+        param: 
+            shapenet_split: [shapenet_split_train, shapenet_split_val, shapenet_split_test]
+            size_split: [size_split_train, size_split_val, size_split_test]
+            batch_size: unique_batch_size
+            is_training: boolean, distinguishing between train/val and eval
         '''
+        
+        # general settings
         self.shapenet_split_train, self.shapenet_split_val, self.shapenet_split_test = shapenet_split
         self.train_size, self.val_size, self.test_size = size_split
         self.batch_size = batch_size
@@ -26,8 +36,16 @@ class Shapenet():
         if self.test_size != -1:
             self.shapenet_split_test = self.shapenet_split_test[:self.test_size]
 
+        # objectives
         self.dict_idx2word, self.dict_word2idx = {}, {}
+        self.cat2label = {}
         self.train_data, self.val_data, self.test_data = [], [], []
+        self.train_data_group, self.val_data_group, self.test_data_group = {}, {}, {}
+        self.train_data_agg, self.val_data_agg, self.test_data_agg = {}, {}, {}
+        self.train_idx2label, self.val_idx2label, self.test_idx2label = {}, {}, {}
+        self.train_label2idx, self.val_label2idx, self.test_label2idx = {}, {}, {}
+
+        # execute
         self._build_mapping()
         self._build_dict()
         self._transform()
@@ -83,7 +101,7 @@ class Shapenet():
         for phase in ["train", "val", "test"]:
             split_data = getattr(self, "shapenet_split_{}".format(phase))
             transformed = []
-            data_agg = {}
+            data_group = {}
             for item in split_data:
                 # get model_id
                 model_id = item[0]
@@ -106,15 +124,15 @@ class Shapenet():
                 # load into result
                 transformed.append((model_id, label, indices))
 
-                # aggregate by key
-                if model_id in data_agg.keys():
-                    data_agg[model_id].append((label, indices))
+                # group by key
+                if model_id in data_group.keys():
+                    data_group[model_id].append((model_id, label, indices))
                 else:
-                    data_agg[model_id] = [(label, indices)]
+                    data_group[model_id] = [(model_id, label, indices)]
 
             setattr(self, "{}_data".format(phase), transformed)
-            setattr(self, "{}_data_agg".format(phase), data_agg)
-            setattr(self, "{}_size".format(phase), len(data_agg.keys()))
+            setattr(self, "{}_data_group".format(phase), data_group)
+            setattr(self, "{}_size".format(phase), len(data_group.keys()))
     
     def _aggregate(self):
         '''
@@ -126,41 +144,38 @@ class Shapenet():
         this method is only performed in training/validation step
         '''
         for phase in ["train", "val", "test"]:
-            split_data = getattr(self, "{}_data".format(phase))
-            
-            # aggregate by model_id
-            data_agg = {}
-            for item in split_data:
-                if item[0] in data_agg.keys():
-                    data_agg[item[0]].append(item)
-                else:
-                    data_agg[item[0]] = [item]
+            group_data = getattr(self, "{}_data_group".format(phase))
 
             # get all combinations
             data_comb = []
-            for key in data_agg.keys():
-                comb = list(combinations(data_agg[key], configs.N_CAPTION_PER_MODEL))
-                if comb:
-                    data_comb.extend(comb)
-                    # data_comb.extend(random.choice(comb))
-            
-            # setattr(self, "{}_data".format(phase), data_comb)
+            for key in group_data.keys():
+                if len(group_data[key]) >= 4:
+                    comb = list(combinations(group_data[key], configs.N_CAPTION_PER_MODEL))
+                    if configs.RANDOM_SAMPLE:
+                        # only randomly choose one data pair
+                        random.seed(42)
+                        data_comb.extend(random.choice(comb))
+                    else:
+                        data_comb.extend(comb)
 
-            # aggregate batch
-            data = []
-            idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
-            chosen_label = []
-            while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
-                if len(chosen_label) == self.batch_size:
-                    chosen_label = []
-                idx = np.random.randint(len(data_comb))
-                if idx2label[idx] in chosen_label:
-                    continue
-                else:
-                    data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
-                    chosen_label.append(idx2label[idx])
-            
-            setattr(self, "{}_data".format(phase), data)
+            if configs.RANDOM_SAMPLE:
+                setattr(self, "{}_data_agg".format(phase), data_comb)
+            else:
+                # aggregate batch
+                data = []
+                idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
+                chosen_label = []
+                while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
+                    if len(chosen_label) == self.batch_size:
+                        chosen_label = []
+                    idx = np.random.randint(len(data_comb))
+                    if idx2label[idx] in chosen_label:
+                        continue
+                    else:
+                        data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
+                        chosen_label.append(idx2label[idx])
+                
+                setattr(self, "{}_data_agg".format(phase), data)
 
 
 

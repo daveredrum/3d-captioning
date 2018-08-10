@@ -1,4 +1,3 @@
-'''
 ############################################################
 
 # implementation of https://arxiv.org/pdf/1803.08495.pdf
@@ -6,7 +5,6 @@
 # by Dave Zhenyu Chen
 
 ############################################################
-'''
 
 import itertools
 import numpy as np
@@ -107,8 +105,8 @@ class InstanceMetricLoss(nn.Module):
         labels are not needed
 
         param:
-            a: 2D embedding tensor, either text embeddings or shape embeddings
-            b: 2D embedding tensor, either text embeddings or shape embeddings
+            inputs: composed embedding matrix with assumption that two consecutive data pairs are from the same class
+                    note that no other data pairs can be from the same class
         
         return:
             instance-level metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.2

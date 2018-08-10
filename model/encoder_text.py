@@ -8,22 +8,36 @@ class ShapenetTextEncoder(nn.Module):
         self.embedding = nn.Embedding(dict_size, 128)
 
         # first conv block
+        # self.conv_128 = nn.Sequential(
+        #     nn.Conv2d(128, 128, kernel_size=(3, 1), padding=(1, 0)),
+        #     nn.ReLU(),
+        #     nn.Conv2d(128, 128, kernel_size=(3, 1), padding=(1, 0), bias=False),
+        #     nn.ReLU(),
+        #     nn.BatchNorm2d(128),
+        # )
         self.conv_128 = nn.Sequential(
-            nn.Conv2d(128, 128, kernel_size=(3, 1), padding=(1, 0)),
+            nn.Conv1d(128, 128, 3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=(3, 1), padding=(1, 0), bias=False),
+            nn.Conv1d(128, 128, 3, padding=1, bias=False),
             nn.ReLU(),
-            nn.BatchNorm2d(128),
         )
+        self.bn_128 = nn.BatchNorm2d(128)
 
         # second conv block
+        # self.conv_256 = nn.Sequential(
+        #     nn.Conv2d(128, 256, kernel_size=(3, 1), padding=(1, 0)),
+        #     nn.ReLU(),
+        #     nn.Conv2d(256, 256, kernel_size=(3, 1), padding=(1, 0), bias=False),
+        #     nn.ReLU(),
+        #     nn.BatchNorm2d(256),
+        # )
         self.conv_256 = nn.Sequential(
-            nn.Conv2d(128, 256, kernel_size=(3, 1), padding=(1, 0)),
+            nn.Conv1d(128, 256, 3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(256, 256, kernel_size=(3, 1), padding=(1, 0), bias=False),
-            nn.ReLU(),
-            nn.BatchNorm2d(256),
+            nn.Conv1d(256, 256, 3, padding=1, bias=False),
+            nn.ReLU()
         )
+        self.bn_256 = nn.BatchNorm2d(256)
 
         # recurrent block
         self.lstm = nn.LSTM(256, 256, batch_first=True)
@@ -39,9 +53,14 @@ class ShapenetTextEncoder(nn.Module):
         #################
         # convolutional
         #################
-        embedded = self.embedding(inputs).transpose(2, 1).contiguous().unsqueeze(3) # (batch_size, emb_size, seq_size, 1)
-        conved = self.conv_128(embedded) # (batch_size, emb_size, seq_size, 1)
-        conved = self.conv_256(conved).squeeze().transpose(2, 1).contiguous() # (batch_size, emb_size, seq_size)
+        # embedded = self.embedding(inputs).transpose(2, 1).contiguous().unsqueeze(3) # (batch_size, emb_size, seq_size, 1)
+        # conved = self.conv_128(embedded) # (batch_size, emb_size, seq_size, 1)
+        # conved = self.conv_256(conved).squeeze().transpose(2, 1).contiguous() # (batch_size, emb_size, seq_size)
+        embedded = self.embedding(inputs) # (batch_size, seq_size, emb_size)
+        conved = self.conv_128(embedded.transpose(2, 1).contiguous()) # (batch_size, emb_size, seq_size)
+        conved = self.bn_128(conved.unsqueeze(3)).squeeze() # (batch_size, emb_size, seq_size)
+        conved = self.conv_256(conved) # (batch_size, emb_size, seq_size)
+        conved = self.bn_256(conved.unsqueeze(3)).squeeze().transpose(2, 1).contiguous() # (batch_size, seq_size, emb_size)
 
         #################
         # recurrent

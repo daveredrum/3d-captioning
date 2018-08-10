@@ -8,14 +8,69 @@ import pickle
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+
+# HACK
+import sys
+sys.path.append(".")
 from lib.data_embedding import *
 from model.encoder_shape import *
+from model.encoder_text import *
+
+def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=False):
+    data = {}
+    offset = 0
+    total_iter = len(dataloader)
+    for iter_id, (model_id, shape, text, _, _) in enumerate(dataloader):
+        start = time.time()
+        # load
+        shape = shape.cuda()
+        text = text.cuda()
+
+        # feed
+        shape_embedding = shape_encoder(shape)
+        text_embedding = text_encoder(text)
+
+        # append
+        for i in range(len(model_id)):
+            if shapenet:
+                cap = " ".join([shapenet.dict_idx2word[str(idx.item())] for idx in text[i] if idx.item() != 0])
+            else:
+                cap = None
+            if model_id[i] in data.keys():
+                data[model_id[i]]['text_embedding'].append(
+                    (
+                        cap,
+                        text_embedding[i].data.cpu().numpy()
+                    )
+                ) 
+            else:
+                data[model_id[i]] = {
+                    'shape_embedding': shape_embedding[i].data.cpu().numpy(),
+                    'text_embedding': [
+                        (
+                            cap,
+                            text_embedding[i].data.cpu().numpy()
+                        )
+                    ]
+                }
+
+        # report
+        if verbose and shapenet:
+            offset += len(model_id)
+            exe_s = time.time() - start
+            eta_s = exe_s * (total_iter - (iter_id + 1))
+            eta_m = math.floor(eta_s / 60)
+            eta_s = math.floor(eta_s % 60)
+            print("extracted: {}/{}, ETA: {}m {}s".format(offset, len(getattr(shapenet, "{}_data".format(phase))), eta_m, int(eta_s)))
+        
+    return data
 
 def main(args):
     # parse args
     root = os.path.join(configs.OUTPUT_EMBEDDING, args.path)
-    shape_encoder = os.path.join(root, "models/shape_encoder.pth")
-    text_encoder = os.path.join(root, "models/text_encoder.pth")
+    voxel = args.voxel
+    shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
+    text_encoder_path = os.path.join(root, "models/text_encoder.pth")
     train_size = args.train_size
     val_size = args.val_size
     test_size = args.test_size
@@ -44,7 +99,7 @@ def main(args):
     )
     dataloader = {}
     for phase in ["train", "val", "test"]:
-        dataset = ShapenetDataset(getattr(shapenet, "{}_data".format(phase)), getattr(shapenet, "{}_idx2label".format(phase)), configs.VOXEL)
+        dataset = ShapenetDataset(getattr(shapenet, "{}_data".format(phase)), getattr(shapenet, "{}_idx2label".format(phase)), voxel)
         dataloader[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
 
     # report settings
@@ -57,8 +112,10 @@ def main(args):
 
     # initialize models
     print("\ninitializing models...\n")
-    shape_encoder = torch.load(shape_encoder).cuda()
-    text_encoder = torch.load(text_encoder).cuda()
+    shape_encoder = ShapenetShapeEncoder().cuda()
+    shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+    text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+    text_encoder.load_state_dict(torch.load(text_encoder_path))
     shape_encoder.eval()
     text_encoder.eval()
 
@@ -67,48 +124,9 @@ def main(args):
         os.mkdir(os.path.join(root, "embeddings"))
     for phase in ["train", "val", "test"]:
         print("extracting {} set...\n".format(phase))
-        data = {}
         with open(os.path.join(root, "embeddings", "{}.p".format(phase)), 'wb') as database:
-            offset = 0
-            total_iter = len(dataloader[phase])
-            for iter_id, (model_id, shape, text, _, _) in enumerate(dataloader[phase]):
-                start = time.time()
-                # load
-                shape = shape.cuda()
-                text = text.cuda()
-
-                # feed
-                shape_embedding = shape_encoder(shape)
-                text_embedding = text_encoder(text)
-
-                # append
-                for i in range(len(model_id)):
-                    cap = " ".join([shapenet.dict_idx2word[str(idx.item())] for idx in text[i] if idx.item() != 0])
-                    if model_id[i] in data.keys():
-                        data[model_id[i]]['text_embedding'].append(
-                            (
-                                cap,
-                                text_embedding[i].data.cpu().numpy()
-                            )
-                        ) 
-                    else:
-                        data[model_id[i]] = {
-                            'shape_embedding': shape_embedding[i].data.cpu().numpy(),
-                            'text_embedding': [
-                                (
-                                    cap,
-                                    text_embedding[i].data.cpu().numpy()
-                                )
-                            ]
-                        }
-
-                # report
-                offset += len(model_id)
-                exe_s = time.time() - start
-                eta_s = exe_s * (total_iter - (iter_id + 1))
-                eta_m = math.floor(eta_s / 60)
-                eta_s = math.floor(eta_s % 60)
-                print("extracted: {}/{}, ETA: {}m {}s".format(offset, len(getattr(shapenet, "{}_data".format(phase))), eta_m, int(eta_s)))
+            # extract
+            data = extract(shape_encoder, text_encoder, dataloader[phase], shapenet, phase, True)
             
             # store
             pickle.dump(data, database)
@@ -120,6 +138,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default=None, help="path to the pretrained encoders")
+    parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
     parser.add_argument("--train_size", type=int, default=100, help="train size")
     parser.add_argument("--val_size", type=int, default=100, help="val size")
     parser.add_argument("--test_size", type=int, default=100, help="test size")
