@@ -39,12 +39,12 @@ __progress:__
   </tr>
   <tr>
     <td><b>ours</b></td>
-    <td align="center">0.67</td>
-    <td align="center">2.29</td>
-    <td align="center">0.62</td>
-    <td align="center"><b>0.63</b></td>
-    <td align="center">2.30</td>
-    <td align="center"><b>1.44</b></td>
+    <td align="center"><b>1.68</b></td>
+    <td align="center"><b>6.57</b></td>
+    <td align="center"><b>1.53</b></td>
+    <td align="center"><b>0.95</b></td>
+    <td align="center"><b>4.52</b></td>
+    <td align="center"><b>2.71</b></td>
   </tr>
 </table>
 
