@@ -38,15 +38,21 @@ __progress:__
     <td align="center">1.35</td>
   </tr>
   <tr>
-    <td><b>ours</b></td>
-    <td align="center">0.67</td>
-    <td align="center">2.29</td>
-    <td align="center">0.62</td>
-    <td align="center"><b>0.63</b></td>
-    <td align="center">2.30</td>
-    <td align="center"><b>1.44</b></td>
+    <td><b>ours (32)</b></td>
+    <td align="center"><b>1.68</b></td>
+    <td align="center"><b>6.57</b></td>
+    <td align="center"><b>1.53</b></td>
+    <td align="center"><b>0.95</b></td>
+    <td align="center"><b>4.52</b></td>
+    <td align="center"><b>2.71</b></td>
   </tr>
 </table>
+
+> __best models:__
+>
+> |resolution|train_size|test_size|learning_rate|weight_decay|batch_size|random|
+> |---|---|---|---|---|---|---|
+> |32|-1|-1|2e-4|5e-4|100|False|
 
 ## Jun. 21
 
