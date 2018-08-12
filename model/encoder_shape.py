@@ -23,6 +23,7 @@ class ShapenetShapeEncoder(nn.Module):
             nn.Conv3d(4, 32, 3, stride=1, padding=1, bias=False), 
             nn.ReLU(),
             nn.BatchNorm3d(32),
+            nn.AvgPool3d(2),
             nn.Conv3d(32, 64, 3, stride=1, padding=1, bias=False), 
             nn.ReLU(),
             nn.BatchNorm3d(64),
