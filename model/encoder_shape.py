@@ -20,9 +20,13 @@ class ShapenetShapeEncoder(nn.Module):
         #     nn.BatchNorm3d(128)
         # )
         self.conv = nn.Sequential(
-            nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False), 
+            nn.Conv3d(4, 32, 3, stride=1, padding=1, bias=False), 
+            nn.ReLU(),
+            nn.BatchNorm3d(32),
+            nn.Conv3d(32, 64, 3, stride=1, padding=1, bias=False), 
             nn.ReLU(),
             nn.BatchNorm3d(64),
+            nn.AvgPool3d(2),
             nn.Conv3d(64, 128, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(128),
