@@ -130,8 +130,8 @@ class InstanceMetricLoss(nn.Module):
             # neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
             # neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
 
-            neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
-            neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
+            neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum() / len(neg_i)
+            neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum() / len(neg_j)
             Dissim = neg_ik + neg_jl
 
             if configs.INVERTED_LOSS:
