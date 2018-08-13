@@ -42,8 +42,8 @@ __progress:__
 > __best models:__
 >
 > |resolution|train_size|test_size|learning_rate|weight_decay|batch_size|epoch|random|
-> |---|---|---|---|---|---|---|
-> |32|-1|-1|2e-4|5e-4|100|20|False|---|
+> |---|---|---|---|---|---|---|---|
+> |32|-1|-1|2e-4|5e-4|100|20|False|
 
 ## Jun. 21
 
