@@ -29,6 +29,15 @@ __progress:__
     <td align="center">0.23</td>
   </tr>
   <tr>
+    <td>ML</td>
+    <td align="center">0.13/<b>0.13</b>/-</td>
+    <td align="center">0.47/<b>0.67</b>/-</td>
+    <td align="center">0.11/<b>0.13</b>/-</td>
+    <td align="center">0.13/<b>0.13</b>/-</td>
+    <td align="center"><b>0.61</b>/0.60/-</td>
+    <td align="center">0.36/<b>0.36</b>/-</td>
+  </tr>
+  <tr>
     <td>Full-MM</td>
     <td align="center">0.83/<b>1.68</b>/1.48</td>
     <td align="center">3.37/<b>6.57</b>/3.95</td>
