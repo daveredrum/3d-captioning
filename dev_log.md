@@ -47,6 +47,15 @@ __progress:__
     <td align="center">0.36/<b>0.36</b>/-</td>
   </tr>
   <tr>
+    <td>Full-TST</td>
+    <td align="center">0.94/-/-</td>
+    <td align="center">3.69/-/-</td>
+    <td align="center">0.85/-/-</td>
+    <td align="center">0.22/-/-</td>
+    <td align="center">1.63/-/-</td>
+    <td align="center">0.87/-/-</td>
+  </tr>
+  <tr>
     <td>Full-MM</td>
     <td align="center">0.83/<b>1.68</b>/1.48</td>
     <td align="center">3.37/<b>6.57</b>/3.95</td>
