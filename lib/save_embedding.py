@@ -8,11 +8,11 @@ import pickle
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from lib.configs import CONF
 
 # HACK
 import sys
 sys.path.append(".")
+from lib.configs import CONF
 from lib.data_embedding import *
 from model.encoder_shape import *
 from model.encoder_text import *
