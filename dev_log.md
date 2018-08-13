@@ -29,6 +29,15 @@ __progress:__
     <td align="center">0.23</td>
   </tr>
   <tr>
+    <td>LBA-MM</td>
+    <td align="center"><b>0.07</b>/0/-</td>
+    <td align="center"><b>0.37</b>/0.20/-</td>
+    <td align="center"><b>0.07</b>/0.04/-</td>
+    <td align="center"><b>0.08</b>/0.05/-</td>
+    <td align="center"><b>0.34</b>/0.23/-</td>
+    <td align="center"><b>0.21</b>/0.13/-</td>
+  </tr>
+  <tr>
     <td>ML</td>
     <td align="center">0.13/<b>0.13</b>/-</td>
     <td align="center">0.47/<b>0.67</b>/-</td>
