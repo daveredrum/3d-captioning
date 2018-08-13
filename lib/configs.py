@@ -53,7 +53,7 @@ CONF.TRAIN.MAX_LENGTH = 18
 global configurations for LBA
 '''
 
-CONF.LBA = EasyDict({})
+CONF.LBA = EasyDict()
 # flags of LBA
 CONF.LBA.IS_LBA = False
 CONF.LBA.IS_LBA_TST = True
