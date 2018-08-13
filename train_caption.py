@@ -9,7 +9,7 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import lib.configs as configs
+from lib.configs import CONF
 import lib.capeval.bleu.bleu as capbleu
 import lib.capeval.cider.cider as capcider
 import lib.capeval.meteor.meteor as capmeteor
@@ -59,30 +59,30 @@ def main(args):
     if args.dataset == 'shapenet':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.SHAPENET_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.SHAPENET_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.SHAPENET_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(CONF.PATH.SHAPENET_PRETRAINED.format("train"), 'rb')),
+                pickle.load(open(CONF.PATH.SHAPENET_PRETRAINED.format("val"), 'rb')),
+                pickle.load(open(CONF.PATH.SHAPENET_PRETRAINED.format("test"), 'rb')),
             ],
             [
                 train_size,
                 val_size,
                 test_size
             ],
-            configs.MAX_LENGTH
+            CONF.TRAIN.MAX_LENGTH
         )
     elif args.dataset == 'primitive':
         embeddings = PretrainedEmbeddings(
             [
-                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("train"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("val"), 'rb')),
-                pickle.load(open(configs.PRIMITIVE_EMBEDDING.format("test"), 'rb')),
+                pickle.load(open(CONF.PATH.PRIMITIVE_PRETRAINED.format("train"), 'rb')),
+                pickle.load(open(CONF.PATH.PRIMITIVE_PRETRAINED.format("val"), 'rb')),
+                pickle.load(open(CONF.PATH.PRIMITIVE_PRETRAINED.format("test"), 'rb')),
             ],
             [
                 train_size,
                 val_size,
                 test_size
             ],
-            configs.MAX_LENGTH
+            CONF.TRAIN.MAX_LENGTH
         )
     else:
         print("invalid dataset, terminating...")

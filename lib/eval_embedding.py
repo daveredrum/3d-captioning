@@ -20,7 +20,7 @@ import matplotlib.gridspec as gridspec
 # HACK
 import sys
 sys.path.append(".")
-import lib.configs as configs
+from lib.configs import CONF
 
 
 def construct_embeddings_matrix(dataset, embedding, mode):
@@ -340,7 +340,7 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
 
     n_neighbors = 20
 
-    distances, indices = compute_nearest_neighbors(target_embeddings_matrix, query_embeddings_matrix, n_neighbors, metric=metric)
+    _, indices = compute_nearest_neighbors(target_embeddings_matrix, query_embeddings_matrix, n_neighbors, metric=metric)
 
     print('Computing precision recall.')
     pr_at_k = compute_pr_at_k(indices, labels, n_neighbors, query_embeddings_matrix.shape[0], fit_labels=target_labels)
@@ -364,7 +364,7 @@ def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
     # plot
     for i in range(num):
         plt.subplot(num, 1, i + 1)
-        img = Image.open(os.path.join(configs.SHAPE_ROOT.format(voxel), configs.SHAPE_IMG.format(keys[chosen[i]], keys[chosen[i]])))
+        img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[chosen[i]], keys[chosen[i]])))
         plt.imshow(img.resize((224, 224)))
         plt.text(240, 60, text_raw[results[chosen[i]][0].item()], fontsize=14)
         plt.text(240, 90, text_raw[results[chosen[i]][1].item()], fontsize=14)
@@ -392,7 +392,7 @@ def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
 
         for j in range(5):
             ax = plt.Subplot(fig, inner[j])
-            img = Image.open(os.path.join(configs.SHAPE_ROOT.format(voxel), configs.SHAPE_IMG.format(keys[results[chosen[i]][j]], keys[results[chosen[i]][j]])))
+            img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[results[chosen[i]][j]], keys[results[chosen[i]][j]])))
             ax.imshow(img.resize((224, 224)))
             ax.axis('off')
             fig.add_subplot(ax)
@@ -455,7 +455,7 @@ def main():
     parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
     parser.add_argument('--dataset', help='dataset (''shapenet'', ''primitives'')')
     parser.add_argument('--embedding', help='path to the root folder containing embeddings')
-    parser.add_argument('--phase', help='train/val/test')
+    parser.add_argument('--phase', help='train/val/test', default='test', type=str)
     parser.add_argument('--mode', help='t2t/t2s/s2t', type=str)
     parser.add_argument('--plot', help='true/false', type=str, default='false')
     args = parser.parse_args()

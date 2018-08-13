@@ -8,6 +8,7 @@ import pickle
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from lib.configs import CONF
 
 # HACK
 import sys
@@ -67,7 +68,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
 
 def main(args):
     # parse args
-    root = os.path.join(configs.OUTPUT_EMBEDDING, args.path)
+    root = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, args.path)
     voxel = args.voxel
     shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
     text_encoder_path = os.path.join(root, "models/text_encoder.pth")

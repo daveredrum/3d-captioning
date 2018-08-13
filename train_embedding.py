@@ -16,7 +16,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from lib.data_embedding import *
 import nrrd
-import lib.configs as configs
+from lib.configs import CONF
 from model.encoder_shape import ShapenetShapeEncoder
 from model.encoder_text import ShapenetTextEncoder
 from lib.losses import *
@@ -33,7 +33,7 @@ def split_dataset(data, idx2label, size, voxel):
 def check_dataset(dataset, batch_size):
     flag = False
     for _, ds in dataset.items():
-        if len(ds) % (batch_size * configs.N_CAPTION_PER_MODEL) != 0:
+        if len(ds) % (batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL) != 0:
             flag = True
     
     return flag
@@ -68,8 +68,8 @@ def get_dataset(split_size, unique_batch_size, voxel, num_worker):
     }
     # for training
     eval_dataset = ShapenetDataset(
-        getattr(shapenet, "{}_data".format(configs.EVAL_DATASET)),
-        getattr(shapenet, "{}_idx2label".format(configs.EVAL_DATASET)), 
+        getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+        getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
         voxel
     )
 
@@ -82,22 +82,22 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
         i: {
             'train': DataLoader(
                 train_dataset[i], 
-                batch_size=unique_batch_size * configs.N_CAPTION_PER_MODEL,  
+                batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL,  
                 collate_fn=collate_shapenet, 
-                drop_last=check_dataset(train_dataset, unique_batch_size * configs.N_CAPTION_PER_MODEL)
+                drop_last=check_dataset(train_dataset, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
             ),
             'val': DataLoader(
                 val_dataset[i], 
-                batch_size=unique_batch_size * configs.N_CAPTION_PER_MODEL, 
+                batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
                 collate_fn=collate_shapenet, 
-                drop_last=check_dataset(val_dataset, unique_batch_size * configs.N_CAPTION_PER_MODEL)
+                drop_last=check_dataset(val_dataset, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
             )
         } for i in range(num_worker)
     }
     # for evaluation
     eval_dataset = ShapenetDataset(
-        getattr(shapenet, "{}_data".format(configs.EVAL_DATASET)),
-        getattr(shapenet, "{}_idx2label".format(configs.EVAL_DATASET)), 
+        getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+        getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
         voxel
     )
     eval_dataloader = DataLoader(eval_dataset, batch_size=unique_batch_size, collate_fn=collate_shapenet)
@@ -127,8 +127,8 @@ def main(args):
     print("\npreparing data...\n")
     shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel, num_worker)
     dataloader, eval_dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel, num_worker)
-    train_per_worker = len(dataloader[0]['train']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
-    val_per_worker = len(dataloader[0]['val']) * unique_batch_size * configs.N_CAPTION_PER_MODEL
+    train_per_worker = len(dataloader[0]['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
+    val_per_worker = len(dataloader[0]['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     
     # report settings
     print("[settings]")
@@ -143,11 +143,11 @@ def main(args):
         val_per_worker, 
         val_per_worker
     ))
-    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), configs.EVAL_DATASET))
+    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.TRAIN.EVAL_DATASET))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
-    print("batch_size: {} shapes per batch, {} texts per batch".format(unique_batch_size, unique_batch_size * configs.N_CAPTION_PER_MODEL))
+    print("batch_size: {} shapes per batch, {} texts per batch".format(unique_batch_size, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL))
     print("num_worker:", num_worker)
     print("verbose:", verbose)
     print("gpu:", gpu)
@@ -156,23 +156,21 @@ def main(args):
     print("\ninitializing models...\n")
     shape_encoder = ShapenetShapeEncoder().cuda()
     text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
-    shape_encoder.train()
-    text_encoder.train()
 
     # initialize optimizer
     print("initializing optimizer...\n")
     criterion = {
-        'walker': RoundTripLoss(weight=configs.WALKER_WEIGHT),
-        'visit': AssociationLoss(weight=configs.VISIT_WEIGHT),
-        'metric': InstanceMetricLoss(margin=configs.METRIC_MARGIN)
+        'walker': RoundTripLoss(weight=CONF.LBA.WALKER_WEIGHT),
+        'visit': AssociationLoss(weight=CONF.LBA.VISIT_WEIGHT),
+        'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
     }
     optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = configs.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, num_worker)
-    if configs.RANDOM_SAMPLE:
+    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, num_worker)
+    if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
     solver = EmbeddingSolver(criterion, optimizer, settings)
-    if not os.path.exists(os.path.join(configs.OUTPUT_EMBEDDING, settings)):
-        os.mkdir(os.path.join(configs.OUTPUT_EMBEDDING, settings))
+    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings)):
+        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 
     # training
     print("start training...\n")
@@ -228,7 +226,7 @@ def main(args):
 
     # draw curves
     train_log, val_log = decode_log_embedding(return_log)
-    draw_curves_embedding(train_log, val_log, os.path.join(configs.OUTPUT_EMBEDDING, settings))
+    draw_curves_embedding(train_log, val_log, os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 
 
 if __name__ == '__main__':

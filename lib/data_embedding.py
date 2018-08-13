@@ -10,7 +10,8 @@ import random
 # HACK
 import sys
 sys.path.append(".")
-import lib.configs as configs
+from lib.configs import CONF
+
 
 class Shapenet():
     def __init__(self, shapenet_split, size_split, batch_size, is_training):
@@ -26,7 +27,7 @@ class Shapenet():
         self.shapenet_split_train, self.shapenet_split_val, self.shapenet_split_test = shapenet_split
         self.train_size, self.val_size, self.test_size = size_split
         self.batch_size = batch_size
-        self.bad_ids = pickle.load(open(configs.PROBLEMATIC, 'rb'))
+        self.bad_ids = pickle.load(open(CONF.PATH.SHAPENET_PROBLEMATIC, 'rb'))
 
         # select sets
         if self.train_size != -1:
@@ -111,8 +112,8 @@ class Shapenet():
                 label = self.cat2label[item[1]]
                 # truncate long captions
                 words = item[2]
-                if len(words) > configs.MAX_LENGTH:
-                    words = words[:configs.MAX_LENGTH]
+                if len(words) > CONF.TRAIN.MAX_LENGTH:
+                    words = words[:CONF.TRAIN.MAX_LENGTH]
                 indices = []
                 # encode
                 for word in words:
@@ -150,29 +151,29 @@ class Shapenet():
             data_comb = []
             for key in group_data.keys():
                 if len(group_data[key]) >= 4:
-                    comb = list(combinations(group_data[key], configs.N_CAPTION_PER_MODEL))
-                    if configs.RANDOM_SAMPLE:
+                    comb = list(combinations(group_data[key], CONF.TRAIN.N_CAPTION_PER_MODEL))
+                    if CONF.TRAIN.RANDOM_SAMPLE:
                         # only randomly choose one data pair
                         random.seed(42)
                         data_comb.extend(random.choice(comb))
                     else:
                         data_comb.extend(comb)
 
-            if configs.RANDOM_SAMPLE:
+            if CONF.TRAIN.RANDOM_SAMPLE:
                 setattr(self, "{}_data_agg".format(phase), data_comb)
             else:
                 # aggregate batch
                 data = []
                 idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
                 chosen_label = []
-                while len(data) < configs.N_CAPTION_PER_MODEL * len(data_comb):
+                while len(data) < CONF.TRAIN.N_CAPTION_PER_MODEL * len(data_comb):
                     if len(chosen_label) == self.batch_size:
                         chosen_label = []
                     idx = np.random.randint(len(data_comb))
                     if idx2label[idx] in chosen_label:
                         continue
                     else:
-                        data.extend([data_comb[idx][i] for i in range(configs.N_CAPTION_PER_MODEL)])
+                        data.extend([data_comb[idx][i] for i in range(CONF.TRAIN.N_CAPTION_PER_MODEL)])
                         chosen_label.append(idx2label[idx])
                 
                 setattr(self, "{}_data_agg".format(phase), data)
@@ -193,7 +194,7 @@ class ShapenetDataset(Dataset):
 
     def __getitem__(self, idx):
         model_id = self.shapenet_data[idx][0]
-        model_path = os.path.join(configs.SHAPE_ROOT.format(self.resolution), configs.SHAPENET_NRRD.format(model_id, model_id))
+        model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
         voxel = torch.FloatTensor(nrrd.read(model_path)[0])
         voxel /= 255.
         caption = self.shapenet_data[idx][2]
@@ -221,7 +222,7 @@ def collate_shapenet(data):
     voxels = torch.stack(voxels, 0)
 
     # Merge captions (from tuple of 1D tensor to 2D tensor).
-    merge_caps = torch.zeros(len(captions), configs.MAX_LENGTH + 2).long()
+    merge_caps = torch.zeros(len(captions), CONF.TRAIN.MAX_LENGTH + 2).long()
     for i, cap in enumerate(captions):
         end = int(lengths[i])
         merge_caps[i, :end] = torch.LongTensor(cap[:end])

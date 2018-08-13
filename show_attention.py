@@ -16,7 +16,7 @@ from lib.solver_encdec import *
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-import lib.configs as configs
+from lib.configs import CONF
 import skimage.transform
 import nrrd
 

@@ -1,17 +1,17 @@
-############################################################
+'''
 
-# implementation of https://arxiv.org/pdf/1803.08495.pdf
+implementation of https://arxiv.org/pdf/1803.08495.pdf
 
-# by Dave Zhenyu Chen
+by Dave Zhenyu Chen
 
-############################################################
+'''
 
 import itertools
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import lib.configs as configs
+from lib.configs import CONF
 
 
 class RoundTripLoss(nn.Module):
@@ -25,6 +25,7 @@ class RoundTripLoss(nn.Module):
         params: 
             a: 2D embedding tensor, either text embeddings or shape embeddings
             b: 2D embedding tensor, either text embeddings or shape embeddings
+            targets: 2D tensor, each row must be a valid probability distribution
 
         returns:
             loss: a positive value of cross entropy loss 
@@ -78,9 +79,9 @@ class InstanceMetricLoss(nn.Module):
     
     def _get_distance(self, inputs):
         # get distance
-        if configs.COSINE_DISTANCE:
+        if CONF.ML.COSINE_DISTANCE:
             D = inputs.matmul(inputs.transpose(1, 0))
-            if configs.INVERTED_LOSS:
+            if CONF.ML.INVERTED_LOSS:
                 D /= 128.
             else:
                 D = 1. - D
@@ -91,7 +92,7 @@ class InstanceMetricLoss(nn.Module):
             D = torch.sqrt(Dsq)
 
         # get exponential distance
-        if configs.INVERTED_LOSS:
+        if CONF.ML.INVERTED_LOSS:
             Dexpm = torch.exp(self.margin + D)
         else:
             Dexpm = torch.exp(self.margin - D)
@@ -106,7 +107,7 @@ class InstanceMetricLoss(nn.Module):
 
         param:
             inputs: composed embedding matrix with assumption that two consecutive data pairs are from the same class
-                    note that no other data pairs can be from the same class
+                    note that no other data pairs in this batch can be from the same class
         
         return:
             instance-level metric_loss: see https://arxiv.org/pdf/1803.08495.pdf Sec.4.2
@@ -130,11 +131,11 @@ class InstanceMetricLoss(nn.Module):
             # neg_i = [pos_i * batch_size + k for k in range(batch_size) if k != pos_i and k != pos_j]
             # neg_j = [pos_j * batch_size + l for l in range(batch_size) if l != pos_i and l != pos_j]
 
-            neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum() / len(neg_i)
-            neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum() / len(neg_j)
+            neg_ik = Dexpm.take(torch.LongTensor(neg_i).cuda()).sum()
+            neg_jl = Dexpm.take(torch.LongTensor(neg_j).cuda()).sum()
             Dissim = neg_ik + neg_jl
 
-            if configs.INVERTED_LOSS:
+            if CONF.ML.INVERTED_LOSS:
                 J_ij = torch.log(1e-8 + Dissim).cuda() - D[pos_pair]
             else:
                 J_ij = torch.log(1e-8 + Dissim).cuda() + D[pos_pair]
