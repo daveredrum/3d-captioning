@@ -46,6 +46,15 @@ __progress:__
     <td align="center"><b>4.52</b></td>
     <td align="center"><b>2.71</b></td>
   </tr>
+  <tr>
+    <td>ours (64)</td>
+    <td align="center">1.48</td>
+    <td align="center">3.95</td>
+    <td align="center">0.98</td>
+    <td align="center">0.79</td>
+    <td align="center">3.46</td>
+    <td align="center">2.07</td>
+  </tr>
 </table>
 
 > __best models:__
