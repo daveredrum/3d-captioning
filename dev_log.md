@@ -8,8 +8,8 @@ __progress:__
 <table>
   <tr>
     <td rowspan=2 align="center">Method</td>
-    <td colspan=3 align="center">Shape-Text</td>
-    <td colspan=3 align="center">Text-Shape</td>
+    <td colspan=3 align="center">Shape-Text<br/>(Text2Shape/ours-32/ours-64)</td>
+    <td colspan=3 align="center">Text-Shape<br/>(Text2Shape/ours-32/ours-64)</td>
   </tr>
   <tr>
     <td align="center">RR@1</td>
@@ -29,31 +29,13 @@ __progress:__
     <td align="center">0.23</td>
   </tr>
   <tr>
-    <td>Text2Shape</td>
-    <td align="center">0.83</td>
-    <td align="center">3.37</td>
-    <td align="center">0.73</td>
-    <td align="center">0.40</td>
-    <td align="center">2.37</td>
-    <td align="center">1.35</td>
-  </tr>
-  <tr>
-    <td><b>ours (32)</b></td>
-    <td align="center"><b>1.68</b></td>
-    <td align="center"><b>6.57</b></td>
-    <td align="center"><b>1.53</b></td>
-    <td align="center"><b>0.95</b></td>
-    <td align="center"><b>4.52</b></td>
-    <td align="center"><b>2.71</b></td>
-  </tr>
-  <tr>
-    <td>ours (64)</td>
-    <td align="center">1.48</td>
-    <td align="center">3.95</td>
-    <td align="center">0.98</td>
-    <td align="center">0.79</td>
-    <td align="center">3.46</td>
-    <td align="center">2.07</td>
+    <td>Full-MM</td>
+    <td align="center">0.83/<b>1.68</b>/1.48</td>
+    <td align="center">3.37/<b>6.57</b>/3.95</td>
+    <td align="center">0.73/<b>1.53</b>/0.98</td>
+    <td align="center">0.40/<b>0.95</b>/0.79</td>
+    <td align="center">2.37/<b>4.52</b>/3.46</td>
+    <td align="center">1.35/<b>2.71</b>/2.07</td>
   </tr>
 </table>
 
