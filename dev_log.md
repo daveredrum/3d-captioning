@@ -39,12 +39,12 @@ __progress:__
   </tr>
   <tr>
     <td>ML</td>
-    <td align="center">0.13/<b>0.13</b>/-</td>
-    <td align="center">0.47/<b>0.67</b>/-</td>
-    <td align="center">0.11/<b>0.13</b>/-</td>
-    <td align="center">0.13/<b>0.13</b>/-</td>
-    <td align="center"><b>0.61</b>/0.60/-</td>
-    <td align="center">0.36/<b>0.36</b>/-</td>
+    <td align="center">0.13/<b>0.13</b>/0.06</td>
+    <td align="center">0.47/<b>0.67</b>/0.40</td>
+    <td align="center">0.11/<b>0.13</b>/0.07</td>
+    <td align="center">0.13/<b>0.13</b>/0.11</td>
+    <td align="center">0.61/0.60/<b>0.64</b></td>
+    <td align="center">0.36/0.36/<b>0.38</b></td>
   </tr>
   <tr>
     <td>Full-TST</td>
