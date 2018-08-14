@@ -70,7 +70,7 @@ global configurations for ML
 
 CONF.ML = EasyDict()
 # flags of ML
-CONF.ML.IS_ML = True
+CONF.ML.IS_ML = False
 CONF.ML.IS_ML_TT = True
 CONF.ML.IS_ML_ST = True
 CONF.ML.COSINE_DISTANCE = True
