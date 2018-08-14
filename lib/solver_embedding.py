@@ -269,21 +269,21 @@ class EmbeddingSolver():
             
             # best
             with lock:
-                if np.mean(val_log['total_loss']) < best['total_loss'].value:
+                if np.mean(train_log['total_loss']) < best['total_loss'].value:
                     # report best
-                    print("[{}] best_loss achieved: {}".format(rank, np.mean(val_log['total_loss'])))
-                    print("[{}] current val_loss: {}".format(rank, np.mean(val_log['total_loss'])))
+                    print("[{}] best_loss achieved: {}".format(rank, np.mean(train_log['total_loss'])))
+                    print("[{}] current val_loss: {}".format(rank, np.mean(train_log['total_loss'])))
                     best['rank'].value = rank
                     best['epoch'].value = epoch_id
-                    best['total_loss'].value = float(np.mean(val_log['total_loss']))
-                    best['walker_loss_tst'].value = float(np.mean(val_log['walker_loss_tst']))
-                    best['walker_loss_sts'].value = float(np.mean(val_log['walker_loss_sts']))
-                    best['visit_loss_ts'].value = float(np.mean(val_log['visit_loss_ts']))
-                    best['visit_loss_st'].value = float(np.mean(val_log['visit_loss_st']))
-                    best['metric_loss_st'].value = float(np.mean(val_log['metric_loss_st']))
-                    best['metric_loss_tt'].value = float(np.mean(val_log['metric_loss_tt']))
-                    best['shape_norm_penalty'].value = float(np.mean(val_log['shape_norm_penalty']))
-                    best['text_norm_penalty'].value = float(np.mean(val_log['text_norm_penalty']))
+                    best['total_loss'].value = float(np.mean(train_log['total_loss']))
+                    best['walker_loss_tst'].value = float(np.mean(train_log['walker_loss_tst']))
+                    best['walker_loss_sts'].value = float(np.mean(train_log['walker_loss_sts']))
+                    best['visit_loss_ts'].value = float(np.mean(train_log['visit_loss_ts']))
+                    best['visit_loss_st'].value = float(np.mean(train_log['visit_loss_st']))
+                    best['metric_loss_st'].value = float(np.mean(train_log['metric_loss_st']))
+                    best['metric_loss_tt'].value = float(np.mean(train_log['metric_loss_tt']))
+                    best['shape_norm_penalty'].value = float(np.mean(train_log['shape_norm_penalty']))
+                    best['text_norm_penalty'].value = float(np.mean(train_log['text_norm_penalty']))
 
                     # save the best models
                     print("[{}] saving models...\n".format(rank))
