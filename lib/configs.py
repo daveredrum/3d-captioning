@@ -57,7 +57,7 @@ CONF.LBA = EasyDict()
 # flags of LBA
 CONF.LBA.IS_LBA = True
 CONF.LBA.IS_LBA_TST = True
-CONF.LBA.IS_LBA_STS = False
+CONF.LBA.IS_LBA_STS = True
 CONF.LBA.IS_LBA_VISIT = True
 # weights
 CONF.LBA.WALKER_WEIGHT = 1.
@@ -70,7 +70,7 @@ global configurations for ML
 
 CONF.ML = EasyDict()
 # flags of ML
-CONF.ML.IS_ML = True
+CONF.ML.IS_ML = False
 CONF.ML.IS_ML_TT = True
 CONF.ML.IS_ML_ST = True
 CONF.ML.COSINE_DISTANCE = True
