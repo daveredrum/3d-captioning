@@ -189,7 +189,11 @@ def main(args):
         'shape_norm_penalty': mp.Value(ctypes.c_float, float("inf")),
         'text_norm_penalty': mp.Value(ctypes.c_float, float("inf")),
     }
-    lock = mp.Lock()
+    lock = {
+        'best_lock': mp.Lock(),
+        'eval_lock': mp.Lock(),
+        'log_lock': mp.Lock(),
+    }
     return_log = mp.Queue()
     processes = []
     for rank in range(num_worker):
