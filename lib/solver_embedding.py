@@ -258,7 +258,7 @@ class EmbeddingSolver():
 
                 # evaluate
                 if iter_count % CONF.TRAIN.EVAL_FREQ == 0:
-                    with lock:
+                    with lock['eval_lock']:
                         self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
             # validate
@@ -268,7 +268,7 @@ class EmbeddingSolver():
             self._epoch_report(train_log, val_log, rank, epoch_id, epoch)
             
             # best
-            with lock:
+            with lock['best_lock']:
                 if np.mean(train_log['total_loss']) < best['total_loss'].value:
                     # report best
                     print("[{}] best_loss achieved: {}".format(rank, np.mean(train_log['total_loss'])))
@@ -314,7 +314,7 @@ class EmbeddingSolver():
 
         # done
         print("[{}] done...\n".format(rank))
-        with lock:
+        with lock['log_lock']:
             return_log.put(log)
             self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
