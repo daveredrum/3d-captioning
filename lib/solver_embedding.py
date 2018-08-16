@@ -316,6 +316,9 @@ class EmbeddingSolver():
         print("[{}] done...\n".format(rank))
         with lock['log_lock']:
             return_log.put(log)
+
+        # end eval
+        with lock['eval_lock']:
             self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
         # return best['shape_encoder'], best['text_encoder']
