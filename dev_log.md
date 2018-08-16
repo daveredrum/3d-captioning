@@ -30,12 +30,12 @@ __progress:__
   </tr>
   <tr>
     <td>LBA-MM</td>
-    <td align="center"><b>0.07</b>/0/-</td>
-    <td align="center"><b>0.37</b>/0.20/-</td>
-    <td align="center"><b>0.07</b>/0.04/-</td>
-    <td align="center"><b>0.08</b>/0.05/-</td>
-    <td align="center"><b>0.34</b>/0.23/-</td>
-    <td align="center"><b>0.21</b>/0.13/-</td>
+    <td align="center">0.07/0/<b>0.13</b></td>
+    <td align="center">0.37/0.20/<b>0.67</b></td>
+    <td align="center">0.07/0.04/<b>0.14</b></td>
+    <td align="center">0.08/0.05/<b>0.11</b></td>
+    <td align="center">0.34/0.23/<b>0.4</b></td>
+    <td align="center">0.21/0.13/<b>0.27</b></td>
   </tr>
   <tr>
     <td>ML</td>
