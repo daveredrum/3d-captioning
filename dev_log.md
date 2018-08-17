@@ -51,7 +51,7 @@ __progress:__
     <td align="center"><b>0.94</b>/0.20/-</td>
     <td align="center"><b>3.69</b>/1.40/-</td>
     <td align="center"><b>0.85</b>/0.22/-</td>
-    <td align="center"><b>0.22</b>/0.32/-</td>
+    <td align="center">0.22/<b>0.32</b>/-</td>
     <td align="center"><b>1.63</b>/1.26/-</td>
     <td align="center"><b>0.87</b>/0.79/-</td>
   </tr>
