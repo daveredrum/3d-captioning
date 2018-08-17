@@ -48,12 +48,12 @@ __progress:__
   </tr>
   <tr>
     <td>Full-TST</td>
-    <td align="center"><b>0.94</b>/0/-</td>
-    <td align="center"><b>3.69</b>/0.87/-</td>
-    <td align="center"><b>0.85</b>/0.16/-</td>
-    <td align="center"><b>0.22</b>/0.17/-</td>
-    <td align="center"><b>1.63</b>/1.15/-</td>
-    <td align="center"><b>0.87</b>/0.63/-</td>
+    <td align="center"><b>0.94</b>/0.20/-</td>
+    <td align="center"><b>3.69</b>/1.40/-</td>
+    <td align="center"><b>0.85</b>/0.22/-</td>
+    <td align="center"><b>0.22</b>/0.32/-</td>
+    <td align="center"><b>1.63</b>/1.26/-</td>
+    <td align="center"><b>0.87</b>/0.79/-</td>
   </tr>
   <tr>
     <td>Full-MM</td>
