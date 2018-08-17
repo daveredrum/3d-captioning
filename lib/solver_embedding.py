@@ -258,8 +258,7 @@ class EmbeddingSolver():
 
                 # evaluate
                 if iter_count % CONF.TRAIN.EVAL_FREQ == 0:
-                    with lock['eval_lock']:
-                        self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
+                    self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
             # validate
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log, rank)
@@ -318,8 +317,7 @@ class EmbeddingSolver():
             return_log.put(log)
 
         # end eval
-        with lock['eval_lock']:
-            self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
+        self.evaluate(shape_encoder, text_encoder, eval_dataloader, rank)
 
         # return best['shape_encoder'], best['text_encoder']
 
