@@ -35,7 +35,8 @@ global configurations for training
 
 CONF.TRAIN = EasyDict()
 # parameters of training
-CONF.TRAIN.SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_mp{}" # mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process
+CONF.TRAIN.SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_{}" 
+# mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process, attention_type 
 CONF.TRAIN.N_CAPTION_PER_MODEL = 2
 CONF.TRAIN.RANDOM_SAMPLE = False
 CONF.TRAIN.REDUCE_STEP = 10

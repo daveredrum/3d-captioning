@@ -359,7 +359,7 @@ def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
     fig = plt.gcf()
-    fig.set_size_inches(16, 24)
+    fig.set_size_inches(16, 4 * num)
 
     # plot
     for i in range(num):
@@ -379,11 +379,11 @@ def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
     fig = plt.gcf()
-    fig.set_size_inches(15, 9)
-    outer = gridspec.GridSpec(3, 1, wspace=0.2, hspace=0.5)
+    fig.set_size_inches(15, 3 * num)
+    outer = gridspec.GridSpec(num, 1, wspace=0.2, hspace=0.5)
 
     # plot
-    for i in range(3):
+    for i in range(num):
         inner = gridspec.GridSpecFromSubplotSpec(1, 5,subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         ax = plt.Subplot(fig, outer[i])
         ax.set_title(text_raw[chosen[i]], fontsize=14)
@@ -399,7 +399,7 @@ def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
 
     plt.savefig(os.path.join(root, 'retrieval', 'text-to-shape.png'), bbox_inches="tight")
 
-def show_retrieval(embedding, root, voxel, num=3):
+def show_retrieval(embedding, root, voxel, num=5):
     # decode embeddings
     keys = list(embedding.keys())
     shape_embedding = []
@@ -453,10 +453,10 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
-    parser.add_argument('--dataset', help='dataset (''shapenet'', ''primitives'')')
+    parser.add_argument('--dataset', help='shapenet/primitives', default='shapenet')
     parser.add_argument('--embedding', help='path to the root folder containing embeddings')
     parser.add_argument('--phase', help='train/val/test', default='test', type=str)
-    parser.add_argument('--mode', help='t2t/t2s/s2t', type=str)
+    parser.add_argument('--mode', help='t2t/t2s/s2t', type=str, default='s2t')
     parser.add_argument('--plot', help='true/false', type=str, default='false')
     args = parser.parse_args()
 

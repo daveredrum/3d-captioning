@@ -73,70 +73,7 @@ def clip_grad_value_(optimizer, clip_value):
                 pass
 
 def decode_log_embedding(return_log):
-    train_log = {
-        'total_loss': [],
-        'walker_loss_tst': [],
-        'walker_loss_sts': [],
-        'visit_loss_ts': [],
-        'visit_loss_st': [],
-        'metric_loss_st': [],
-        'metric_loss_tt': [],
-        'shape_norm_penalty': [],
-        'text_norm_penalty': []
-    }
-    val_log = {
-        'total_loss': [],
-        'walker_loss_tst': [],
-        'walker_loss_sts': [],
-        'visit_loss_ts': [],
-        'visit_loss_st': [],
-        'metric_loss_st': [],
-        'metric_loss_tt': [],
-        'shape_norm_penalty': [],
-        'text_norm_penalty': [] 
-    }
-    while not return_log.empty():
-        data = return_log.get()
-        train_log['total_loss'].append(data['train']['total_loss'])
-        train_log['walker_loss_tst'].append(data['train']['walker_loss_tst'])
-        train_log['walker_loss_sts'].append(data['train']['walker_loss_sts'])
-        train_log['visit_loss_ts'].append(data['train']['visit_loss_ts'])
-        train_log['visit_loss_st'].append(data['train']['visit_loss_st'])
-        train_log['metric_loss_st'].append(data['train']['metric_loss_st'])
-        train_log['metric_loss_tt'].append(data['train']['metric_loss_tt'])
-        train_log['shape_norm_penalty'].append(data['train']['shape_norm_penalty'])
-        train_log['text_norm_penalty'].append(data['train']['text_norm_penalty'])
-        val_log['total_loss'].append(data['val']['total_loss'])
-        val_log['walker_loss_tst'].append(data['val']['walker_loss_tst'])
-        val_log['walker_loss_sts'].append(data['val']['walker_loss_sts'])
-        val_log['visit_loss_ts'].append(data['val']['visit_loss_ts'])
-        val_log['visit_loss_st'].append(data['val']['visit_loss_st'])
-        val_log['metric_loss_st'].append(data['val']['metric_loss_st'])
-        val_log['metric_loss_tt'].append(data['val']['metric_loss_tt'])
-        val_log['shape_norm_penalty'].append(data['val']['shape_norm_penalty'])
-        val_log['text_norm_penalty'].append(data['val']['text_norm_penalty'])
-    
-    # aggregate
-    train_log['total_loss'] = np.mean(np.array(train_log['total_loss']), 0)
-    train_log['walker_loss_tst'] = np.mean(np.array(train_log['walker_loss_tst']), 0)
-    train_log['walker_loss_sts'] = np.mean(np.array(train_log['walker_loss_sts']), 0)
-    train_log['visit_loss_ts'] = np.mean(np.array(train_log['visit_loss_ts']), 0)
-    train_log['visit_loss_st'] = np.mean(np.array(train_log['visit_loss_st']), 0)
-    train_log['metric_loss_st'] = np.mean(np.array(train_log['metric_loss_st']), 0)
-    train_log['metric_loss_tt'] = np.mean(np.array(train_log['metric_loss_tt']), 0)
-    train_log['shape_norm_penalty'] = np.mean(np.array(train_log['shape_norm_penalty']), 0)
-    train_log['text_norm_penalty'] = np.mean(np.array(train_log['text_norm_penalty']), 0)
-    val_log['total_loss'] = np.mean(np.array(val_log['total_loss']), 0)
-    val_log['walker_loss_tst'] = np.mean(np.array(val_log['walker_loss_tst']), 0)
-    val_log['walker_loss_sts'] = np.mean(np.array(val_log['walker_loss_sts']), 0)
-    val_log['visit_loss_ts'] = np.mean(np.array(val_log['visit_loss_ts']), 0)
-    val_log['visit_loss_st'] = np.mean(np.array(val_log['visit_loss_st']), 0)
-    val_log['metric_loss_st'] = np.mean(np.array(val_log['metric_loss_st']), 0)
-    val_log['metric_loss_tt'] = np.mean(np.array(val_log['metric_loss_tt']), 0)
-    val_log['shape_norm_penalty'] = np.mean(np.array(val_log['shape_norm_penalty']), 0)
-    val_log['text_norm_penalty'] = np.mean(np.array(val_log['text_norm_penalty']), 0)
-
-    return train_log, val_log
+    return return_log['train'], return_log['val']
 
 def draw_curves_embedding(train_log, val_log, root):
     print("plotting training curves...")

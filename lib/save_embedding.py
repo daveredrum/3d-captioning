@@ -28,8 +28,11 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
         text = text.cuda()
 
         # feed
-        shape_embedding = shape_encoder(shape)
-        text_embedding = text_encoder(text)
+        if text_encoder:
+            shape_embedding = shape_encoder(shape)
+            text_embedding = text_encoder(text)
+        else:
+            shape_embedding, text_embedding = shape_encoder(shape, text)
 
         # append
         for i in range(len(model_id)):
@@ -38,6 +41,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             else:
                 cap = None
             if model_id[i] in data.keys():
+                data[model_id[i]]['shape_embedding'].append(shape_embedding[i].data.cpu().numpy())
                 data[model_id[i]]['text_embedding'].append(
                     (
                         cap,
@@ -46,7 +50,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
                 ) 
             else:
                 data[model_id[i]] = {
-                    'shape_embedding': shape_embedding[i].data.cpu().numpy(),
+                    'shape_embedding': [shape_embedding[i].data.cpu().numpy()],
                     'text_embedding': [
                         (
                             cap,
@@ -63,7 +67,11 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             eta_m = math.floor(eta_s / 60)
             eta_s = math.floor(eta_s % 60)
             print("extracted: {}/{}, ETA: {}m {}s".format(offset, len(getattr(shapenet, "{}_data".format(phase))), eta_m, int(eta_s)))
-        
+
+    # aggregate shape embeddings
+    for key in data.keys():
+        data[key]['shape_embedding'] = np.mean(data[key]['shape_embedding'], axis=0)
+
     return data
 
 def main(args):
