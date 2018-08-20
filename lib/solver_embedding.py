@@ -289,16 +289,16 @@ class EmbeddingSolver():
                 # report best
                 print("best_loss achieved: {}".format(np.mean(train_log['total_loss'])))
                 print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
-                best['epoch'].value = epoch_id
-                best['total_loss'].value = float(np.mean(train_log['total_loss']))
-                best['walker_loss_tst'].value = float(np.mean(train_log['walker_loss_tst']))
-                best['walker_loss_sts'].value = float(np.mean(train_log['walker_loss_sts']))
-                best['visit_loss_ts'].value = float(np.mean(train_log['visit_loss_ts']))
-                best['visit_loss_st'].value = float(np.mean(train_log['visit_loss_st']))
-                best['metric_loss_st'].value = float(np.mean(train_log['metric_loss_st']))
-                best['metric_loss_tt'].value = float(np.mean(train_log['metric_loss_tt']))
-                best['shape_norm_penalty'].value = float(np.mean(train_log['shape_norm_penalty']))
-                best['text_norm_penalty'].value = float(np.mean(train_log['text_norm_penalty']))
+                best['epoch'] = epoch_id
+                best['total_loss'] = float(np.mean(train_log['total_loss']))
+                best['walker_loss_tst'] = float(np.mean(train_log['walker_loss_tst']))
+                best['walker_loss_sts'] = float(np.mean(train_log['walker_loss_sts']))
+                best['visit_loss_ts'] = float(np.mean(train_log['visit_loss_ts']))
+                best['visit_loss_st'] = float(np.mean(train_log['visit_loss_st']))
+                best['metric_loss_st'] = float(np.mean(train_log['metric_loss_st']))
+                best['metric_loss_tt'] = float(np.mean(train_log['metric_loss_tt']))
+                best['shape_norm_penalty'] = float(np.mean(train_log['shape_norm_penalty']))
+                best['text_norm_penalty'] = float(np.mean(train_log['text_norm_penalty']))
 
                 # save the best models
                 print("saving models...\n")
