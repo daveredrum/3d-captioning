@@ -187,26 +187,26 @@ def main(args):
     # report best
     print("------------------------best------------------------")
     print("[Loss] epoch: %d" % (
-        best['epoch'].value
+        best['epoch']
     ))
     print("[Loss] total_loss: %f" % (
-        best['total_loss'].value
+        best['total_loss']
     ))
     print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
-        best['walker_loss_tst'].value,
-        best['walker_loss_sts'].value
+        best['walker_loss_tst'],
+        best['walker_loss_sts']
     ))
     print("[Loss] visit_loss_ts: %f, visit_loss_st: %f" % (
-        best['visit_loss_ts'].value,
-        best['visit_loss_st'].value
+        best['visit_loss_ts'],
+        best['visit_loss_st']
     ))
     print("[Loss] metric_loss_st: %f, metric_loss_tt: %f" % (
-        best['metric_loss_st'].value,
-        best['metric_loss_tt'].value
+        best['metric_loss_st'],
+        best['metric_loss_tt']
     ))
     print("[Loss] shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
-        best['shape_norm_penalty'].value,
-        best['text_norm_penalty'].value
+        best['shape_norm_penalty'],
+        best['text_norm_penalty']
     ))
 
     # draw curves
