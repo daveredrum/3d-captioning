@@ -89,7 +89,7 @@ class AdaptiveEncoder(nn.Module):
         attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
         shape_contexts_step = (1 - sentinel_scalar) * attended
         attended = sentinel_scalar * sentinel + shape_contexts_step
-        states = (attended, c)
+        states = (attended + h, c)
 
         return shape_contexts_step, states, weights
 
