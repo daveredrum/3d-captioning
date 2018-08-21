@@ -18,7 +18,7 @@ class AdaptiveEncoder(nn.Module):
             nn.Conv3d(64, 128, 3, stride=2, padding=1),
             nn.ReLU(),
             nn.BatchNorm3d(128),
-            nn.Conv3d(128, 256, 3, stride=2, padding=1),
+            nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(256)
         )

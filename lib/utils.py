@@ -84,7 +84,7 @@ def draw_curves_embedding(train_log, val_log, root):
     plt.switch_backend("agg")
     fig = plt.gcf()
     fig.set_size_inches(16,8)
-    epochs = train_log['total_loss'].shape[0]
+    epochs = len(train_log['total_loss'])
 
     # plot total loss
     plt.plot(range(1, epochs + 1), train_log['total_loss'], label="train_loss")
