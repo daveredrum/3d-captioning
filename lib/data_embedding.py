@@ -195,8 +195,8 @@ class ShapenetDataset(Dataset):
         return len(self.shapenet_data)
 
     def __getitem__(self, idx):
-        model_id = self.shapenet_data[idx][0]
         start = time.time()
+        model_id = self.shapenet_data[idx][0]
         if self.database:
             db_idx = self.idx2label[model_id]
             voxel = self.database['volume'][db_idx].reshape((4, self.resolution, self.resolution, self.resolution))
@@ -205,10 +205,11 @@ class ShapenetDataset(Dataset):
             model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
             voxel = torch.FloatTensor(nrrd.read(model_path)[0])
             voxel /= 255.
-        exe_time = time.time() - start
+       
         caption = self.shapenet_data[idx][2]
         length = len(caption)
         label = int(self.idx2label[self.shapenet_data[idx][0]])
+        exe_time = time.time() - start
 
         return model_id, voxel, caption, length, label, exe_time
 
