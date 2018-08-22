@@ -198,8 +198,8 @@ class ShapenetDataset(Dataset):
         model_id = self.shapenet_data[idx][0]
         start = time.time()
         if self.database:
-            idx = self.idx2label[model_id]
-            voxel = self.database['volume'][idx].reshape((4, self.resolution, self.resolution, self.resolution))
+            db_idx = self.idx2label[model_id]
+            voxel = self.database['volume'][db_idx].reshape((4, self.resolution, self.resolution, self.resolution))
             voxel = torch.FloatTensor(voxel)
         else:
             model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
