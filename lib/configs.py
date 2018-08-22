@@ -10,8 +10,9 @@ global configurations for path
 CONF.PATH = EasyDict()
 # general
 CONF.PATH.DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
-CONF.PATH.SHAPENET_ROOT = "data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
+CONF.PATH.SHAPENET_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 CONF.PATH.SHAPENET_SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
+CONF.PATH.SHAPENET_DATABASE = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid.hdf5" # TODO modify this
 CONF.PATH.PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
 CONF.PATH.SHAPENET_IMG = "{}/{}.png" # model_id
 CONF.PATH.SHAPENET_NRRD = "{}/{}.nrrd" # model_id

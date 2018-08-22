@@ -54,13 +54,27 @@ def get_dataset(split_size, unique_batch_size, voxel):
         unique_batch_size,
         True
     )
-    train_dataset = ShapenetDataset(shapenet.train_data_agg, shapenet.train_idx2label, voxel)
-    val_dataset = ShapenetDataset(shapenet.val_data_agg, shapenet.val_idx2label, voxel)
+    train_dataset = ShapenetDataset(
+        shapenet.train_data_agg, 
+        shapenet.train_idx2label, 
+        shapenet.train_label2idx, 
+        voxel, 
+        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+    )
+    val_dataset = ShapenetDataset(
+        shapenet.val_data_agg, 
+        shapenet.val_idx2label, 
+        shapenet.val_label2idx,
+        voxel,
+        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+    )
     # for evaluation
     eval_dataset = ShapenetDataset(
         getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
         getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-        voxel
+        getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+        voxel,
+        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
     )
 
     return shapenet, train_dataset, val_dataset, eval_dataset
@@ -216,7 +230,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
+    parser.add_argument("--voxel", type=int, default=64, help="voxel resolution")
     parser.add_argument("--train_size", type=int, default=100, help="train size")
     parser.add_argument("--val_size", type=int, default=100, help="val size")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")

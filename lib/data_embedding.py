@@ -6,6 +6,8 @@ from torch.utils.data import Dataset
 import nrrd
 from itertools import combinations
 import random
+import h5py
+import time
 
 # HACK
 import sys
@@ -24,7 +26,9 @@ class Shapenet():
         '''
         
         # general settings
-        self.shapenet_split_train, self.shapenet_split_val, self.shapenet_split_test = shapenet_split
+        self.shapenet_split_train, self.train_modelid2idx = shapenet_split[0]['data'], shapenet_split[0]['modelid2idx']
+        self.shapenet_split_val, self.val_modelid2idx = shapenet_split[1]['data'], shapenet_split[1]['modelid2idx']
+        self.shapenet_split_test, self.test_modelid2idx = shapenet_split[2]['data'], shapenet_split[2]['modelid2idx']
         self.train_size, self.val_size, self.test_size = size_split
         self.batch_size = batch_size
         self.bad_ids = pickle.load(open(CONF.PATH.SHAPENET_PROBLEMATIC, 'rb'))
@@ -59,13 +63,8 @@ class Shapenet():
         '''
         setattr(self, "cat2label", {'table': -1, 'chair': 1})
         for phase in ["train", "val", "test"]:
-            idx2label = {}
-            for label, item in enumerate(getattr(self, "shapenet_split_{}".format(phase))):
-                model_id = item[0]
-                if model_id not in idx2label.keys() and model_id not in self.bad_ids:
-                    idx2label[model_id] = str(label)
-            
-            label2idx = {label: idx for idx, label in idx2label.items()}
+            idx2label = {idx: label for idx, label in getattr(self, "{}_modelid2idx".format(phase)).items()}
+            label2idx = {label: idx for idx, label in getattr(self, "{}_modelid2idx".format(phase)).items()}
             setattr(self, "{}_idx2label".format(phase), idx2label)
             setattr(self, "{}_label2idx".format(phase), label2idx)
 
@@ -181,27 +180,37 @@ class Shapenet():
 
 
 class ShapenetDataset(Dataset):
-    def __init__(self, shapenet_data, idx2label, resolution):
+    def __init__(self, shapenet_data, idx2label, label2idx, resolution, database=None):
         '''
-        param: shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
+        param: 
+            shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
         '''
         self.shapenet_data = shapenet_data
         self.idx2label = idx2label
+        self.label2idx = label2idx
         self.resolution = resolution
+        self.database = database 
 
     def __len__(self):
         return len(self.shapenet_data)
 
     def __getitem__(self, idx):
         model_id = self.shapenet_data[idx][0]
-        model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
-        voxel = torch.FloatTensor(nrrd.read(model_path)[0])
-        voxel /= 255.
+        start = time.time()
+        if self.database:
+            idx = self.idx2label[model_id]
+            voxel = self.database['volume'][idx].reshape((4, self.resolution, self.resolution, self.resolution))
+            voxel = torch.FloatTensor(voxel)
+        else:
+            model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
+            voxel = torch.FloatTensor(nrrd.read(model_path)[0])
+            voxel /= 255.
+        exe_time = time.time() - start
         caption = self.shapenet_data[idx][2]
         length = len(caption)
         label = int(self.idx2label[self.shapenet_data[idx][0]])
 
-        return model_id, voxel, caption, length, label
+        return model_id, voxel, caption, length, label, exe_time
 
 def collate_shapenet(data):
     '''
@@ -212,13 +221,14 @@ def collate_shapenet(data):
         5D tensor of voxels
         2D tensor of transformed captions
         lengths of transformed captions
-        labels, table is -1 and chair is 1
+        labels
+        data fetch time
     '''
     # # Sort a data list by caption length (descending order)
     # data.sort(key=lambda x: x[3], reverse=True)
 
     # Merge voxels (from tuple of 4D tensor to 5D tensor)
-    model_ids, voxels, captions, lengths, labels = zip(*data)
+    model_ids, voxels, captions, lengths, labels, exe_time = zip(*data)
     voxels = torch.stack(voxels, 0)
 
     # Merge captions (from tuple of 1D tensor to 2D tensor).
@@ -227,4 +237,4 @@ def collate_shapenet(data):
         end = int(lengths[i])
         merge_caps[i, :end] = torch.LongTensor(cap[:end])
     
-    return model_ids, voxels, merge_caps, torch.Tensor(list(lengths)), torch.Tensor(list(labels))
+    return model_ids, voxels, merge_caps, torch.Tensor(list(lengths)), torch.Tensor(list(labels)), np.sum(exe_time)

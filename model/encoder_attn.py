@@ -102,9 +102,11 @@ class AdaptiveEncoder(nn.Module):
         
         # through attention
         shape_contexts = []
+        weights = []
         for i in range(text_feat.size(1)):
-            shape_contexts_step, states, _ = self.attend(shape_feat, text_feat[:, i, :], states)
+            shape_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
             shape_contexts.append(shape_contexts_step.unsqueeze(2))
+            weights.append(weights_step)
         shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
         text_attended = states[0]
 
@@ -112,5 +114,5 @@ class AdaptiveEncoder(nn.Module):
         shape_outputs = self.shape_outputs(shape_attended)
         text_outputs = self.text_outputs(text_attended)
 
-        return shape_outputs, text_outputs
+        return shape_outputs, text_outputs, weights_step
         

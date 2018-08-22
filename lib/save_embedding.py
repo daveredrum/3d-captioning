@@ -16,12 +16,13 @@ from lib.configs import CONF
 from lib.data_embedding import *
 from model.encoder_shape import *
 from model.encoder_text import *
+from model.encoder_attn import AdaptiveEncoder
 
 def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=False):
     data = {}
     offset = 0
     total_iter = len(dataloader)
-    for iter_id, (model_id, shape, text, _, _) in enumerate(dataloader):
+    for iter_id, (model_id, shape, text, _, _, _) in enumerate(dataloader):
         start = time.time()
         # load
         shape = shape.cuda()
@@ -78,8 +79,12 @@ def main(args):
     # parse args
     root = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, args.path)
     voxel = args.voxel
-    shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
-    text_encoder_path = os.path.join(root, "models/text_encoder.pth")
+    if args.path.split("_")[-1] == "noattention":
+        shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
+        text_encoder_path = os.path.join(root, "models/text_encoder.pth")
+    else:
+        shape_encoder_path = os.path.join(root, "models/encoder.pth")
+        text_encoder_path = None
     train_size = args.train_size
     val_size = args.val_size
     test_size = args.test_size
@@ -108,7 +113,14 @@ def main(args):
     )
     dataloader = {}
     for phase in ["train", "val", "test"]:
-        dataset = ShapenetDataset(getattr(shapenet, "{}_data".format(phase)), getattr(shapenet, "{}_idx2label".format(phase)), voxel)
+        dataset = ShapenetDataset(
+            getattr(shapenet, 
+            "{}_data".format(phase)), 
+            getattr(shapenet, "{}_idx2label".format(phase)), 
+            getattr(shapenet, "{}_label2idx".format(phase)), 
+            voxel,
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+        )
         dataloader[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
 
     # report settings
@@ -121,12 +133,18 @@ def main(args):
 
     # initialize models
     print("\ninitializing models...\n")
-    shape_encoder = ShapenetShapeEncoder().cuda()
-    shape_encoder.load_state_dict(torch.load(shape_encoder_path))
-    text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
-    text_encoder.load_state_dict(torch.load(text_encoder_path))
-    shape_encoder.eval()
-    text_encoder.eval()
+    if text_encoder_path:
+        shape_encoder = ShapenetShapeEncoder().cuda()
+        shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+        shape_encoder.eval()
+        text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        text_encoder.load_state_dict(torch.load(text_encoder_path))
+        text_encoder.eval()
+    else:
+        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+        shape_encoder.eval()
+        text_encoder = None
 
     # extract
     if not os.path.exists(os.path.join(root, "embeddings")):

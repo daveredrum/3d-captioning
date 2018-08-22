@@ -31,8 +31,11 @@ def construct_embeddings_matrix(dataset, embedding, mode):
         dataset: String specifying the dataset
         embedding: Dictionary containing the embeddings. 
             form: emb = {
-                'shape_embedding': shape_emb,
-                'text_embedding': text_emb
+                'e702f89ce87a0b6579368d1198f406e7': {
+                    'shape_embedding': shape_emb,
+                    'text_embedding': [text_emb_1, text_emb_2, ...]
+                }
+                ...
             }
     """
     
@@ -45,6 +48,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     print('\nNumber of embedding:', num_sample)
     print('Number of shape embeddings: {}, number of text embeddings: {}'.format(num_shape, num_text))
     print('Dimensionality of embedding:', embedding_dim)
+    print('Evaluation mode:', mode)
     print()
 
     # extract embedding

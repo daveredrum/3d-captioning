@@ -35,7 +35,7 @@ class EmbeddingSolver():
             s = shape_encoder(shapes)
             t = text_encoder(texts)
         else:
-            s, t = shape_encoder(shapes, texts)
+            s, t, _ = shape_encoder(shapes, texts)
             s_upper = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
             s_lower = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
             s = (s_upper + s_lower) / 2.
@@ -135,7 +135,7 @@ class EmbeddingSolver():
 
     def validate(self, shape_encoder, text_encoder, dataloader, val_log):
         print("validating...\n")
-        for _, (_, shapes, texts, _, labels) in enumerate(dataloader['val']):
+        for _, (_, shapes, texts, _, labels, _) in enumerate(dataloader['val']):
             start = time.time()
             # forward pass
             # eval mode
@@ -219,7 +219,8 @@ class EmbeddingSolver():
                 'metric_loss_st': [],
                 'metric_loss_tt': [],
                 'shape_norm_penalty': [],
-                'text_norm_penalty': []
+                'text_norm_penalty': [],
+                'fetch_time': []
             }
             val_log = {
                 'iter_time': [],
@@ -234,7 +235,7 @@ class EmbeddingSolver():
                 'text_norm_penalty': []
                 
             }
-            for _, (_, shapes, texts, _, labels) in enumerate(dataloader['train']):
+            for _, (_, shapes, texts, _, labels, fetch_time) in enumerate(dataloader['train']):
                 start = time.time()
                 # forward pass
                 forward_since = time.time()
@@ -254,6 +255,7 @@ class EmbeddingSolver():
                 train_log['metric_loss_tt'].append(losses['metric_loss_tt'].item())
                 train_log['shape_norm_penalty'].append(losses['shape_norm_penalty'].item())
                 train_log['text_norm_penalty'].append(losses['text_norm_penalty'].item())
+                train_log['fetch_time'].append(fetch_time)
 
                 # back prop
                 self.optimizer.zero_grad()
@@ -267,7 +269,7 @@ class EmbeddingSolver():
                 train_log['backward'].append(time.time() - backward_since)
 
                 # record
-                train_log['iter_time'].append(time.time() - start)
+                train_log['iter_time'].append(time.time() - start + fetch_time)
                 iter_count += 1
 
                 # report
@@ -285,20 +287,20 @@ class EmbeddingSolver():
             self._epoch_report(train_log, val_log, epoch_id, epoch)
             
             # best
-            if np.mean(train_log['total_loss']) < best['total_loss']:
+            if np.mean(val_log['total_loss']) < best['total_loss']:
                 # report best
-                print("best_loss achieved: {}".format(np.mean(train_log['total_loss'])))
-                print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
+                print("best val_loss achieved: {}".format(np.mean(val_log['total_loss'])))
+                print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
                 best['epoch'] = epoch_id
-                best['total_loss'] = float(np.mean(train_log['total_loss']))
-                best['walker_loss_tst'] = float(np.mean(train_log['walker_loss_tst']))
-                best['walker_loss_sts'] = float(np.mean(train_log['walker_loss_sts']))
-                best['visit_loss_ts'] = float(np.mean(train_log['visit_loss_ts']))
-                best['visit_loss_st'] = float(np.mean(train_log['visit_loss_st']))
-                best['metric_loss_st'] = float(np.mean(train_log['metric_loss_st']))
-                best['metric_loss_tt'] = float(np.mean(train_log['metric_loss_tt']))
-                best['shape_norm_penalty'] = float(np.mean(train_log['shape_norm_penalty']))
-                best['text_norm_penalty'] = float(np.mean(train_log['text_norm_penalty']))
+                best['total_loss'] = float(np.mean(val_log['total_loss']))
+                best['walker_loss_tst'] = float(np.mean(val_log['walker_loss_tst']))
+                best['walker_loss_sts'] = float(np.mean(val_log['walker_loss_sts']))
+                best['visit_loss_ts'] = float(np.mean(val_log['visit_loss_ts']))
+                best['visit_loss_st'] = float(np.mean(val_log['visit_loss_st']))
+                best['metric_loss_st'] = float(np.mean(val_log['metric_loss_st']))
+                best['metric_loss_tt'] = float(np.mean(val_log['metric_loss_tt']))
+                best['shape_norm_penalty'] = float(np.mean(val_log['shape_norm_penalty']))
+                best['text_norm_penalty'] = float(np.mean(val_log['text_norm_penalty']))
 
                 # save the best models
                 print("saving models...\n")
@@ -374,9 +376,10 @@ class EmbeddingSolver():
             np.mean(log['shape_norm_penalty']),
             np.mean(log['text_norm_penalty'])
         ))
-        print("[info] forward_per_iter: %fs\n[info] backward_per_iter: %fs" % ( 
+        print("[info] forward_per_iter: %fs\n[info] backward_per_iter: %fs\n[info] data_fetch: %fs" % ( 
             np.mean(log['forward']),
-            np.mean(log['backward'])
+            np.mean(log['backward']),
+            np.mean(log['fetch_time'])
         ))
         print("[info] time_per_iter: %fs\n[info] ETA: %dm %ds\n" % ( 
             np.mean(log['iter_time']),
