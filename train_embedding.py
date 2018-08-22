@@ -130,9 +130,6 @@ def main(args):
     # prepare data
     print("\npreparing data...\n")
     shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel)
-    print(len(train_dataset))
-    print(len(val_dataset))
-    print(len(eval_dataset))
     dataloader, eval_dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
     train_per_worker = len(dataloader['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     val_per_worker = len(dataloader['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
