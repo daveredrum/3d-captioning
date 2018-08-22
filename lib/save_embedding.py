@@ -33,7 +33,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             shape_embedding = shape_encoder(shape)
             text_embedding = text_encoder(text)
         else:
-            shape_embedding, text_embedding = shape_encoder(shape, text)
+            shape_embedding, text_embedding, _ = shape_encoder(shape, text)
 
         # append
         for i in range(len(model_id)):
