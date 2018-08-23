@@ -129,10 +129,9 @@ class AdaptiveEncoder(nn.Module):
             weights.append(weights_step)
             sentinel_scalars.append(weights_step[:, -1].unsqueeze(1))
         
-        shape_attn = F.softmax(1. - torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
-        shape_attended = torch.sum(torch.cat(shape_contexts, dim=2) * shape_attn, dim=2)
-        text_attn = F.softmax(torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
-        text_attended = torch.sum(torch.cat(text_contexts, dim=2) * text_attn, dim=2)
+        attn_mask = F.softmax(1. - torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
+        shape_attended = torch.sum(torch.cat(shape_contexts, dim=2) * attn_mask, dim=2)
+        text_attended = torch.sum(torch.cat(text_contexts, dim=2) * attn_mask, dim=2)
 
         # outputs
         shape_outputs = self.shape_outputs(shape_attended)
