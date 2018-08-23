@@ -1,5 +1,50 @@
 # Development Log
 
+## Aug. 23
+
+__progress:__
+- performance of cross-modality retrieval on __ShapeNetCore__:
+
+<table>
+  <tr>
+    <td rowspan=2 align="center">Method</td>
+    <td colspan=3 align="center">Shape-Text<br/>(Text2Shape-64/ours-64)</td>
+    <td colspan=3 align="center">Text-Shape<br/>(Text2Shape-64/ours-64)</td>
+  </tr>
+  <tr>
+    <td align="center">RR@1</td>
+    <td align="center">RR@5</td>
+    <td align="center">NDCG@5</td>
+    <td align="center">RR@1</td>
+    <td align="center">RR@5</td>
+    <td align="center">NDCG@5</td>
+  </tr>
+  <tr>
+    <td>Baseline</td>
+    <td align="center">0.07</td>
+    <td align="center">0.34</td>
+    <td align="center">0.06</td>
+    <td align="center">0.11</td>
+    <td align="center">0.35</td>
+    <td align="center">0.23</td>
+  </tr>
+  <tr>
+    <td>Full-MM</td>
+    <td align="center">1.68/<b>63.67</b></td>
+    <td align="center">6.57/<b>73.73</b></td>
+    <td align="center">1.53/<b>62.65</b></td>
+    <td align="center">0.95/<b>8.84</b></td>
+    <td align="center">4.52/<b>43.60</b></td>
+    <td align="center">2.71/<b>25.66</b></td>
+  </tr>
+</table>
+
+> __best models:__
+>
+> |train_size|test_size|learning_rate|weight_decay|batch_size|epoch|random|
+> |---|---|---|---|---|---|---|
+> |-1|-1|2e-4|5e-4|32|10|False|
+
 ## Aug. 9
 
 __progress:__
