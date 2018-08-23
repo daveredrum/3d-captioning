@@ -83,15 +83,17 @@ class AdaptiveEncoder(nn.Module):
     def attend(self, shape_feat, text_feat, states):
         states, sentinel = self.lstm_cell(text_feat, states)
         h, c = states
-        weights = self.attention(shape_feat, states, sentinel)
-        attention_weights = weights[:, :-1]
-        sentinel_scalar = weights[:, -1].unsqueeze(1)
+        weights_step = self.attention(shape_feat, states, sentinel)
+        attention_weights = weights_step[:, :-1]
+        sentinel_scalar = weights_step[:, -1].unsqueeze(1)
         attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
         shape_contexts_step = (1 - sentinel_scalar) * attended
-        attended = sentinel_scalar * sentinel + shape_contexts_step
-        states = (attended + h, c)
+        # text_attended_step = sentinel_scalar * sentinel
+        text_attended_step = sentinel_scalar * h
+        # states = (attended + h, c)
+        states = (h, c)
 
-        return shape_contexts_step, states, weights
+        return shape_contexts_step, text_attended_step, states, weights_step
 
 
     def forward(self, shape_inputs, text_inputs):
@@ -102,17 +104,19 @@ class AdaptiveEncoder(nn.Module):
         
         # through attention
         shape_contexts = []
+        text_attended = []
         weights = []
         for i in range(text_feat.size(1)):
-            shape_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+            shape_contexts_step, text_attended_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
             shape_contexts.append(shape_contexts_step.unsqueeze(2))
+            text_attended.append(text_attended_step.unsqueeze(2))
             weights.append(weights_step)
         shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
-        text_attended = states[0]
+        text_attended = torch.cat(text_attended, dim=2).mean(2)
 
         # outputs
         shape_outputs = self.shape_outputs(shape_attended)
         text_outputs = self.text_outputs(text_attended)
 
-        return shape_outputs, text_outputs, weights_step
+        return shape_outputs, text_outputs, weights
         

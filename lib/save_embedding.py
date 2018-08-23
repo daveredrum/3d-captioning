@@ -78,7 +78,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
 def main(args):
     # parse args
     root = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, args.path)
-    voxel = args.voxel
+    voxel = int(args.path.split("_")[1][1:])
     if args.path.split("_")[-1] == "noattention":
         shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
         text_encoder_path = os.path.join(root, "models/text_encoder.pth")
@@ -165,7 +165,6 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default=None, help="path to the pretrained encoders")
-    parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
     parser.add_argument("--train_size", type=int, default=100, help="train size")
     parser.add_argument("--val_size", type=int, default=100, help="val size")
     parser.add_argument("--test_size", type=int, default=100, help="test size")

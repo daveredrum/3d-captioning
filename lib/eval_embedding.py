@@ -456,7 +456,6 @@ def show_retrieval(embedding, root, voxel, num=5):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--voxel", type=int, default=32, help="voxel resolution")
     parser.add_argument('--dataset', help='shapenet/primitives', default='shapenet')
     parser.add_argument('--embedding', help='path to the root folder containing embeddings')
     parser.add_argument('--phase', help='train/val/test', default='test', type=str)
@@ -472,7 +471,7 @@ def main():
     compute_metrics(args.dataset, embedding, mode=args.mode, metric='cosine')
 
     if args.plot == 'true':
-        show_retrieval(embedding, root, args.voxel)
+        show_retrieval(embedding, root, int(args.embedding.split("_")[1][1:]))
 
 
 if __name__ == '__main__':
