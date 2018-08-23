@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from model.net_components import AdaptiveLSTMCell
 from model.attn_components import AdaptiveAttention3D
 
@@ -81,19 +82,24 @@ class AdaptiveEncoder(nn.Module):
         )
 
     def attend(self, shape_feat, text_feat, states):
+        # states, sentinel = self.lstm_cell(text_feat, states)
+        # h, c = states
+        # weights_step = self.attention(shape_feat, states, sentinel)
+        # attention_weights = weights_step[:, :-1]
+        # sentinel_scalar = weights_step[:, -1].unsqueeze(1)
+        # attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
+        # shape_contexts_step = (1 - sentinel_scalar) * attended
+        # text_contexts_step = sentinel_scalar * sentinel + shape_contexts_step
+        # states = (text_contexts_step + h, c)
+
         states, sentinel = self.lstm_cell(text_feat, states)
-        h, c = states
         weights_step = self.attention(shape_feat, states, sentinel)
         attention_weights = weights_step[:, :-1]
-        sentinel_scalar = weights_step[:, -1].unsqueeze(1)
         attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
-        shape_contexts_step = (1 - sentinel_scalar) * attended
-        # text_attended_step = sentinel_scalar * sentinel
-        text_attended_step = sentinel_scalar * h
-        # states = (attended + h, c)
-        states = (h, c)
+        shape_contexts_step = attended
+        text_contexts_step = states[0]
 
-        return shape_contexts_step, text_attended_step, states, weights_step
+        return shape_contexts_step, text_contexts_step, states, weights_step
 
 
     def forward(self, shape_inputs, text_inputs):
@@ -103,16 +109,30 @@ class AdaptiveEncoder(nn.Module):
         states = self._init_hidden(text_feat) # (batch_size, 256)
         
         # through attention
+        # shape_contexts = []
+        # weights = []
+        # for i in range(text_feat.size(1)):
+        #     shape_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+        #     shape_contexts.append(shape_contexts_step.unsqueeze(2))
+        #     weights.append(weights_step)
+        # shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
+        # text_attended = states[0]
+
         shape_contexts = []
-        text_attended = []
+        text_contexts = []
         weights = []
+        sentinel_scalars = []
         for i in range(text_feat.size(1)):
-            shape_contexts_step, text_attended_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+            shape_contexts_step, text_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
             shape_contexts.append(shape_contexts_step.unsqueeze(2))
-            text_attended.append(text_attended_step.unsqueeze(2))
+            text_contexts.append(text_contexts_step.unsqueeze(2))
             weights.append(weights_step)
-        shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
-        text_attended = torch.cat(text_attended, dim=2).mean(2)
+            sentinel_scalars.append(weights_step[:, -1].unsqueeze(1))
+        
+        shape_attn = F.softmax(1. - torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
+        shape_attended = torch.sum(torch.cat(shape_contexts, dim=2) * shape_attn, dim=2)
+        text_attn = F.softmax(torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
+        text_attended = torch.sum(torch.cat(text_contexts, dim=2) * text_attn, dim=2)
 
         # outputs
         shape_outputs = self.shape_outputs(shape_attended)
