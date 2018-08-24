@@ -116,7 +116,7 @@ class Shapenet():
                         indices.append(int(self.dict_word2idx[word]))
                     else:
                         indices.append(int(self.dict_word2idx["<UNK>"]))
-                indices = [int(self.dict_word2idx["<START>"])] + indices + [int(self.dict_word2idx["<END>"])]
+    
                 # load into result
                 transformed.append((model_id, label, indices))
 
