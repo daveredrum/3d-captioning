@@ -10,7 +10,107 @@ import torchvision.models as torchmodels
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-# attention module
+class TemporalAttention(nn.Module):
+    def __init__(self, hidden_size, ver):
+        super(TemporalAttention, self).__init__()
+        # basic settings
+        self.hidden_size = hidden_size
+        self.ver = ver
+        # MLP
+        self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
+        if self.ver == "2.1-b":
+            self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, V, H):
+        if self.ver == "2.1-a":
+            H_t = H.permute(0, 2, 1).contiguous() # (batch_size, seq_size, hidden_size)
+            H_mapped = self.comp_hidden(H_t) # (batch_size, seq_size, hidden_size)
+            outputs = self.output_layer(F.tanh(H_mapped)) # (batch_size, seq_size, 1)
+            outputs = F.softmax(outputs, dim=1).permute(0, 2, 1).contiguous() # (batch_size, 1, seq_size)
+        if self.ver == "2.1-b":
+            H_t = H.permute(0, 2, 1).contiguous() # (batch_size, seq_size, hidden_size)
+            V_t = V.permute(0, 2, 1).contiguous() # (batch_size, seq_size, hidden_size)
+            H_mapped = self.comp_hidden(H_t) # (batch_size, seq_size, hidden_size)
+            V_mapped = self.comp_visual(V_t) # (batch_size, seq_size, hidden_size)
+            outputs = self.output_layer(F.tanh(V_mapped + H_mapped)) # (batch_size, seq_size, 1)
+            outputs = F.softmax(outputs, dim=1).permute(0, 2, 1).contiguous() # (batch_size, 1, seq_size)
+
+        return outputs
+
+
+class AdaptiveTemporalAttention(nn.Module):
+    def __init__(self, hidden_size):
+        super(AdaptiveTemporalAttention, self).__init__()
+        # basic settings
+        self.hidden_size = hidden_size
+        # MLP
+        # self.comp_hidden = nn.Linear(hidden_size, hidden_size, bias=False)
+        # self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, V, H, sentinel_scalar):
+        H_t = H.permute(0, 2, 1).contiguous() # (batch_size, seq_size, hidden_size)
+        V_t = V.permute(0, 2, 1).contiguous() # (batch_size, seq_size, hidden_size)
+        # H_mapped = self.comp_hidden(H_t) # (batch_size, seq_size, hidden_size)
+        # V_mapped = self.comp_visual(V_t) # (batch_size, seq_size, hidden_size)
+        sentinel_scalar = sentinel_scalar.permute(0, 2, 1).contiguous() # (batch_size, seq_size, 1)
+        balanced = (1 - sentinel_scalar) * V_t + sentinel_scalar * H_t # (batch_size, seq_size, hidden_size)
+        outputs = self.output_layer(F.tanh(balanced)) # (batch_size, seq_size, 1)
+        outputs = F.softmax(outputs, dim=1).permute(0, 2, 1).contiguous() # (batch_size, 1, seq_size)
+
+        return outputs
+
+
+class AdaptiveSpatialAttention(nn.Module):
+    def __init__(self, visual_channels, hidden_size, visual_flat):
+        super(AdaptiveSpatialAttention, self).__init__()
+        # basic settings
+        self.visual_channels = visual_channels
+        self.hidden_size = hidden_size
+        self.visual_flat = visual_flat
+        # MLP
+        self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.comp_hidden = nn.Linear(hidden_size, 1, bias=False)
+        self.comp_sentinel = nn.Linear(hidden_size, 1, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+    
+    def forward(self, visual_inputs, states, sentinel):
+        feature = visual_inputs.permute(0, 2, 1).contiguous() # (batch_size, visual_flat, visual_channels)
+        # get the hidden state
+        hidden = states[0] # (batch_size, hidden_size)
+        V = self.comp_visual(feature) # (batch_size, visual_flat, hidden_size)
+        H = self.comp_hidden(hidden).unsqueeze(1) # (batch_size, 1, 1)
+        Z = F.tanh(V + H) # (batch_size, visual_flat, hidden_size)
+        Z = self.output_layer(Z).squeeze(2) # (batch_size, visual_flat)
+        attention_weights = F.softmax(Z, dim=1) # (batch_size, visual_flat)
+        S = F.tanh(self.comp_sentinel(sentinel) + self.comp_hidden(hidden)) # (batch_size, 1)
+        sentinel_scalar = F.softmax(torch.cat((Z, S), dim=1), dim=1)[:, -1].unsqueeze(1) # (batch_size, 1)
+
+        return attention_weights, sentinel_scalar
+
+# 3D attention module
 class Attention3D(nn.Module):
     def __init__(self, visual_channels, hidden_size, visual_flat):
         super(Attention3D, self).__init__()
@@ -19,15 +119,9 @@ class Attention3D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.comp_visual = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size, bias=False),
-        )
-        self.comp_hidden = nn.Sequential(
-            nn.Linear(hidden_size, 1, bias=False),
-        )
-        self.output_layer = nn.Sequential(
-            nn.Linear(hidden_size, 1, bias=False),
-        )
+        self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.comp_hidden = nn.Linear(hidden_size, 1, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -47,18 +141,16 @@ class Attention3D(nn.Module):
         # in = (batch_size, hidden_size)
         # out = (batch_size, 1, hidden_size)
         H = self.comp_hidden(hidden).unsqueeze(1)
-        # print("V", V.view(-1).min(0)[0].item(), V.view(-1).max(0)[0].item())
-        # print("H", H.view(-1).min(0)[0].item(), H.view(-1).max(0)[0].item())
         # combine
-        outputs = F.tanh(V + H)
-        # outputs = (batch_size, visual_flat)
-        outputs = self.output_layer(outputs).squeeze(2)
-        outputs = F.softmax(outputs, dim=1)
+        Z = F.tanh(V + H)
+        # attention_weights = (batch_size, visual_flat)
+        attention_weights = self.output_layer(Z).squeeze(2)
+        attention_weights = F.softmax(attention_weights, dim=1)
 
-        return outputs
+        return attention_weights
 
 
-# adaptive attention module
+# 3D adaptive attention module
 class AdaptiveAttention3D(nn.Module):
     def __init__(self, visual_channels, hidden_size, visual_flat):
         super(AdaptiveAttention3D, self).__init__()
@@ -67,18 +159,10 @@ class AdaptiveAttention3D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.comp_visual = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size, bias=False),
-        )
-        self.comp_hidden = nn.Sequential(
-            nn.Linear(hidden_size, 1, bias=False),
-        )
-        self.comp_sentinel = nn.Sequential(
-            nn.Linear(hidden_size, 1, bias=False),
-        )
-        self.output_layer = nn.Sequential(
-            nn.Linear(hidden_size, 1, bias=False),
-        )
+        self.comp_visual = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.comp_hidden = nn.Linear(hidden_size, 1, bias=False)
+        self.comp_sentinel = nn.Linear(hidden_size, 1, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
         # initialize weights
         self.reset_parameters()
 

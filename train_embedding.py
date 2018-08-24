@@ -27,10 +27,6 @@ import ctypes
 import sys
 from lib.utils import decode_log_embedding, draw_curves_embedding
 
-def split_dataset(data, idx2label, size, voxel):
-    for i in range(0, len(data), size):
-        yield ShapenetDataset(data[i:i+size], idx2label, voxel)
-
 def check_dataset(dataset, batch_size):
     flag = False
     if len(dataset) % (batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL) != 0:
@@ -113,12 +109,14 @@ def main(args):
     unique_batch_size = args.batch_size
     verbose = args.verbose
     gpu = args.gpu
+    ver = args.ver
     if args.attention == 'adaptive':
         attention = True
         attention_type = 'adaptive'
     elif args.attention == 'false':
         attention = False
         attention_type = 'noattention'
+        ver = None
     else:
         raise ValueError("invalid attention setting, terminating...")
     
@@ -153,11 +151,12 @@ def main(args):
     print("verbose:", verbose)
     print("gpu:", gpu)
     print("attention:", attention_type)
+    print("version:", ver)
 
     # initialize models
     if attention:
         print("\ninitializing {} models...\n".format(attention_type))
-        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), ver).cuda()
         text_encoder = None
     else:
         print("\ninitializing models...\n")
@@ -175,7 +174,7 @@ def main(args):
         optimizer = torch.optim.Adam(shape_encoder.parameters(), lr=learning_rate, weight_decay=weight_decay)
     else:
         optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
+    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type + ver)
     if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
     solver = EmbeddingSolver(criterion, optimizer, settings)
@@ -240,5 +239,6 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     parser.add_argument("--attention", type=str, default='false', help="apply the attention: adaptive/false")
+    parser.add_argument("--ver", type=str, default='2.1-c', help="1/2/2.1-a/2.1-b/2.1-c")
     args = parser.parse_args()
     main(args)

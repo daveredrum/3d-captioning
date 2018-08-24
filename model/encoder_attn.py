@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from model.net_components import AdaptiveLSTMCell
-from model.attn_components import AdaptiveAttention3D
+from model.attn_components import *
 
 class AdaptiveEncoder(nn.Module):
-    def __init__(self, dict_size):
+    def __init__(self, dict_size, ver):
         super(AdaptiveEncoder, self).__init__()
+        self.ver = ver
         ############################
         #                          #
         #       shape encoder      #
@@ -56,8 +57,19 @@ class AdaptiveEncoder(nn.Module):
         #         attention       #
         #                         #
         ###########################
-        self.lstm_cell = AdaptiveLSTMCell(256, 256)
-        self.attention = AdaptiveAttention3D(256, 256, 512)
+        if self.ver == "1" or self.ver == "2":
+            self.lstm_cell = AdaptiveLSTMCell(256, 256)
+            self.attention = AdaptiveAttention3D(256, 256, 512)
+        elif self.ver == "2.1-a" or self.ver == "2.1-b":
+            self.lstm_cell = nn.LSTMCell(256, 256)
+            self.attention_spatial = Attention3D(256, 256, 512)
+            self.attention_temporal = TemporalAttention(256, self.ver)
+        elif self.ver == "2.1-c":
+            self.lstm_cell = AdaptiveLSTMCell(256, 256)
+            self.attention_spatial = AdaptiveSpatialAttention(256, 256, 512)
+            self.attention_temporal = AdaptiveTemporalAttention(256)
+        else:
+            raise ValueError("invalid version, terminating...")
 
     def _get_shape_feat(self, inputs, flat=True):
         conved = self.shape_conv(inputs)
@@ -82,22 +94,36 @@ class AdaptiveEncoder(nn.Module):
         )
 
     def attend(self, shape_feat, text_feat, states):
-        # states, sentinel = self.lstm_cell(text_feat, states)
-        # h, c = states
-        # weights_step = self.attention(shape_feat, states, sentinel)
-        # attention_weights = weights_step[:, :-1]
-        # sentinel_scalar = weights_step[:, -1].unsqueeze(1)
-        # attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
-        # shape_contexts_step = (1 - sentinel_scalar) * attended
-        # text_contexts_step = sentinel_scalar * sentinel + shape_contexts_step
-        # states = (text_contexts_step + h, c)
-
-        states, sentinel = self.lstm_cell(text_feat, states)
-        weights_step = self.attention(shape_feat, states, sentinel)
-        attention_weights = weights_step[:, :-1]
-        attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
-        shape_contexts_step = attended
-        text_contexts_step = states[0]
+        if self.ver == "1":
+            states, sentinel = self.lstm_cell(text_feat, states)
+            h, c = states
+            weights_step = self.attention(shape_feat, states, sentinel)
+            attention_weights = weights_step[:, :-1]
+            sentinel_scalar = weights_step[:, -1].unsqueeze(1)
+            attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
+            shape_contexts_step = (1 - sentinel_scalar) * attended
+            text_contexts_step = sentinel_scalar * sentinel + shape_contexts_step
+            states = (text_contexts_step + h, c)
+        elif self.ver == "2":
+            states, sentinel = self.lstm_cell(text_feat, states)
+            weights_step = self.attention(shape_feat, states, sentinel)
+            attention_weights = weights_step[:, :-1]
+            attended = torch.sum(shape_feat * attention_weights.unsqueeze(1), 2)
+            shape_contexts_step = attended
+            text_contexts_step = states[0]
+        elif self.ver == "2.1-a" or self.ver == "2.1-b":
+            states = self.lstm_cell(text_feat, states)
+            weights_step = self.attention_spatial(shape_feat, states)
+            shape_contexts_step = torch.sum(shape_feat * weights_step.unsqueeze(1), 2)
+            text_contexts_step = states[0]
+        elif self.ver == "2.1-c":
+            states, sentinel = self.lstm_cell(text_feat, states)
+            weights_step, sentinel_scalar_step = self.attention_spatial(shape_feat, states, sentinel)
+            shape_contexts_step = torch.sum(shape_feat * weights_step.unsqueeze(1), 2)
+            text_contexts_step = states[0]
+            weights_step = torch.cat((weights_step, sentinel_scalar_step), dim=1)
+        else:
+            raise ValueError("invalid version, terminating...")
 
         return shape_contexts_step, text_contexts_step, states, weights_step
 
@@ -109,29 +135,68 @@ class AdaptiveEncoder(nn.Module):
         states = self._init_hidden(text_feat) # (batch_size, 256)
         
         # through attention
-        # shape_contexts = []
-        # weights = []
-        # for i in range(text_feat.size(1)):
-        #     shape_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
-        #     shape_contexts.append(shape_contexts_step.unsqueeze(2))
-        #     weights.append(weights_step)
-        # shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
-        # text_attended = states[0]
+        if self.ver == "1":
+            shape_contexts = []
+            weights = []
+            for i in range(text_feat.size(1)):
+                shape_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+                shape_contexts.append(shape_contexts_step.unsqueeze(2))
+                weights.append(weights_step)
+            
+            shape_attended = torch.cat(shape_contexts, dim=2).mean(2)
+            text_attended = states[0]
+        elif self.ver == "2":
+            shape_contexts = []
+            text_contexts = []
+            weights = []
+            sentinel_scalars = []
+            for i in range(text_feat.size(1)):
+                shape_contexts_step, text_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+                shape_contexts.append(shape_contexts_step.unsqueeze(2))
+                text_contexts.append(text_contexts_step.unsqueeze(2))
+                weights.append(weights_step)
+                sentinel_scalars.append(weights_step[:, -1].unsqueeze(1))
+            
+            attn_mask = F.softmax(1. - torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
+            shape_attended = torch.sum(torch.cat(shape_contexts, dim=2) * attn_mask, dim=2)
+            text_attended = torch.sum(torch.cat(text_contexts, dim=2) * attn_mask, dim=2)
+        elif self.ver == "2.1-a" or self.ver == "2.1-b":
+            shape_contexts = []
+            text_contexts = []
+            weights = []
+            for i in range(text_feat.size(1)):
+                shape_contexts_step, text_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+                shape_contexts.append(shape_contexts_step.unsqueeze(2))
+                text_contexts.append(text_contexts_step.unsqueeze(2))
+                weights.append(weights_step)
 
-        shape_contexts = []
-        text_contexts = []
-        weights = []
-        sentinel_scalars = []
-        for i in range(text_feat.size(1)):
-            shape_contexts_step, text_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
-            shape_contexts.append(shape_contexts_step.unsqueeze(2))
-            text_contexts.append(text_contexts_step.unsqueeze(2))
-            weights.append(weights_step)
-            sentinel_scalars.append(weights_step[:, -1].unsqueeze(1))
-        
-        attn_mask = F.softmax(1. - torch.cat(sentinel_scalars, dim=1), dim=1).unsqueeze(1)
-        shape_attended = torch.sum(torch.cat(shape_contexts, dim=2) * attn_mask, dim=2)
-        text_attended = torch.sum(torch.cat(text_contexts, dim=2) * attn_mask, dim=2)
+            # temporal attention
+            shape_contexts = torch.cat(shape_contexts, dim=2)
+            text_contexts = torch.cat(text_contexts, dim=2)
+            attn_mask = self.attention_temporal(shape_contexts, text_contexts)
+            shape_attended = torch.sum(shape_contexts * attn_mask, dim=2)
+            text_attended = torch.sum(text_contexts * attn_mask, dim=2)
+        elif self.ver == "2.1-c":
+            shape_contexts = []
+            text_contexts = []
+            sentinel_scalars = []
+            weights = []
+            for i in range(text_feat.size(1)):
+                shape_contexts_step, text_contexts_step, states, weights_step = self.attend(shape_feat, text_feat[:, i, :], states)
+                shape_contexts.append(shape_contexts_step.unsqueeze(2))
+                text_contexts.append(text_contexts_step.unsqueeze(2))
+                sentinel_scalars.append(weights_step[:, -1].view(weights_step.size(0), 1, 1))
+                weights.append(weights_step)
+
+            # temporal attention
+            shape_contexts = torch.cat(shape_contexts, dim=2)
+            text_contexts = torch.cat(text_contexts, dim=2)
+            sentinel_scalars = torch.cat(sentinel_scalars, dim=2)
+            attn_mask = self.attention_temporal(shape_contexts, text_contexts, sentinel_scalars)
+            shape_attended = torch.sum(shape_contexts * attn_mask, dim=2)
+            text_attended = torch.sum(text_contexts * attn_mask, dim=2)
+        else:
+            raise ValueError("invalid version, terminating...")
 
         # outputs
         shape_outputs = self.shape_outputs(shape_attended)
