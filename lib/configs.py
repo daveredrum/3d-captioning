@@ -74,6 +74,7 @@ CONF.ML = EasyDict()
 # flags of ML
 CONF.ML.IS_ML = True
 CONF.ML.IS_ML_TT = True
+CONF.ML.IS_ML_SS = True
 CONF.ML.IS_ML_ST = True
 CONF.ML.COSINE_DISTANCE = True
 CONF.ML.INVERTED_LOSS = True

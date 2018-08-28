@@ -24,27 +24,28 @@ class EmbeddingSolver():
         batch_size = shapes.size(0)
         texts = texts.cuda()
         text_labels = labels.cuda()
-        shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
         if text_encoder:
             shapes = shapes.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+            shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
         else:
             shapes = shapes.cuda()
+            shape_labels = labels.cuda()
         
         # forward pass
         if text_encoder:
             s = shape_encoder(shapes)
             t = text_encoder(texts)
         else:
-            s, t, _ = shape_encoder(shapes, texts)
-            s_upper = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
-            s_lower = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
-            s = (s_upper + s_lower) / 2.
+            s, t, _, _ = shape_encoder(shapes, texts)
+            # s_upper = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+            # s_lower = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+            # s = (s_upper + s_lower) / 2.
         
         # LBA
         if CONF.LBA.IS_LBA:
             # TST
             if CONF.LBA.IS_LBA_TST:
-                # build target
+                # build uniformed target
                 text_targets = text_labels.unsqueeze(0).expand(text_labels.size(0), text_labels.size(0)).eq(
                     text_labels.unsqueeze(1).expand(text_labels.size(0), text_labels.size(0))
                 ).float()
@@ -59,10 +60,11 @@ class EmbeddingSolver():
                 visit_loss_ts = torch.Tensor([0]).cuda()[0]
             # STS
             if CONF.LBA.IS_LBA_STS:
-                # build target
+                # build uniformed target
                 shape_targets = shape_labels.unsqueeze(0).expand(shape_labels.size(0), shape_labels.size(0)).eq(
                     shape_labels.unsqueeze(1).expand(shape_labels.size(0), shape_labels.size(0))
                 ).float()
+                shape_targets /= shape_targets.sum(1)
                 walker_loss_sts = self.criterion['walker'](s, t, shape_targets)
                 if CONF.LBA.IS_LBA_VISIT:
                     visit_loss_st = self.criterion['visit'](s, t)
@@ -85,21 +87,59 @@ class EmbeddingSolver():
                 metric_loss_tt = self.criterion['metric'](embedding)
             else:
                 metric_loss_tt = torch.Tensor([0]).cuda()[0]
+            if CONF.ML.IS_ML_SS:
+                if text_encoder:
+                    pass
+                else:
+                    embedding = s
+                    metric_loss_tt += self.criterion['metric'](embedding)
             # ST
             if CONF.ML.IS_ML_ST:
-                s_mask = torch.ByteTensor([[1], [0]]).repeat(batch_size // 2, 128).cuda()
-                t_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size // 2, 128).cuda()
-                selected_s = s
-                selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
-                masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
-                masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
-                embedding = masked_s + masked_t
-                metric_loss_st = self.criterion['metric'](embedding)
-                # flip t
-                flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
-                flipped_masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, flipped_t)
-                embedding = masked_s + flipped_masked_t
-                metric_loss_st += self.criterion['metric'](embedding)
+                if text_encoder:
+                    s_mask = torch.ByteTensor([[1], [0]]).repeat(batch_size // 2, 128).cuda()
+                    t_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size // 2, 128).cuda()
+                    selected_s = s
+                    selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+                    masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+                    masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
+                    embedding = masked_s + masked_t
+                    metric_loss_st = self.criterion['metric'](embedding)
+                    # flip t
+                    flipped_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+                    flipped_masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, flipped_t)
+                    embedding = masked_s + flipped_masked_t
+                    metric_loss_st += self.criterion['metric'](embedding)
+                else:
+                    s_mask = torch.ByteTensor([[1], [0]]).repeat(batch_size // 2, 128).cuda()
+                    t_mask = torch.ByteTensor([[0], [1]]).repeat(batch_size // 2, 128).cuda()
+                    # upper_s to upper_t
+                    selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+                    selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+                    masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+                    masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
+                    embedding = masked_s + masked_t
+                    metric_loss_st = self.criterion['metric'](embedding)
+                    # lower_s to upper_t
+                    selected_s = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+                    selected_t = t.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+                    masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+                    masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
+                    embedding = masked_s + masked_t
+                    metric_loss_st += self.criterion['metric'](embedding)
+                    # upper_s to lower_t
+                    selected_s = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+                    selected_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+                    masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+                    masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
+                    embedding = masked_s + masked_t
+                    metric_loss_st += self.criterion['metric'](embedding)
+                    # lower_s to lower_t
+                    selected_s = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+                    selected_t = t.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
+                    masked_s = torch.zeros(batch_size, 128).cuda().masked_scatter_(s_mask, selected_s)
+                    masked_t = torch.zeros(batch_size, 128).cuda().masked_scatter_(t_mask, selected_t)
+                    embedding = masked_s + masked_t
+                    metric_loss_st += self.criterion['metric'](embedding)
             else:
                 metric_loss_st = torch.Tensor([0]).cuda()[0]
         else:
@@ -276,9 +316,9 @@ class EmbeddingSolver():
                 if iter_count % verbose == 0:
                     self._iter_report(train_log, iter_count, total_iter)
 
-                # evaluate
-                if iter_count % CONF.TRAIN.EVAL_FREQ == 0:
-                    self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+                # # evaluate
+                # if iter_count % CONF.TRAIN.EVAL_FREQ == 0:
+                    # self.evaluate(shape_encoder, text_encoder, eval_dataloader)
 
             # validate
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
@@ -336,7 +376,7 @@ class EmbeddingSolver():
         print("done...\n")
 
         # end eval
-        self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+        # self.evaluate(shape_encoder, text_encoder, eval_dataloader)
 
         return best, log
 

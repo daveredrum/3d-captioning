@@ -81,9 +81,11 @@ class AdaptiveEncoder(nn.Module):
     def _get_text_feat(self, inputs):
         embedded = self.text_embedding(inputs) # (batch_size, seq_size, 128)
         conved = self.text_conv_128(embedded.transpose(2, 1).contiguous()) # (batch_size, 128, seq_size)
-        conved = self.text_bn_128(conved.unsqueeze(3)).squeeze() # (batch_size, 128, seq_size)
+        conved = self.text_bn_128(conved.unsqueeze(3))
+        conved = conved.view(*list(conved.size())[:-1]) # (batch_size, 128, seq_size)
         conved = self.text_conv_256(conved) # (batch_size, 256, seq_size)
-        conved = self.text_bn_256(conved.unsqueeze(3)).squeeze().transpose(2, 1).contiguous() # (batch_size, seq_size, 256)
+        conved = self.text_bn_256(conved.unsqueeze(3))
+        conved = conved.view(*list(conved.size())[:-1]).transpose(2, 1).contiguous() # (batch_size, seq_size, 256)
 
         return conved
 
@@ -202,5 +204,5 @@ class AdaptiveEncoder(nn.Module):
         shape_outputs = self.shape_outputs(shape_attended)
         text_outputs = self.text_outputs(text_attended)
 
-        return shape_outputs, text_outputs, weights
+        return shape_outputs, text_outputs, weights, attn_mask
         

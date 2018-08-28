@@ -18,6 +18,8 @@ from model.encoder_shape import *
 from model.encoder_text import *
 from model.encoder_attn import AdaptiveEncoder
 
+
+
 def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=False):
     data = {}
     offset = 0
@@ -28,14 +30,15 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
         shape = shape.cuda()
         text = text.cuda()
 
-        # feed
+        # non-attentive
         if text_encoder:
             shape_embedding = shape_encoder(shape)
             text_embedding = text_encoder(text)
         else:
-            shape_embedding, text_embedding, _ = shape_encoder(shape, text)
+            shape_embedding, text_embedding , _, _ = shape_encoder(shape, text)
 
-        # append
+
+        # dump
         for i in range(len(model_id)):
             if shapenet:
                 cap = " ".join([shapenet.dict_idx2word[str(idx.item())] for idx in text[i] if idx.item() != 0])
@@ -59,7 +62,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
                         )
                     ]
                 }
-
+        
         # report
         if verbose and shapenet:
             offset += len(model_id)
@@ -69,9 +72,9 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             eta_s = math.floor(eta_s % 60)
             print("extracted: {}/{}, ETA: {}m {}s".format(offset, len(getattr(shapenet, "{}_data".format(phase))), eta_m, int(eta_s)))
 
-    # aggregate shape embeddings
-    for key in data.keys():
-        data[key]['shape_embedding'] = np.mean(data[key]['shape_embedding'], axis=0)
+    # # aggregate shape embeddings
+    # for key in data.keys():
+    #     data[key]['shape_embedding'] = np.mean(data[key]['shape_embedding'], axis=0)
 
     return data
 
@@ -85,9 +88,9 @@ def main(args):
     else:
         shape_encoder_path = os.path.join(root, "models/encoder.pth")
         text_encoder_path = None
-    train_size = args.train_size
-    val_size = args.val_size
-    test_size = args.test_size
+    
+    phase = args.phase
+    size = args.size
     batch_size = args.batch_size
     gpu = args.gpu
 
@@ -97,37 +100,32 @@ def main(args):
 
     # prepare data
     print("\npreparing data...\n")
+    phase2idx = {'train': 0, 'val': 1, 'test': 2}
+    size_split = [-1] * 3
+    size_split[phase2idx[phase]] = size
     shapenet = Shapenet(
         [
             pickle.load(open("data/shapenet_split_train.p", 'rb')),
             pickle.load(open("data/shapenet_split_val.p", 'rb')),
             pickle.load(open("data/shapenet_split_test.p", 'rb'))
         ],
-        [
-            train_size,
-            val_size,
-            test_size
-        ],
+        size_split,
         batch_size,
         False
     )
-    dataloader = {}
-    for phase in ["train", "val", "test"]:
-        dataset = ShapenetDataset(
-            getattr(shapenet, 
-            "{}_data".format(phase)), 
-            getattr(shapenet, "{}_idx2label".format(phase)), 
-            getattr(shapenet, "{}_label2idx".format(phase)), 
-            voxel,
-            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-        )
-        dataloader[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
+    dataset = ShapenetDataset(
+        getattr(shapenet, "{}_data".format(phase)), 
+        getattr(shapenet, "{}_idx2label".format(phase)), 
+        getattr(shapenet, "{}_label2idx".format(phase)), 
+        voxel,
+        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+    )
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
 
     # report settings
     print("[settings]")
-    print("train_size:", len(shapenet.train_data))
-    print("val_size:", len(shapenet.val_data))
-    print("test_size:", len(shapenet.test_data))
+    print("phase:", phase)
+    print("size:", len(getattr(shapenet, "{}_data".format(phase))))
     print("batch_size:", batch_size)
     print("gpu:", gpu)
 
@@ -141,7 +139,7 @@ def main(args):
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
     else:
-        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), args.path.split("_")[-1][8:]).cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = None
@@ -149,15 +147,15 @@ def main(args):
     # extract
     if not os.path.exists(os.path.join(root, "embeddings")):
         os.mkdir(os.path.join(root, "embeddings"))
-    for phase in ["train", "val", "test"]:
-        print("extracting {} set...\n".format(phase))
-        with open(os.path.join(root, "embeddings", "{}.p".format(phase)), 'wb') as database:
-            # extract
-            data = extract(shape_encoder, text_encoder, dataloader[phase], shapenet, phase, True)
-            
-            # store
-            pickle.dump(data, database)
-            print()
+    
+    print("extracting {} set...\n".format(phase))
+    with open(os.path.join(root, "embeddings", "{}.p".format(phase)), 'wb') as database:
+        # extract
+        data = extract(shape_encoder, text_encoder, dataloader, shapenet, phase, True)
+        
+        # store
+        pickle.dump(data, database)
+        print()
             
         
         
@@ -165,9 +163,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default=None, help="path to the pretrained encoders")
-    parser.add_argument("--train_size", type=int, default=100, help="train size")
-    parser.add_argument("--val_size", type=int, default=100, help="val size")
-    parser.add_argument("--test_size", type=int, default=100, help="test size")
+    parser.add_argument("--phase", type=str, default='val', help="train/val/test")
+    parser.add_argument("--size", type=int, default=100, help="train size")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     args = parser.parse_args()

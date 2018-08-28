@@ -52,7 +52,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     print()
 
     # extract embedding
-    shape_embedding = [(key, embedding[key]['shape_embedding']) for key in embedding.keys()]
+    shape_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['shape_embedding']]
     text_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['text_embedding']]
 
     # process shape embedding
