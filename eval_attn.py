@@ -101,7 +101,7 @@ def _feed(encoder, src_dataloader, tar_dataloader, num_src, num_tar, idx2label, 
                 if idx2label[model_id_src[i]] in common_model_ids:
                     for j in range(batch_size):
                         if idx2label[model_id_tar[j]] in common_model_ids:
-                            sim_src2tar[src_id * batch_size + offset_i, tar_id * batch_size + offset_j] = sim[i, j].item()
+                            sim_src2tar[offset_i, offset_j] = sim[i, j].item()
                             offset_j += 1
                     offset_i += 1
         
