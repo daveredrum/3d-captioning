@@ -8,6 +8,7 @@ from itertools import combinations
 import random
 import h5py
 import time
+import copy
 
 # HACK
 import sys
@@ -176,16 +177,28 @@ class Shapenet():
 
 
 class ShapenetDataset(Dataset):
-    def __init__(self, shapenet_data, idx2label, label2idx, resolution, database=None):
+    def __init__(self, shapenet_data, idx2label, label2idx, resolution, database=None, aggr_shape=False):
         '''
         param: 
             shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
         '''
-        self.shapenet_data = shapenet_data
+        self.shapenet_data = copy.deepcopy(shapenet_data)
+        if aggr_shape:
+            self.shapenet_data = self._aggr_data()
         self.idx2label = idx2label
         self.label2idx = label2idx
         self.resolution = resolution
-        self.database = database 
+        self.database = database
+
+    def _aggr_data(self):
+        aggr_data = []
+        reached_model = []
+        for item in self.shapenet_data:
+            if item[0] not in reached_model:
+                aggr_data.append(item)
+                reached_model.append(item[0])
+        
+        return aggr_data
 
     def __len__(self):
         return len(self.shapenet_data)
@@ -229,7 +242,7 @@ def collate_shapenet(data):
     voxels = torch.stack(voxels, 0)
 
     # Merge captions (from tuple of 1D tensor to 2D tensor).
-    merge_caps = torch.zeros(len(captions), CONF.TRAIN.MAX_LENGTH + 2).long()
+    merge_caps = torch.zeros(len(captions), CONF.TRAIN.MAX_LENGTH).long()
     for i, cap in enumerate(captions):
         end = int(lengths[i])
         merge_caps[i, :end] = torch.LongTensor(cap[:end])
