@@ -12,42 +12,25 @@ from lib.configs import CONF
 from torch.nn.utils import clip_grad_value_
 from lib.save_embedding import extract
 from lib.eval_embedding import compute_metrics
+from eval_attn import evaluate
+from model.encoder_attn import MultiHeadEncoder
 
 class EmbeddingSolver():
-    def __init__(self, criterion, optimizer, settings):
+    def __init__(self, shapenet, criterion, optimizer, settings, is_multi_head=False):
+        self.shapenet = shapenet
         self.criterion = criterion
         self.optimizer = optimizer
         self.settings = settings
+        self.is_multi_head = is_multi_head
 
-    def forward(self, shape_encoder, text_encoder, shapes, texts, labels):
-        # load
-        batch_size = shapes.size(0)
-        texts = texts.cuda()
-        text_labels = labels.cuda()
-        if text_encoder:
-            shapes = shapes.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
-            shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
-        else:
-            shapes = shapes.cuda()
-            shape_labels = labels.cuda()
-        
-        # forward pass
-        if text_encoder:
-            s = shape_encoder(shapes)
-            t = text_encoder(texts)
-        else:
-            s, t, _, _ = shape_encoder(shapes, texts)
-            # s_upper = s.index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
-            # s_lower = s.index_select(0, torch.LongTensor([i * 2 + 1 for i in range(batch_size // 2)]).cuda())
-            # s = (s_upper + s_lower) / 2.
-        
+    def _compute_loss(self, s, t, s_labels, t_labels, text_encoder, batch_size):
         # LBA
         if CONF.LBA.IS_LBA:
             # TST
             if CONF.LBA.IS_LBA_TST:
                 # build uniformed target
-                text_targets = text_labels.unsqueeze(0).expand(text_labels.size(0), text_labels.size(0)).eq(
-                    text_labels.unsqueeze(1).expand(text_labels.size(0), text_labels.size(0))
+                text_targets = t_labels.unsqueeze(0).expand(t_labels.size(0), t_labels.size(0)).eq(
+                    t_labels.unsqueeze(1).expand(t_labels.size(0), t_labels.size(0))
                 ).float()
                 text_targets /= text_targets.sum(1)
                 walker_loss_tst = self.criterion['walker'](t, s, text_targets)
@@ -61,8 +44,8 @@ class EmbeddingSolver():
             # STS
             if CONF.LBA.IS_LBA_STS:
                 # build uniformed target
-                shape_targets = shape_labels.unsqueeze(0).expand(shape_labels.size(0), shape_labels.size(0)).eq(
-                    shape_labels.unsqueeze(1).expand(shape_labels.size(0), shape_labels.size(0))
+                shape_targets = s_labels.unsqueeze(0).expand(s_labels.size(0), s_labels.size(0)).eq(
+                    s_labels.unsqueeze(1).expand(s_labels.size(0), s_labels.size(0))
                 ).float()
                 shape_targets /= shape_targets.sum(1)
                 walker_loss_sts = self.criterion['walker'](s, t, shape_targets)
@@ -172,6 +155,43 @@ class EmbeddingSolver():
         }
 
         return losses
+    
+    def _merge_loss(self, ext_loss, attn_loss):
+        losses = {}
+        for key in ext_loss.keys():
+            losses[key] = ext_loss[key] + CONF.MH.ATTN_MULTIPLIER * attn_loss[key]
+        
+        return losses
+
+    def forward(self, shape_encoder, text_encoder, shapes, texts, labels):
+        # load
+        batch_size = shapes.size(0)
+        texts = texts.cuda()
+        text_labels = labels.cuda()
+        if text_encoder:
+            shapes = shapes.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+            shape_labels = labels.cuda().index_select(0, torch.LongTensor([i * 2 for i in range(batch_size // 2)]).cuda())
+        else:
+            shapes = shapes.cuda()
+            shape_labels = labels.cuda()
+        
+        # forward pass
+        if text_encoder:
+            s = shape_encoder(shapes)
+            t = text_encoder(texts)
+            losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
+        else:
+            if self.is_multi_head:
+                s, t, s_attn, t_attn, _, _ = shape_encoder(shapes, texts)
+                ext_loss = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
+                attn_loss = self._compute_loss(s_attn, t_attn, shape_labels, text_labels, text_encoder, batch_size)
+                losses = self._merge_loss(ext_loss, attn_loss)
+            else:
+                s, t, _, _ = shape_encoder(shapes, texts)
+                losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
+        
+
+        return losses
 
     def validate(self, shape_encoder, text_encoder, dataloader, val_log):
         print("validating...\n")
@@ -199,18 +219,29 @@ class EmbeddingSolver():
         return val_log
 
     def evaluate(self, shape_encoder, text_encoder, eval_dataloader):
-        # extract embedding
-        print("extracting...\n")
-        # eval mode
-        shape_encoder.eval()
-        if text_encoder:
-            text_encoder.eval()
-        embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
+        # # extract embedding
+        # print("extracting...\n")
+        # # eval mode
+        # shape_encoder.eval()
+        # if text_encoder:
+        #     text_encoder.eval()
+        # embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
 
         # evaluate
         print("evaluating...\n")
-        compute_metrics("shapenet", embedding, mode=CONF.TRAIN.EVAL_MODE, metric=CONF.TRAIN.EVAL_METRIC)
+        metrics_t2s, metrics_s2t = evaluate(
+            self.shapenet, 
+            CONF.TRAIN.EVAL_DATASET, 
+            shape_encoder, 
+            text_encoder, 
+            eval_dataloader['shape'], 
+            eval_dataloader['text'], 
+            CONF.TRAIN.EVAL_BATCH_SIZE,
+            0, 
+            self.is_multi_head
+        )
 
+        return metrics_t2s, metrics_s2t
 
     def train(self, shape_encoder, text_encoder, best, dataloader, eval_dataloader, epoch, verbose):
         '''
@@ -322,16 +353,51 @@ class EmbeddingSolver():
 
             # validate
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
+
+            # evaluate
+            metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+            scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
+            scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
             
             # epoch report
             self._epoch_report(train_log, val_log, epoch_id, epoch)
             
+            # # best
+            # if scores > best['scores']:
+            #     # report best
+            #     print("best scores achieved: {}".format(scores))
+            #     print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
+            #     print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
+            #     best['epoch'] = epoch_id + 1
+            #     best['scores'] = scores
+            #     best['total_loss'] = float(np.mean(val_log['total_loss']))
+            #     best['walker_loss_tst'] = float(np.mean(val_log['walker_loss_tst']))
+            #     best['walker_loss_sts'] = float(np.mean(val_log['walker_loss_sts']))
+            #     best['visit_loss_ts'] = float(np.mean(val_log['visit_loss_ts']))
+            #     best['visit_loss_st'] = float(np.mean(val_log['visit_loss_st']))
+            #     best['metric_loss_st'] = float(np.mean(val_log['metric_loss_st']))
+            #     best['metric_loss_tt'] = float(np.mean(val_log['metric_loss_tt']))
+            #     best['shape_norm_penalty'] = float(np.mean(val_log['shape_norm_penalty']))
+            #     best['text_norm_penalty'] = float(np.mean(val_log['text_norm_penalty']))
+
+            #     # save the best models
+            #     print("saving models...\n")
+            #     if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models")):
+            #         os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models"))
+            #     if text_encoder:
+            #         torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
+            #         torch.save(text_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
+            #     else:
+            #         torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "encoder.pth"))
+            
             # best
-            if np.mean(val_log['total_loss']) < best['total_loss']:
+            if np.mean(train_log['total_loss']) < best['total_loss']:
                 # report best
-                print("best val_loss achieved: {}".format(np.mean(val_log['total_loss'])))
-                print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
-                best['epoch'] = epoch_id
+                print("best train_loss achieved: {}".format(np.mean(train_log['total_loss'])))
+                print("current scores: {}".format(scores))
+                print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
+                best['epoch'] = epoch_id + 1
+                best['scores'] = scores
                 best['total_loss'] = float(np.mean(val_log['total_loss']))
                 best['walker_loss_tst'] = float(np.mean(val_log['walker_loss_tst']))
                 best['walker_loss_sts'] = float(np.mean(val_log['walker_loss_sts']))

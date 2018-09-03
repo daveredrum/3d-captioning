@@ -19,9 +19,9 @@ import nrrd
 from lib.configs import CONF
 from model.encoder_shape import ShapenetShapeEncoder
 from model.encoder_text import ShapenetTextEncoder
-from model.encoder_attn import AdaptiveEncoder
+from model.encoder_attn import AdaptiveEncoder, MultiHeadEncoder
 from lib.losses import *
-from lib.solver_embedding import *
+from lib.solver_embedding import EmbeddingSolver
 import torch.multiprocessing as mp
 import ctypes
 import sys
@@ -65,13 +65,23 @@ def get_dataset(split_size, unique_batch_size, voxel):
         h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
     )
     # for evaluation
-    eval_dataset = ShapenetDataset(
-        getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-        getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-        getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
-        voxel,
-        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-    )
+    eval_dataset = {
+        'text': ShapenetDataset(
+            getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+            getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            voxel,
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+        ),
+        'shape': ShapenetDataset(
+            getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+            getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            voxel,
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r"),
+            aggr_shape=True
+        )
+    }
 
     return shapenet, train_dataset, val_dataset, eval_dataset
 
@@ -93,7 +103,10 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
         )
     }
     # for evaluation
-    eval_dataloader = DataLoader(eval_dataset, batch_size=unique_batch_size, collate_fn=collate_shapenet)
+    eval_dataloader = {
+        'text': DataLoader(eval_dataset['text'], batch_size=unique_batch_size, collate_fn=collate_shapenet),
+        'shape': DataLoader(eval_dataset['shape'], batch_size=unique_batch_size, collate_fn=collate_shapenet)
+    }
 
     return dataloader, eval_dataloader
 
@@ -116,7 +129,7 @@ def main(args):
     elif args.attention == 'false':
         attention = False
         attention_type = 'noattention'
-        ver = None
+        ver = ''
     else:
         raise ValueError("invalid attention setting, terminating...")
     
@@ -154,9 +167,13 @@ def main(args):
     print("version:", ver)
 
     # initialize models
-    if attention:
+    if attention and ver != '3':
         print("\ninitializing {} models...\n".format(attention_type))
         shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), ver).cuda()
+        text_encoder = None
+    elif attention and ver == '3':
+        print("\ninitializing {} models...\n".format("multi-head"))
+        shape_encoder = MultiHeadEncoder(shapenet.dict_idx2word.__len__()).cuda()
         text_encoder = None
     else:
         print("\ninitializing models...\n")
@@ -177,7 +194,10 @@ def main(args):
     settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type + ver)
     if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
-    solver = EmbeddingSolver(criterion, optimizer, settings)
+    if ver == '3':
+        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, True)
+    else:
+        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings)
     if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings)):
         os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 
@@ -185,6 +205,7 @@ def main(args):
     print("start training...\n")
     best = {
         'epoch': 0,
+        'scores': 0,
         'total_loss': float("inf"),
         'walker_loss_tst': float("inf"),
         'walker_loss_sts': float("inf"),
@@ -201,6 +222,9 @@ def main(args):
     print("------------------------best------------------------")
     print("[Loss] epoch: %d" % (
         best['epoch']
+    ))
+    print("[Loss] scores: %f" % (
+        best['scores']
     ))
     print("[Loss] total_loss: %f" % (
         best['total_loss']
@@ -239,6 +263,6 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     parser.add_argument("--attention", type=str, default='false', help="apply the attention: adaptive/false")
-    parser.add_argument("--ver", type=str, default='2.1-c', help="1/2/2.1-a/2.1-b/2.1-c")
+    parser.add_argument("--ver", type=str, default='2.1-d', help="1/2/2.1-a/2.1-b/2.1-c/2.1-d/3")
     args = parser.parse_args()
     main(args)

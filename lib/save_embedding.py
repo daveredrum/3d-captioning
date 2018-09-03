@@ -45,7 +45,6 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             else:
                 cap = None
             if model_id[i] in data.keys():
-                data[model_id[i]]['shape_embedding'].append(shape_embedding[i].data.cpu().numpy())
                 data[model_id[i]]['text_embedding'].append(
                     (
                         cap,
@@ -54,7 +53,7 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
                 ) 
             else:
                 data[model_id[i]] = {
-                    'shape_embedding': [shape_embedding[i].data.cpu().numpy()],
+                    'shape_embedding': shape_embedding[i].data.cpu().numpy(),
                     'text_embedding': [
                         (
                             cap,

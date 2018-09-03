@@ -90,6 +90,18 @@ class Shapenet():
         self.dict_idx2word[str(0)] = "<PAD>"
         self.dict_word2idx["<UNK>"] = str(1)
         self.dict_idx2word[str(1)] = "<UNK>"
+        # # indexing starts at 4
+        # self.dict_word2idx = {word_count[i][0]: str(i + 4) for i in range(len(word_count))}
+        # self.dict_idx2word = {str(i + 4): word_count[i][0] for i in range(len(word_count))}
+        # # add special tokens
+        # self.dict_word2idx["<PAD>"] = str(0)
+        # self.dict_idx2word[str(0)] = "<PAD>"
+        # self.dict_word2idx["<UNK>"] = str(1)
+        # self.dict_idx2word[str(1)] = "<UNK>"
+        # self.dict_word2idx["<START>"] = str(2)
+        # self.dict_idx2word[str(2)] = "<START>"
+        # self.dict_word2idx["<END>"] = str(3)
+        # self.dict_idx2word[str(3)] = "<END>"
     
     def _transform(self):
         '''
@@ -117,7 +129,8 @@ class Shapenet():
                         indices.append(int(self.dict_word2idx[word]))
                     else:
                         indices.append(int(self.dict_word2idx["<UNK>"]))
-    
+
+                # indices = [int(self.dict_word2idx["<START>"])] + indices + [int(self.dict_word2idx["<END>"])]
                 # load into result
                 transformed.append((model_id, label, indices))
 

@@ -5,13 +5,13 @@ class ShapenetShapeEncoder(nn.Module):
     def __init__(self):
         super(ShapenetShapeEncoder, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(4, 64, 3, stride=2, padding=1),
+            nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(64),
-            nn.Conv3d(64, 128, 3, stride=2, padding=1),
+            nn.Conv3d(64, 128, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(128),
-            nn.Conv3d(128, 256, 3, stride=2, padding=1),
+            nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(256)
         )

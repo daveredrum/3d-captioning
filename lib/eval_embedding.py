@@ -52,8 +52,10 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     print()
 
     # extract embedding
-    shape_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['shape_embedding']]
+    shape_embedding = [(key, embedding[key]['shape_embedding'][0]) for key in embedding.keys()]
     text_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['text_embedding']]
+    print(len(shape_embedding))
+    print(len(text_embedding))
 
     # process shape embedding
     shape_matrix = np.zeros((num_shape, embedding_dim))
@@ -458,7 +460,7 @@ def main():
 
     parser.add_argument('--dataset', help='shapenet/primitives', default='shapenet')
     parser.add_argument('--embedding', help='path to the root folder containing embeddings')
-    parser.add_argument('--phase', help='train/val/test', default='test', type=str)
+    parser.add_argument('--phase', help='train/val/test', default='val', type=str)
     parser.add_argument('--mode', help='t2t/t2s/s2t', type=str, default='s2t')
     parser.add_argument('--plot', help='true/false', type=str, default='false')
     args = parser.parse_args()
