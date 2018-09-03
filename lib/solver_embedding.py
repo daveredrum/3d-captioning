@@ -355,9 +355,10 @@ class EmbeddingSolver():
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
 
             # evaluate
-            metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader)
-            scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
-            scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
+            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+            # scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
+            # scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
+            scores = 0
             
             # epoch report
             self._epoch_report(train_log, val_log, epoch_id, epoch)
