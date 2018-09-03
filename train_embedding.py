@@ -104,8 +104,8 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
     }
     # for evaluation
     eval_dataloader = {
-        'text': DataLoader(eval_dataset['text'], batch_size=unique_batch_size, collate_fn=collate_shapenet),
-        'shape': DataLoader(eval_dataset['shape'], batch_size=unique_batch_size, collate_fn=collate_shapenet)
+        'text': DataLoader(eval_dataset['text'], batch_size=unique_batch_size, collate_fn=collate_shapenet, drop_last=True),
+        'shape': DataLoader(eval_dataset['shape'], batch_size=unique_batch_size, collate_fn=collate_shapenet, drop_last=True)
     }
 
     return dataloader, eval_dataloader
