@@ -14,6 +14,7 @@ from lib.eval_embedding import compute_pr_at_k
 from model.encoder_attn import AdaptiveEncoder, MultiHeadEncoder
 from model.encoder_shape import ShapenetShapeEncoder
 from model.encoder_text import ShapenetTextEncoder
+from lib.configs import CONF
 
 def compute_nearest_neighbors_cosine(similarities, n_neighbors, range_start=0):
     '''
@@ -50,22 +51,22 @@ def compute_nearest_neighbors_cosine(similarities, n_neighbors, range_start=0):
     
     return indices
 
-def _align_label(idx2label):
-    new_idx2label = {}
-    for idx, (key, _) in enumerate(idx2label.items()):
-        new_idx2label[key] = idx
+def _get_modelid2idx(common_model_ids):
+    modelid2idx = {}
+    for idx, modelid in enumerate(common_model_ids):
+        modelid2idx[modelid] = idx
     
-    return new_idx2label
+    return modelid2idx
 
-def _filter_label(labels, common_model_ids):
+def _filter_label(model_ids, common_model_ids, modelid2idx):
     filtered = []
-    for l in labels:
-        if l in common_model_ids:
-            filtered.append(l)
+    for model_id in model_ids:
+        if model_id in common_model_ids:
+            filtered.append(modelid2idx[model_id])
     
     return filtered
 
-def _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch_size, verbose, mode, is_multihead):
+def _feed(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, mode, is_multihead):
     if mode == 't2s':
         a_dataloader, b_dataloader = textloader, shapeloader
     elif mode == 's2t':
@@ -73,29 +74,33 @@ def _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch
     else:
         raise ValueError("invalid mode, terminating...")
 
-    a_label = []
+    a_model_id = []
     for model_id_a, _, _, _, _, _ in a_dataloader:
         for i in range(batch_size):
-            a_label.append(idx2label[model_id_a[i]])
+            a_model_id.append(model_id_a[i])
 
-    b_label = []
+    b_model_id = []
     for model_id_b, _, _, _, _, _ in b_dataloader:
         for i in range(batch_size):
-            b_label.append(idx2label[model_id_b[i]])
+            b_model_id.append(model_id_b[i])
 
-    num_matched = min(len(set(a_label)), len(set(b_label)))
-    common_model_ids = list(set(a_label).intersection(b_label))
-    a_label = _filter_label(a_label, common_model_ids)
-    b_label = _filter_label(b_label, common_model_ids)
+    common_model_ids = list(set(a_model_id).intersection(b_model_id))
+    modelid2idx = _get_modelid2idx(common_model_ids)
+    a_label = _filter_label(a_model_id, common_model_ids, modelid2idx)
+    b_label = _filter_label(b_model_id, common_model_ids, modelid2idx)
     num_a = len(a_label)
     num_b = len(b_label)
-    assert len(set(a_label).intersection(b_label)) == num_matched
+
+    if verbose > 0:
+        print("evaluate on {} models\n".format(len(common_model_ids)))
 
     sim_a2b = np.zeros((num_a, num_b))
     exe_s = []
     total_iter = len(a_dataloader)
+    offset_a = 0
     for a_id, (model_id_a, a_shape, a_text, _, _, _) in enumerate(a_dataloader):
         sbt = time.time()
+        offset_b = 0
         for b_id, (model_id_b, b_shape, b_text, _, _, _) in enumerate(b_dataloader):
             if text_encoder:
                 if mode == 't2s':
@@ -127,15 +132,20 @@ def _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch
                     raise ValueError("invalid mode, terminating...")
 
             sim = a_embedding.matmul(b_embedding.transpose(1, 0))
-            offset_i = 0
+            offset_in_batch_a = 0
             for i in range(batch_size):
-                offset_j = 0
-                if idx2label[model_id_a[i]] in common_model_ids:
+                if model_id_a[i] in common_model_ids:
+                    offset_in_batch_b = 0
                     for j in range(batch_size):
-                        if idx2label[model_id_b[j]] in common_model_ids:
-                            sim_a2b[offset_i, offset_j] = sim[i, j].item()
-                            offset_j += 1
-                    offset_i += 1
+                        if model_id_b[j] in common_model_ids:
+                            sim_a2b[offset_a + offset_in_batch_a, offset_b + offset_in_batch_b] = sim[i, j].item()
+                            offset_in_batch_b += 1
+                    
+                    offset_in_batch_a += 1
+            
+            offset_b += sum([1 for model_id in model_id_b if model_id in common_model_ids])
+        
+        offset_a += sum([1 for model_id in model_id_a if model_id in common_model_ids])
         
         exe_s.append(time.time() - sbt)
 
@@ -147,16 +157,16 @@ def _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch
 
     return sim_a2b, a_label, b_label
 
-def retrieve(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch_size, verbose, is_multihead):
+def retrieve(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, is_multihead):
     # t2s
     if verbose != 0:
         print("retrieve text-to-shape\n")
-    sim_t2s, source_t2s, target_t2s = _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch_size, verbose, 't2s', is_multihead)
+    sim_t2s, source_t2s, target_t2s = _feed(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, 't2s', is_multihead)
 
     # s2t
     if verbose != 0:
         print("\nretrieve shape-to-text\n")
-    sim_s2t, source_s2t, target_s2t = _feed(shape_encoder, text_encoder, shapeloader, textloader, idx2label, batch_size, verbose, 's2t', is_multihead)
+    sim_s2t, source_s2t, target_s2t = _feed(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, 's2t', is_multihead)
 
     return sim_t2s, sim_s2t, source_t2s, source_s2t, target_t2s, target_s2t
 
@@ -168,8 +178,6 @@ def _check_multihead(version):
     return flag
 
 def evaluate(
-    shapenet,
-    phase,
     shape_encoder, 
     text_encoder,
     shapeloader, 
@@ -179,20 +187,18 @@ def evaluate(
     is_multihead
     ):
     # retrieve
-    idx2label = _align_label(getattr(shapenet, "{}_idx2label".format(phase)))
     sim_t2s, sim_s2t, label_t2s, label_s2t, target_t2s, target_s2t = retrieve(
         shape_encoder, 
         text_encoder,
         shapeloader, 
         textloader, 
-        idx2label, 
         batch_size,
         verbose,
         is_multihead
     )
 
     # compute scores
-    n_neighbors = 20
+    n_neighbors = CONF.TRAIN.N_NEIGHBOR
     print("\ncompute text-to-shape retrieval scores...\n")
     indices_t2s = compute_nearest_neighbors_cosine(sim_t2s, n_neighbors)
     metrics_t2s = compute_pr_at_k(indices_t2s, label_t2s, n_neighbors, len(label_t2s), fit_labels=target_t2s)
@@ -236,7 +242,7 @@ def main(args):
             pickle.load(open("data/shapenet_split_test.p", 'rb'))
         ],
         size_split,
-        1,
+        batch_size,
         False
     )
     textset = ShapenetDataset(
@@ -254,8 +260,8 @@ def main(args):
         h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r"),
         aggr_shape=True
     )
-    textloader = DataLoader(textset, batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet, drop_last=True)
-    shapeloader = DataLoader(shapeset, batch_size=batch_size, shuffle=True, collate_fn=collate_shapenet, drop_last=True)
+    textloader = DataLoader(textset, batch_size=batch_size, collate_fn=collate_shapenet, drop_last=True)
+    shapeloader = DataLoader(shapeset, batch_size=batch_size, collate_fn=collate_shapenet, drop_last=True)
     num_shape = len(shapeloader) * batch_size
     num_text = len(textloader) * batch_size
 
@@ -294,7 +300,7 @@ def main(args):
             shape_encoder.eval()
             text_encoder.eval()
 
-    evaluate(shapenet, phase, shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, is_multihead)
+    evaluate(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, is_multihead)
 
 
 if __name__ == "__main__":

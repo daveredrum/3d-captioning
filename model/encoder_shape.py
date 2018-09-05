@@ -24,20 +24,20 @@ class ShapenetShapeEncoder(nn.Module):
 
         return outputs
 
-class ShapenetEmbeddingEncoder(nn.Module):
-    def __init__(self, encoder_path):
-        super(ShapenetEmbeddingEncoder, self).__init__()
-        encoder = torch.load(encoder_path)
-        self.conv = nn.Sequential(*list(encoder.conv.children())[:-2])
-        self.pool = nn.AvgPool3d(2)
-        self.bn = encoder.conv[-1]
-        self.outputs = encoder.outputs
+# class ShapenetEmbeddingEncoder(nn.Module):
+#     def __init__(self, encoder_path):
+#         super(ShapenetEmbeddingEncoder, self).__init__()
+#         encoder = torch.load(encoder_path)
+#         self.conv = nn.Sequential(*list(encoder.conv.children())[:-2])
+#         self.pool = nn.AvgPool3d(2)
+#         self.bn = encoder.conv[-1]
+#         self.outputs = encoder.outputs
 
-    def forward(self, inputs):
-        area_feat = self.conv(inputs)
-        global_feat = self.pool(area_feat)
-        global_feat = self.bn(global_feat)
-        global_feat = self.outputs(global_feat.view(global_feat.size(0), -1))
+#     def forward(self, inputs):
+#         area_feat = self.conv(inputs)
+#         global_feat = self.pool(area_feat)
+#         global_feat = self.bn(global_feat)
+#         global_feat = self.outputs(global_feat.view(global_feat.size(0), -1))
 
-        return area_feat, global_feat
+#         return area_feat, global_feat
         

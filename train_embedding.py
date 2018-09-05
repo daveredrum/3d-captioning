@@ -104,8 +104,18 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
     }
     # for evaluation
     eval_dataloader = {
-        'text': DataLoader(eval_dataset['text'], batch_size=unique_batch_size, collate_fn=collate_shapenet, drop_last=True),
-        'shape': DataLoader(eval_dataset['shape'], batch_size=unique_batch_size, collate_fn=collate_shapenet, drop_last=True)
+        'text': DataLoader(
+            eval_dataset['text'], 
+            batch_size=unique_batch_size, 
+            collate_fn=collate_shapenet, 
+            drop_last=check_dataset(eval_dataset['text'], unique_batch_size)
+        ),
+        'shape': DataLoader(
+            eval_dataset['shape'], 
+            batch_size=unique_batch_size, 
+            collate_fn=collate_shapenet, 
+            drop_last=check_dataset(eval_dataset['shape'], unique_batch_size)
+        )
     }
 
     return dataloader, eval_dataloader
@@ -195,9 +205,9 @@ def main(args):
     if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
     if ver == '3':
-        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, True)
+        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, True)
     else:
-        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings)
+        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
     if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings)):
         os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 

@@ -119,7 +119,7 @@ def main(args):
         voxel,
         h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
     )
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_shapenet)
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_shapenet)
 
     # report settings
     print("[settings]")

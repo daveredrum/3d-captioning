@@ -16,11 +16,12 @@ from eval_attn import evaluate
 from model.encoder_attn import MultiHeadEncoder
 
 class EmbeddingSolver():
-    def __init__(self, shapenet, criterion, optimizer, settings, is_multi_head=False):
+    def __init__(self, shapenet, criterion, optimizer, settings, batch_size, is_multi_head=False):
         self.shapenet = shapenet
         self.criterion = criterion
         self.optimizer = optimizer
         self.settings = settings
+        self.batch_size = batch_size
         self.is_multi_head = is_multi_head
 
     def _compute_loss(self, s, t, s_labels, t_labels, text_encoder, batch_size):
@@ -218,7 +219,7 @@ class EmbeddingSolver():
 
         return val_log
 
-    def evaluate(self, shape_encoder, text_encoder, eval_dataloader):
+    def evaluate(self, shape_encoder, text_encoder, eval_dataloader, iter_time_list):
         # # extract embedding
         # print("extracting...\n")
         # # eval mode
@@ -228,15 +229,16 @@ class EmbeddingSolver():
         # embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
 
         # evaluate
-        print("evaluating...\n")
+        mean_exe_s = np.mean(iter_time_list)
+        eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
+        eta_m = math.floor(eta_s / 60)
+        print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
         metrics_t2s, metrics_s2t = evaluate(
-            self.shapenet, 
-            CONF.TRAIN.EVAL_DATASET, 
             shape_encoder, 
             text_encoder, 
             eval_dataloader['shape'], 
             eval_dataloader['text'], 
-            CONF.TRAIN.EVAL_BATCH_SIZE,
+            self.batch_size,
             0, 
             self.is_multi_head
         )
@@ -273,6 +275,9 @@ class EmbeddingSolver():
                 'metric_loss_tt': [],
                 'shape_norm_penalty': [],
                 'text_norm_penalty': []
+            },
+            'eval': {
+                'eval_time': []
             }
         }
         for epoch_id in range(epoch):
@@ -345,7 +350,9 @@ class EmbeddingSolver():
 
                 # report
                 if iter_count % verbose == 0:
-                    self._iter_report(train_log, iter_count, total_iter)
+                    val_est = np.mean(train_log['iter_time'] + val_log['iter_time']) * len(dataloader['val']) * (epoch - epoch_id - 1)
+                    eval_est = 0
+                    self._iter_report(train_log, iter_count, total_iter, val_est, eval_est)
 
                 # # evaluate
                 # if iter_count % CONF.TRAIN.EVAL_FREQ == 0:
@@ -354,8 +361,8 @@ class EmbeddingSolver():
             # validate
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
 
-            # evaluate
-            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+            # # evaluate
+            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['iter_time'] + val_log['iter_time'])
             # scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
             # scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
             scores = 0
@@ -392,11 +399,11 @@ class EmbeddingSolver():
             #         torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "encoder.pth"))
             
             # best
-            if np.mean(train_log['total_loss']) < best['total_loss']:
+            if np.mean(val_log['total_loss']) < best['total_loss']:
                 # report best
-                print("best train_loss achieved: {}".format(np.mean(train_log['total_loss'])))
-                print("current scores: {}".format(scores))
-                print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
+                print("best val_loss achieved: {}".format(np.mean(val_log['total_loss'])))
+                # print("current scores: {}".format(scores))
+                print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
                 best['epoch'] = epoch_id + 1
                 best['scores'] = scores
                 best['total_loss'] = float(np.mean(val_log['total_loss']))
@@ -443,7 +450,7 @@ class EmbeddingSolver():
         print("done...\n")
 
         # end eval
-        # self.evaluate(shape_encoder, text_encoder, eval_dataloader)
+        self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['iter_time'] + val_log['iter_time'])
 
         return best, log
 
@@ -456,10 +463,10 @@ class EmbeddingSolver():
 
         return penalty
 
-    def _iter_report(self, log, iter_count, total_iter):
+    def _iter_report(self, log, iter_count, total_iter, val_est, eval_est):
         # compute ETA
         exetime_s = np.mean(log['iter_time'])
-        eta_s = exetime_s * (total_iter - iter_count)
+        eta_s = exetime_s * (total_iter - iter_count) + val_est + eval_est
         eta_m = math.floor(eta_s / 60)
         
         # show report

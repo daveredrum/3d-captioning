@@ -10,7 +10,8 @@ global configurations for path
 CONF.PATH = EasyDict()
 # general
 CONF.PATH.DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
-CONF.PATH.SHAPENET_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
+# CONF.PATH.SHAPENET_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
+CONF.PATH.SHAPENET_ROOT = "data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 CONF.PATH.SHAPENET_SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
 CONF.PATH.SHAPENET_DATABASE = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid.hdf5" # TODO modify this
 CONF.PATH.PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
@@ -43,8 +44,8 @@ CONF.TRAIN.RANDOM_SAMPLE = False
 CONF.TRAIN.REDUCE_STEP = 10
 CONF.TRAIN.REDUCE_FACTOR = 0.95
 CONF.TRAIN.CLIP_VALUE = 5.
+CONF.TRAIN.N_NEIGHBOR = 10
 CONF.TRAIN.EVAL_DATASET = 'val'
-CONF.TRAIN.EVAL_BATCH_SIZE = 80
 CONF.TRAIN.EVAL_FREQ = 2500
 CONF.TRAIN.EVAL_MODE = 't2s'
 CONF.TRAIN.EVAL_METRIC = 'cosine'
