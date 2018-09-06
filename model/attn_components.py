@@ -201,7 +201,7 @@ class SelfAttention3D(nn.Module):
         self.f = nn.Linear(visual_channels, hidden_size, bias=False)
         self.g = nn.Linear(visual_channels, hidden_size, bias=False)
         self.h = nn.Linear(visual_channels, visual_channels, bias=False)
-        self.output_layer = nn.Linear(visual_flat, 1, bias=False)
+        self.output_layer = nn.Linear(visual_flat, visual_flat, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -216,9 +216,9 @@ class SelfAttention3D(nn.Module):
         g = self.g(feature) # (batch_size, visual_flat, hidden_size)
         h = self.h(feature).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_flat)
         s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
-        s_comp = self.output_layer(s) # (batch_size, visual_flat, 1)
-        mask = F.softmax(s_comp, dim=0) # (batch_size, visual_flat, 1)
-        outputs = h.matmul(mask).squeeze(2) # (batch_size, visual_channels)
+        s_comp = self.output_layer(s) # (batch_size, visual_flat, visual_flat)
+        mask = F.softmax(s_comp, dim=0) # (batch_size, visual_flat, visual_flat)
+        outputs = h.matmul(mask) # (batch_size, visual_channels, visual_flat)
 
         return outputs, mask
 
