@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from lib.data_embedding import *
 from lib.configs import *
 from lib.eval_embedding import compute_pr_at_k
-from model.encoder_attn import AdaptiveEncoder, MultiHeadEncoder
+from model.encoder_attn import *
 from model.encoder_shape import ShapenetShapeEncoder
 from model.encoder_text import ShapenetTextEncoder
 from lib.configs import CONF
@@ -106,11 +106,19 @@ def _feed(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verb
                 if mode == 't2s':
                     a = a_text.cuda()
                     b = b_shape.cuda()
-                    a_embedding, b_embedding = text_encoder(a), shape_encoder(b)
+                    if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
+                        a_embedding, _ = text_encoder(a)
+                        b_embedding, _ = shape_encoder(b)
+                    else:
+                        a_embedding, b_embedding = text_encoder(a), shape_encoder(b)
                 elif mode == 's2t':
                     a = a_shape.cuda()
                     b = b_text.cuda()
-                    a_embedding, b_embedding = shape_encoder(a), text_encoder(b)
+                    if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
+                        a_embedding, _ = shape_encoder(a)
+                        b_embedding, _ = text_encoder(b)
+                    else:
+                        a_embedding, b_embedding = shape_encoder(a), text_encoder(b)
                 else:
                     raise ValueError("invalid mode, terminating...")
             else:
@@ -282,14 +290,7 @@ def main(args):
         shape_encoder.eval()
         text_encoder = None
     else:
-        if attention != 'noattention':
-            print("\ninitializing attentive models ver.{}...\n".format(version))
-            shape_encoder_path = os.path.join(root, "models/encoder.pth")
-            shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), version).cuda()
-            shape_encoder.load_state_dict(torch.load(shape_encoder_path))
-            shape_encoder.eval()
-            text_encoder = None
-        else:
+        if attention == 'noattention':
             print("\ninitializing naive models...\n")
             shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
             text_encoder_path = os.path.join(root, "models/text_encoder.pth")
@@ -299,6 +300,23 @@ def main(args):
             text_encoder.load_state_dict(torch.load(text_encoder_path))
             shape_encoder.eval()
             text_encoder.eval()
+        elif attention == 'self':
+            print("\ninitializing self-attentive models...\n")
+            shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
+            text_encoder_path = os.path.join(root, "models/text_encoder.pth")
+            shape_encoder = SelfAttnShapeEncoder().cuda()
+            text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+            shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+            text_encoder.load_state_dict(torch.load(text_encoder_path))
+            shape_encoder.eval()
+            text_encoder.eval()
+        else:
+            print("\ninitializing attentive models ver.{}...\n".format(version))
+            shape_encoder_path = os.path.join(root, "models/encoder.pth")
+            shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), version).cuda()
+            shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+            shape_encoder.eval()
+            text_encoder = None
 
     evaluate(shape_encoder, text_encoder, shapeloader, textloader, batch_size, verbose, is_multihead)
 

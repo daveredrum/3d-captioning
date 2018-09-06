@@ -13,7 +13,7 @@ from torch.nn.utils import clip_grad_value_
 from lib.save_embedding import extract
 from lib.eval_embedding import compute_metrics
 from eval_attn import evaluate
-from model.encoder_attn import MultiHeadEncoder
+from model.encoder_attn import MultiHeadEncoder, SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 class EmbeddingSolver():
     def __init__(self, shapenet, criterion, optimizer, settings, batch_size, is_multi_head=False):
@@ -178,8 +178,12 @@ class EmbeddingSolver():
         
         # forward pass
         if text_encoder:
-            s = shape_encoder(shapes)
-            t = text_encoder(texts)
+            if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
+                s, _ = shape_encoder(shapes)
+                t, _ = text_encoder(texts)
+            else:
+                s = shape_encoder(shapes)
+                t = text_encoder(texts)
             losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
         else:
             if self.is_multi_head:
@@ -219,7 +223,7 @@ class EmbeddingSolver():
 
         return val_log
 
-    def evaluate(self, shape_encoder, text_encoder, eval_dataloader, iter_time_list):
+    def evaluate(self, shape_encoder, text_encoder, eval_dataloader, iter_time_list=None):
         # # extract embedding
         # print("extracting...\n")
         # # eval mode
@@ -229,10 +233,13 @@ class EmbeddingSolver():
         # embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
 
         # evaluate
-        mean_exe_s = np.mean(iter_time_list)
-        eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
-        eta_m = math.floor(eta_s / 60)
-        print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
+        if not iter_time_list:
+            mean_exe_s = np.mean(iter_time_list)
+            eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
+            eta_m = math.floor(eta_s / 60)
+            print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
+        else:
+            print("evaluating...")
         metrics_t2s, metrics_s2t = evaluate(
             shape_encoder, 
             text_encoder, 
@@ -350,7 +357,8 @@ class EmbeddingSolver():
 
                 # report
                 if iter_count % verbose == 0:
-                    val_est = np.mean(train_log['iter_time'] + val_log['iter_time']) * len(dataloader['val']) * (epoch - epoch_id - 1)
+                    val_est = np.mean(train_log['forward'] + val_log['iter_time']) * len(dataloader['val']) * (epoch - epoch_id - 1)
+                    # eval_est = np.mean(train_log['forward'] + val_log['iter_time']) * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2 * (epoch - epoch_id - 1)
                     eval_est = 0
                     self._iter_report(train_log, iter_count, total_iter, val_est, eval_est)
 
@@ -362,7 +370,7 @@ class EmbeddingSolver():
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
 
             # # evaluate
-            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['iter_time'] + val_log['iter_time'])
+            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['forward'] + val_log['iter_time'])
             # scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
             # scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
             scores = 0
@@ -450,7 +458,7 @@ class EmbeddingSolver():
         print("done...\n")
 
         # end eval
-        self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['iter_time'] + val_log['iter_time'])
+        self.evaluate(shape_encoder, text_encoder, eval_dataloader)
 
         return best, log
 

@@ -19,7 +19,7 @@ import nrrd
 from lib.configs import CONF
 from model.encoder_shape import ShapenetShapeEncoder
 from model.encoder_text import ShapenetTextEncoder
-from model.encoder_attn import AdaptiveEncoder, MultiHeadEncoder
+from model.encoder_attn import *
 from lib.losses import *
 from lib.solver_embedding import EmbeddingSolver
 import torch.multiprocessing as mp
@@ -29,7 +29,7 @@ from lib.utils import decode_log_embedding, draw_curves_embedding
 
 def check_dataset(dataset, batch_size):
     flag = False
-    if len(dataset) % (batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL) != 0:
+    if len(dataset) % batch_size != 0:
         flag = True
     
     return flag
@@ -106,15 +106,15 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
     eval_dataloader = {
         'text': DataLoader(
             eval_dataset['text'], 
-            batch_size=unique_batch_size, 
+            batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
             collate_fn=collate_shapenet, 
-            drop_last=check_dataset(eval_dataset['text'], unique_batch_size)
+            drop_last=check_dataset(eval_dataset['text'], unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
         ),
         'shape': DataLoader(
             eval_dataset['shape'], 
-            batch_size=unique_batch_size, 
+            batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
             collate_fn=collate_shapenet, 
-            drop_last=check_dataset(eval_dataset['shape'], unique_batch_size)
+            drop_last=check_dataset(eval_dataset['shape'], unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
         )
     }
 
@@ -136,6 +136,10 @@ def main(args):
     if args.attention == 'adaptive':
         attention = True
         attention_type = 'adaptive'
+    if args.attention == 'self':
+        attention = True
+        attention_type = 'self'
+        ver = ''
     elif args.attention == 'false':
         attention = False
         attention_type = 'noattention'
@@ -177,16 +181,21 @@ def main(args):
     print("version:", ver)
 
     # initialize models
-    if attention and ver != '3':
+    if attention_type == "adaptive":
+        if ver != '3':
+            print("\ninitializing {} models...\n".format(attention_type))
+            shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), ver).cuda()
+            text_encoder = None
+        else:
+            print("\ninitializing {} models...\n".format("multi-head"))
+            shape_encoder = MultiHeadEncoder(shapenet.dict_idx2word.__len__()).cuda()
+            text_encoder = None
+    elif attention_type == "self":
         print("\ninitializing {} models...\n".format(attention_type))
-        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), ver).cuda()
-        text_encoder = None
-    elif attention and ver == '3':
-        print("\ninitializing {} models...\n".format("multi-head"))
-        shape_encoder = MultiHeadEncoder(shapenet.dict_idx2word.__len__()).cuda()
-        text_encoder = None
+        shape_encoder = SelfAttnShapeEncoder().cuda()
+        text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
     else:
-        print("\ninitializing models...\n")
+        print("\ninitializing naive models...\n")
         shape_encoder = ShapenetShapeEncoder().cuda()
         text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
 
@@ -197,7 +206,7 @@ def main(args):
         'visit': AssociationLoss(weight=CONF.LBA.VISIT_WEIGHT),
         'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
     }
-    if attention:
+    if attention_type == "adaptive":
         optimizer = torch.optim.Adam(shape_encoder.parameters(), lr=learning_rate, weight_decay=weight_decay)
     else:
         optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)

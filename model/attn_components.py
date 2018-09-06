@@ -189,9 +189,10 @@ class AdaptiveAttention3D(nn.Module):
 
         return outputs
 
+# self-attention module
 class SelfAttention3D(nn.Module):
     def __init__(self, visual_channels, hidden_size, visual_flat):
-        super(AdaptiveAttention3D, self).__init__()
+        super(SelfAttention3D, self).__init__()
         # basic settings
         self.visual_channels = visual_channels
         self.hidden_size = hidden_size
@@ -200,6 +201,7 @@ class SelfAttention3D(nn.Module):
         self.f = nn.Linear(visual_channels, hidden_size, bias=False)
         self.g = nn.Linear(visual_channels, hidden_size, bias=False)
         self.h = nn.Linear(visual_channels, visual_channels, bias=False)
+        self.output_layer = nn.Linear(visual_flat, 1, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -214,7 +216,30 @@ class SelfAttention3D(nn.Module):
         g = self.g(feature) # (batch_size, visual_flat, hidden_size)
         h = self.h(feature).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_flat)
         s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
-        beta = F.softmax(s, dim=0) # (batch_size, visual_flat, visual_flat)
-        outputs = h.matmul(beta) # (batch_size, visual_channels, visual_flat)
+        s_comp = self.output_layer(s) # (batch_size, visual_flat, 1)
+        mask = F.softmax(s_comp, dim=0) # (batch_size, visual_flat, 1)
+        outputs = h.matmul(mask).squeeze(2) # (batch_size, visual_channels)
+
+        return outputs, mask
+
+class TemporalSelfAttention(nn.Module):
+    def __init__(self, hidden_size):
+        super(TemporalSelfAttention, self).__init__()
+        # basic settings
+        self.hidden_size = hidden_size
+        # MLP
+        self.comp_h = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.output_layer = nn.Linear(hidden_size, 1, bias=False)
+        # initialize weights
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.parameters():
+            stdv = 1.0 / math.sqrt(weight.size(0))
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, h):
+        h_comp = self.comp_h(h) # (batch_size, seq_size, hidden_size)
+        outputs = self.output_layer(h_comp) # (batch_size, seq_size, 1)
 
         return outputs
