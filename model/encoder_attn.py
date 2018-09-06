@@ -264,7 +264,8 @@ class SelfAttnShapeEncoder(nn.Module):
 
     def attend(self, shape_feat):
         spatial_contexts, spatial_weights = self.attention_spatial(shape_feat)
-        spatial_attended = shape_feat.mean(2) + self.gamma * spatial_contexts # (batch_size, visual_channels)
+        spatial_attended = shape_feat + self.gamma * spatial_contexts # (batch_size, visual_channels, , visual_flat)
+        spatial_attended = spatial_attended.mean(2)
 
         return spatial_attended, spatial_weights
 
