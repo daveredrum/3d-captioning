@@ -42,10 +42,11 @@ __progress:__
 
 > __best models:__
 >
-> |train_size|test_size|learning_rate|weight_decay|batch_size|epoch|random|
+> |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|
 > |---|---|---|---|---|---|---|
-> |-1|-1|2e-4|5e-4|32|10|False|
+> |-1|-1|2e-4|5e-4|100|10|False|
 
+<s>
 ## Aug. 23
 
 __progress:__
@@ -90,7 +91,8 @@ __progress:__
 > |train_size|test_size|learning_rate|weight_decay|batch_size|epoch|random|
 > |---|---|---|---|---|---|---|
 > |-1|-1|2e-4|5e-4|32|10|False|
-
+</s>
+  
 ## Aug. 9
 
 __progress:__
