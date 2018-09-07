@@ -73,9 +73,9 @@ def clip_grad_value_(optimizer, clip_value):
                 pass
 
 def decode_log_embedding(return_log):
-    return return_log['train'], return_log['val']
+    return return_log['train'], return_log['val'], return_log['eval']
 
-def draw_curves_embedding(train_log, val_log, root):
+def draw_curves_embedding(train_log, val_log, eval_log, root):
     print("plotting training curves...")
     if not os.path.exists(os.path.join(root, 'curves')):
         os.mkdir(os.path.join(root, 'curves'))
@@ -170,4 +170,37 @@ def draw_curves_embedding(train_log, val_log, root):
     plt.xticks(range(1, epochs + 1))
     plt.legend()
     plt.savefig(os.path.join(root, 'curves', 'norm_penalty.png'), bbox_inches="tight")
+
+    # plot eval scores
+    fig.clf()
+    fig.set_size_inches(16,32)
+    plt.subplot(4, 1, 1)
+    plt.plot(range(1, epochs + 1), eval_log['total_score_t2s'], label="total_score_t2s")
+    plt.plot(range(1, epochs + 1), eval_log['total_score_s2t'], label="total_score_s2t")
+    plt.xlabel('epoch')
+    plt.ylabel('score')
+    plt.xticks(range(1, epochs + 1))
+    plt.legend()
+    plt.subplot(4, 1, 2)
+    plt.plot(range(1, epochs + 1), eval_log['recall_1_t2s'], label="RR@1_t2s")
+    plt.plot(range(1, epochs + 1), eval_log['recall_1_s2t'], label="RR@1_s2t")
+    plt.xlabel('epoch')
+    plt.ylabel('RR@1')
+    plt.xticks(range(1, epochs + 1))
+    plt.legend()
+    plt.subplot(4, 1, 3)
+    plt.plot(range(1, epochs + 1), eval_log['recall_5_t2s'], label="RR@5_t2s")
+    plt.plot(range(1, epochs + 1), eval_log['recall_5_s2t'], label="RR@5_s2t")
+    plt.xlabel('epoch')
+    plt.ylabel('RR@5')
+    plt.xticks(range(1, epochs + 1))
+    plt.legend()
+    plt.subplot(4, 1, 4)
+    plt.plot(range(1, epochs + 1), eval_log['ndcg_5_t2s'], label="NDCG@5_t2s")
+    plt.plot(range(1, epochs + 1), eval_log['ndcg_5_s2t'], label="NDCG@5_s2t")
+    plt.xlabel('epoch')
+    plt.ylabel('NDCG@5')
+    plt.xticks(range(1, epochs + 1))
+    plt.legend()
+    plt.savefig(os.path.join(root, 'curves', 'scores.png'), bbox_inches="tight")
     

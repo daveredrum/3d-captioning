@@ -54,8 +54,6 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     # extract embedding
     shape_embedding = [(key, embedding[key]['shape_embedding']) for key in embedding.keys()]
     text_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['text_embedding']]
-    print(len(shape_embedding))
-    print(len(text_embedding))
 
     # process shape embedding
     shape_matrix = np.zeros((num_shape, embedding_dim))

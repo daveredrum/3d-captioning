@@ -16,7 +16,7 @@ from lib.configs import CONF
 from lib.data_embedding import *
 from model.encoder_shape import *
 from model.encoder_text import *
-from model.encoder_attn import AdaptiveEncoder
+from model.encoder_attn import AdaptiveEncoder, SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 
 
@@ -32,8 +32,12 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
 
         # non-attentive
         if text_encoder:
-            shape_embedding = shape_encoder(shape)
-            text_embedding = text_encoder(text)
+            if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
+                shape_embedding, _ = shape_encoder(shape)
+                text_embedding, _ = text_encoder(text)
+            else:
+                shape_embedding = shape_encoder(shape)
+                text_embedding = text_encoder(text)
         else:
             shape_embedding, text_embedding , _, _ = shape_encoder(shape, text)
 
@@ -81,7 +85,11 @@ def main(args):
     # parse args
     root = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, args.path)
     voxel = int(args.path.split("_")[1][1:])
-    if args.path.split("_")[-1] == "noattention":
+    attention_type = args.path.split("_")[-1]
+    if attention_type == "noattention":
+        shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
+        text_encoder_path = os.path.join(root, "models/text_encoder.pth")
+    elif attention_type == "self":
         shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
         text_encoder_path = os.path.join(root, "models/text_encoder.pth")
     else:
@@ -130,15 +138,22 @@ def main(args):
 
     # initialize models
     print("\ninitializing models...\n")
-    if text_encoder_path:
+    if attention_type == "noattention":
         shape_encoder = ShapenetShapeEncoder().cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
+    elif attention_type == "self":
+        shape_encoder = SelfAttnShapeEncoder().cuda()
+        shape_encoder.load_state_dict(torch.load(shape_encoder_path))
+        shape_encoder.eval()
+        text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        text_encoder.load_state_dict(torch.load(text_encoder_path))
+        text_encoder.eval()
     else:
-        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), args.path.split("_")[-1][8:]).cuda()
+        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), attention_type[8:]).cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = None
@@ -163,7 +178,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default=None, help="path to the pretrained encoders")
     parser.add_argument("--phase", type=str, default='val', help="train/val/test")
-    parser.add_argument("--size", type=int, default=100, help="train size")
+    parser.add_argument("--size", type=int, default=-1, help="train size")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     args = parser.parse_args()

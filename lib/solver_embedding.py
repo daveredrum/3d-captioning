@@ -223,36 +223,40 @@ class EmbeddingSolver():
 
         return val_log
 
-    def evaluate(self, shape_encoder, text_encoder, eval_dataloader, iter_time_list=None):
-        # # extract embedding
-        # print("extracting...\n")
-        # # eval mode
-        # shape_encoder.eval()
-        # if text_encoder:
-        #     text_encoder.eval()
-        # embedding = extract(shape_encoder, text_encoder, eval_dataloader, None, None)
+    def evaluate(self, shape_encoder, text_encoder, dataloader):
+        # extract embedding
+        print("extracting...\n")
+        # eval mode
+        shape_encoder.eval()
+        if text_encoder:
+            text_encoder.eval()
+        embedding = extract(shape_encoder, text_encoder, dataloader['eval'], None, None)
 
-        # evaluate
-        if not iter_time_list:
-            mean_exe_s = np.mean(iter_time_list)
-            eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
-            eta_m = math.floor(eta_s / 60)
-            print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
-        else:
-            print("evaluating...")
-        metrics_t2s, metrics_s2t = evaluate(
-            shape_encoder, 
-            text_encoder, 
-            eval_dataloader['shape'], 
-            eval_dataloader['text'], 
-            self.batch_size,
-            0, 
-            self.is_multi_head
-        )
+        # # evaluate
+        # if iter_time_list:
+        #     mean_exe_s = np.mean(iter_time_list)
+        #     eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
+        #     eta_m = math.floor(eta_s / 60)
+        #     print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
+        # else:
+        #     print("evaluating...")
+        # metrics_t2s, metrics_s2t = evaluate(
+        #     shape_encoder, 
+        #     text_encoder, 
+        #     eval_dataloader['shape'], 
+        #     eval_dataloader['text'], 
+        #     self.batch_size,
+        #     0, 
+        #     self.is_multi_head
+        # )
+
+        print("evaluating...")
+        metrics_t2s = compute_metrics("shapenet", embedding, mode='t2s', metric='cosine')
+        metrics_s2t = compute_metrics("shapenet", embedding, mode='s2t', metric='cosine')
 
         return metrics_t2s, metrics_s2t
 
-    def train(self, shape_encoder, text_encoder, best, dataloader, eval_dataloader, epoch, verbose):
+    def train(self, shape_encoder, text_encoder, best, dataloader, epoch, verbose):
         '''
         note:
             text_encoder = None -> attention is applied
@@ -284,7 +288,14 @@ class EmbeddingSolver():
                 'text_norm_penalty': []
             },
             'eval': {
-                'eval_time': []
+                'total_score_t2s': [],
+                'recall_1_t2s': [],
+                'recall_5_t2s': [],
+                'ndcg_5_t2s': [],
+                'total_score_s2t': [],
+                'recall_1_s2t': [],
+                'recall_5_s2t': [],
+                'ndcg_5_s2t': []
             }
         }
         for epoch_id in range(epoch):
@@ -316,7 +327,6 @@ class EmbeddingSolver():
                 'metric_loss_tt': [],
                 'shape_norm_penalty': [],
                 'text_norm_penalty': []
-                
             }
             for _, (_, shapes, texts, _, labels, fetch_time) in enumerate(dataloader['train']):
                 start = time.time()
@@ -358,8 +368,8 @@ class EmbeddingSolver():
                 # report
                 if iter_count % verbose == 0:
                     val_est = np.mean(train_log['forward'] + val_log['iter_time']) * len(dataloader['val']) * (epoch - epoch_id - 1)
-                    # eval_est = np.mean(train_log['forward'] + val_log['iter_time']) * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2 * (epoch - epoch_id - 1)
-                    eval_est = 0
+                    eval_est = np.mean(train_log['forward'] + val_log['iter_time']) * len(dataloader['eval']) * (epoch - epoch_id - 1)
+                    # eval_est = 0
                     self._iter_report(train_log, iter_count, total_iter, val_est, eval_est)
 
                 # # evaluate
@@ -368,22 +378,57 @@ class EmbeddingSolver():
 
             # validate
             val_log = self.validate(shape_encoder, text_encoder, dataloader, val_log)
-
-            # # evaluate
-            # metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, eval_dataloader, train_log['forward'] + val_log['iter_time'])
-            # scores = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
-            # scores += metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
-            scores = 0
             
             # epoch report
             self._epoch_report(train_log, val_log, epoch_id, epoch)
+
+            # evaluate
+            metrics_t2s, metrics_s2t = self.evaluate(shape_encoder, text_encoder, dataloader)
+            total_score_t2s = metrics_t2s.recall_rate[0] + metrics_t2s.recall_rate[4] + metrics_t2s.ndcg[4]
+            total_score_s2t = metrics_s2t.recall_rate[0] + metrics_s2t.recall_rate[4] + metrics_s2t.ndcg[4]
+            total_score = total_score_t2s + total_score_s2t
+            # scores = 0
+            
+            # best
+            if total_score > best['total_score']:
+                # report best
+                print("best total_score achieved: {}".format(total_score))
+                print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
+                print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
+                best['epoch'] = epoch_id + 1
+                best['total_score'] = total_score
+                best['recall_1_t2s'] = metrics_t2s.recall_rate[0]
+                best['recall_5_t2s'] = metrics_t2s.recall_rate[4]
+                best['ndcg_5_t2s'] = metrics_t2s.ndcg[4]
+                best['recall_1_s2t'] = metrics_s2t.recall_rate[0]
+                best['recall_5_s2t'] = metrics_s2t.recall_rate[4]
+                best['ndcg_5_s2t'] = metrics_s2t.ndcg[4]
+                best['total_loss'] = float(np.mean(val_log['total_loss']))
+                best['walker_loss_tst'] = float(np.mean(val_log['walker_loss_tst']))
+                best['walker_loss_sts'] = float(np.mean(val_log['walker_loss_sts']))
+                best['visit_loss_ts'] = float(np.mean(val_log['visit_loss_ts']))
+                best['visit_loss_st'] = float(np.mean(val_log['visit_loss_st']))
+                best['metric_loss_st'] = float(np.mean(val_log['metric_loss_st']))
+                best['metric_loss_tt'] = float(np.mean(val_log['metric_loss_tt']))
+                best['shape_norm_penalty'] = float(np.mean(val_log['shape_norm_penalty']))
+                best['text_norm_penalty'] = float(np.mean(val_log['text_norm_penalty']))
+
+                # save the best models
+                print("saving models...\n")
+                if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models")):
+                    os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models"))
+                if text_encoder:
+                    torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
+                    torch.save(text_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
+                else:
+                    torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "encoder.pth"))
             
             # # best
-            # if scores > best['scores']:
+            # if np.mean(val_log['total_loss']) < best['total_loss']:
             #     # report best
-            #     print("best scores achieved: {}".format(scores))
+            #     print("best val_loss achieved: {}".format(np.mean(val_log['total_loss'])))
+            #     # print("current scores: {}".format(scores))
             #     print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
-            #     print("current val_loss: {}".format(np.mean(val_log['total_loss'])))
             #     best['epoch'] = epoch_id + 1
             #     best['scores'] = scores
             #     best['total_loss'] = float(np.mean(val_log['total_loss']))
@@ -405,34 +450,6 @@ class EmbeddingSolver():
             #         torch.save(text_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
             #     else:
             #         torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "encoder.pth"))
-            
-            # best
-            if np.mean(val_log['total_loss']) < best['total_loss']:
-                # report best
-                print("best val_loss achieved: {}".format(np.mean(val_log['total_loss'])))
-                # print("current scores: {}".format(scores))
-                print("current train_loss: {}".format(np.mean(train_log['total_loss'])))
-                best['epoch'] = epoch_id + 1
-                best['scores'] = scores
-                best['total_loss'] = float(np.mean(val_log['total_loss']))
-                best['walker_loss_tst'] = float(np.mean(val_log['walker_loss_tst']))
-                best['walker_loss_sts'] = float(np.mean(val_log['walker_loss_sts']))
-                best['visit_loss_ts'] = float(np.mean(val_log['visit_loss_ts']))
-                best['visit_loss_st'] = float(np.mean(val_log['visit_loss_st']))
-                best['metric_loss_st'] = float(np.mean(val_log['metric_loss_st']))
-                best['metric_loss_tt'] = float(np.mean(val_log['metric_loss_tt']))
-                best['shape_norm_penalty'] = float(np.mean(val_log['shape_norm_penalty']))
-                best['text_norm_penalty'] = float(np.mean(val_log['text_norm_penalty']))
-
-                # save the best models
-                print("saving models...\n")
-                if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models")):
-                    os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models"))
-                if text_encoder:
-                    torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "shape_encoder.pth"))
-                    torch.save(text_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "text_encoder.pth"))
-                else:
-                    torch.save(shape_encoder.state_dict(), os.path.join(CONF.PATH.OUTPUT_EMBEDDING, self.settings, "models", "encoder.pth"))
 
             # epoch log
             log['train']['total_loss'].append(np.mean(train_log['total_loss']))
@@ -453,12 +470,17 @@ class EmbeddingSolver():
             log['val']['metric_loss_tt'].append(np.mean(val_log['metric_loss_tt']))
             log['val']['shape_norm_penalty'].append(np.mean(val_log['shape_norm_penalty']))
             log['val']['text_norm_penalty'].append(np.mean(val_log['text_norm_penalty']))
+            log['eval']['total_score_t2s'].append(total_score_t2s)
+            log['eval']['recall_1_t2s'].append(metrics_t2s.recall_rate[0])
+            log['eval']['recall_5_t2s'].append(metrics_t2s.recall_rate[4])
+            log['eval']['ndcg_5_t2s'].append(metrics_t2s.ndcg[4])
+            log['eval']['total_score_s2t'].append(total_score_s2t)
+            log['eval']['recall_1_s2t'].append(metrics_s2t.recall_rate[0])
+            log['eval']['recall_5_s2t'].append(metrics_s2t.recall_rate[4])
+            log['eval']['ndcg_5_s2t'].append(metrics_s2t.ndcg[4])
 
         # done
         print("done...\n")
-
-        # end eval
-        self.evaluate(shape_encoder, text_encoder, eval_dataloader)
 
         return best, log
 

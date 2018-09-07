@@ -65,29 +65,18 @@ def get_dataset(split_size, unique_batch_size, voxel):
         h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
     )
     # for evaluation
-    eval_dataset = {
-        'text': ShapenetDataset(
-            getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-            getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-            getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
-            voxel,
-            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-        ),
-        'shape': ShapenetDataset(
-            getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-            getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-            getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
-            voxel,
-            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r"),
-            aggr_shape=True
-        )
-    }
+    eval_dataset = ShapenetDataset(
+        getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+        getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
+        getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+        voxel,
+        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
+    )
 
     return shapenet, train_dataset, val_dataset, eval_dataset
 
 
 def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel):
-    # for training
     dataloader = {
         'train': DataLoader(
             train_dataset, 
@@ -100,25 +89,15 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
             batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
             collate_fn=collate_shapenet, 
             drop_last=check_dataset(val_dataset, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
-        )
-    }
-    # for evaluation
-    eval_dataloader = {
-        'text': DataLoader(
-            eval_dataset['text'], 
-            batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
-            collate_fn=collate_shapenet, 
-            drop_last=check_dataset(eval_dataset['text'], unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
         ),
-        'shape': DataLoader(
-            eval_dataset['shape'], 
-            batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
-            collate_fn=collate_shapenet, 
-            drop_last=check_dataset(eval_dataset['shape'], unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
+        'eval': DataLoader(
+            eval_dataset, 
+            batch_size=unique_batch_size, 
+            collate_fn=collate_shapenet
         )
     }
 
-    return dataloader, eval_dataloader
+    return dataloader
 
 
 def main(args):
@@ -155,7 +134,7 @@ def main(args):
     # prepare data
     print("\npreparing data...\n")
     shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel)
-    dataloader, eval_dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
+    dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
     train_per_worker = len(dataloader['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     val_per_worker = len(dataloader['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     
@@ -224,7 +203,13 @@ def main(args):
     print("start training...\n")
     best = {
         'epoch': 0,
-        'scores': 0,
+        'total_score': 0,
+        'recall_1_t2s': 0,
+        'recall_5_t2s': 0,
+        'ndcg_5_t2s': 0,
+        'recall_1_s2t': 0,
+        'recall_5_s2t': 0,
+        'ndcg_5_s2t': 0,
         'total_loss': float("inf"),
         'walker_loss_tst': float("inf"),
         'walker_loss_sts': float("inf"),
@@ -235,39 +220,57 @@ def main(args):
         'shape_norm_penalty': float("inf"),
         'text_norm_penalty': float("inf"),
     }
-    best, return_log = solver.train(shape_encoder, text_encoder, best, dataloader, eval_dataloader, epoch, verbose) 
+    best, return_log = solver.train(shape_encoder, text_encoder, best, dataloader, epoch, verbose) 
     
     # report best
     print("------------------------best------------------------")
-    print("[Loss] epoch: %d" % (
+    print("[Score] epoch: %d" % (
         best['epoch']
     ))
-    print("[Loss] scores: %f" % (
-        best['scores']
+    print("[Score] total_scores: %f" % (
+        best['total_score']
     ))
-    print("[Loss] total_loss: %f" % (
+    print("[Score] recall_1_t2s: %f, recall_1_s2t: %f" % (
+        best['recall_1_t2s'],
+        best['recall_1_s2t']
+    ))
+    print("[Score] recall_5_t2s: %f, recall_5_s2t: %f" % (
+        best['recall_5_t2s'],
+        best['recall_5_s2t']
+    ))
+    print("[Score] ndcg_5_t2s: %f, ndcg_5_s2t: %f" % (
+        best['ndcg_5_t2s'],
+        best['ndcg_5_s2t']
+    ))
+    print("[Loss]  total_loss: %f" % (
         best['total_loss']
     ))
-    print("[Loss] walker_loss_tst: %f, walker_loss_sts: %f" % (
+    print("[Loss]  walker_loss_tst: %f, walker_loss_sts: %f" % (
         best['walker_loss_tst'],
         best['walker_loss_sts']
     ))
-    print("[Loss] visit_loss_ts: %f, visit_loss_st: %f" % (
+    print("[Loss]  visit_loss_ts: %f, visit_loss_st: %f" % (
         best['visit_loss_ts'],
         best['visit_loss_st']
     ))
-    print("[Loss] metric_loss_st: %f, metric_loss_tt: %f" % (
+    print("[Loss]  metric_loss_st: %f, metric_loss_tt: %f" % (
         best['metric_loss_st'],
         best['metric_loss_tt']
     ))
-    print("[Loss] shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
+    print("[Loss]  shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
         best['shape_norm_penalty'],
         best['text_norm_penalty']
     ))
 
+    # save logs
+    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs")):
+        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs"))
+    pickle.dump(best, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "best.p"), 'wb'))
+    pickle.dump(return_log, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "log.p"), 'wb'))
+
     # draw curves
-    train_log, val_log = decode_log_embedding(return_log)
-    draw_curves_embedding(train_log, val_log, os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
+    train_log, val_log, eval_log = decode_log_embedding(return_log) 
+    draw_curves_embedding(train_log, val_log, eval_log, os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 
 
 if __name__ == '__main__':
