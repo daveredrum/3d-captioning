@@ -31,12 +31,12 @@ __progress:__
   </tr>
   <tr>
     <td>Full-MM</td>
-    <td align="center">0.27/<b>1.35</b></td>
-    <td align="center">1.88/<b>6.26</b></td>
-    <td align="center">0.37/<b>1.41</b></td>
-    <td align="center">0.35/<b>0.74</b></td>
-    <td align="center">1.71/<b>3.85</b></td>
-    <td align="center">1.07/<b>2.23</b></td>
+    <td align="center">0.83/<b>1.35</b></td>
+    <td align="center">3.37/<b>6.26</b></td>
+    <td align="center">0.73/<b>1.41</b></td>
+    <td align="center">0.40/<b>0.74</b></td>
+    <td align="center">2.37/<b>3.85</b></td>
+    <td align="center">1.35/<b>2.23</b></td>
   </tr>
 </table>
 
