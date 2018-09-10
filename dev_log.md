@@ -33,21 +33,21 @@ __progress:__
   </tr>
   <tr>
     <td>Full-MM</td>
-    <td align="center">0.61/<b>1.62</b></td>
-    <td align="center">2.89/<b>6.46</b></td>
-    <td align="center">0.63/<b>1.40</b></td>
-    <td align="center">0.35/<b>0.66</b></td>
-    <td align="center">1.75/<b>3.77</b></td>
-    <td align="center">1.01/<b>2.22</b></td>
-    <td align="center">7.24/<b>16.09</b></td>
+    <td align="center">0.61/<b>0.94</b></td>
+    <td align="center">2.89/<b>7.67</b></td>
+    <td align="center">0.63/<b>1.56</b></td>
+    <td align="center">0.35/<b>1.20</b></td>
+    <td align="center">1.75/<b>4.91</b></td>
+    <td align="center">1.01/<b>2.98</b></td>
+    <td align="center">7.24/<b>19.27</b></td>
   </tr>
 </table>
 
 > __best models:__
 >
-> |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|
-> |---|---|---|---|---|---|---|
-> |-1|-1|2e-4|5e-4|100|10|False|
+> |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
+> |---|---|---|---|---|---|---|---|
+> |-1|-1|2e-4|5e-4|100|20|False|96|
 
 <s>
 ## Aug. 23
