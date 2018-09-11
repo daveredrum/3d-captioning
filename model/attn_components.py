@@ -9,6 +9,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 import torchvision.models as torchmodels
 import torch.nn.functional as F
 from torch.nn import Parameter
+from lib.configs import CONF
 
 class TemporalAttention(nn.Module):
     def __init__(self, hidden_size, ver=None):
@@ -198,10 +199,19 @@ class SelfAttention3D(nn.Module):
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
         # MLP
-        self.f = nn.Linear(visual_channels, hidden_size, bias=False)
-        self.g = nn.Linear(visual_channels, hidden_size, bias=False)
-        self.h = nn.Linear(visual_channels, visual_channels, bias=False)
-        self.output_layer = nn.Linear(visual_flat, visual_flat, bias=False)
+        if CONF.TRAIN.IS_NEW_SELF:
+            self.spatial_f = nn.Conv1d(visual_channels, hidden_size, 1, bias=False)
+            self.spatial_g = nn.Conv1d(visual_channels, hidden_size, 1, bias=False)
+            self.channel_f = nn.Linear(visual_flat, hidden_size, bias=False)
+            self.channel_g = nn.Linear(visual_flat, hidden_size, bias=False)
+        else:
+            self.spatial_f = nn.Conv1d(visual_channels, hidden_size, 1, bias=False)
+            self.spatial_g = nn.Conv1d(visual_channels, hidden_size, 1, bias=False)
+            self.channel_f = nn.Linear(visual_flat, hidden_size, bias=False)
+            self.channel_g = nn.Linear(visual_flat, hidden_size, bias=False)
+            # self.comp_f = nn.Linear(visual_channels, hidden_size, bias=False)
+            # self.comp_g = nn.Linear(visual_channels, hidden_size, bias=False)
+            # self.comp_h = nn.Linear(visual_channels, visual_channels, bias=False)
         # initialize weights
         self.reset_parameters()
 
@@ -211,14 +221,67 @@ class SelfAttention3D(nn.Module):
             weight.data.uniform_(-stdv, stdv)
 
     def forward(self, visual_inputs):
-        feature = visual_inputs.permute(0, 2, 1).contiguous() # (batch_size, visual_flat, visual_channels)
-        f = self.f(feature) # (batch_size, visual_flat, hidden_size)
-        g = self.g(feature) # (batch_size, visual_flat, hidden_size)
-        h = self.h(feature).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_flat)
-        s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
-        s_comp = self.output_layer(s) # (batch_size, visual_flat, visual_flat)
-        mask = F.softmax(s_comp, dim=0) # (batch_size, visual_flat, visual_flat)
-        outputs = h.matmul(mask) # (batch_size, visual_channels, visual_flat)
+        if CONF.TRAIN.IS_NEW_SELF:
+            '''
+                replace the matrix multiplication with point-wise multiplication,
+                separate attention to similarity based channel-wise and spatial attention
+            '''
+            channel_f = self.channel_f(visual_inputs) # (batch_size, visual_channels, hidden_size)
+            channel_g = self.channel_g(visual_inputs) # (batch_size, visual_channels, hidden_size)
+            channel_sim = channel_f.matmul(channel_g.transpose(2, 1).contiguous()) # (batch_size, visual_channels, visual_channels)
+            channel_sim_comp = channel_sim.sum(dim=1, keepdim=True) # (batch_size, 1, visual_channels)
+            channel_mask = F.softmax(channel_sim_comp, dim=2).transpose(2, 1).contiguous() # (batch_size, visual_channels, 1)
+            feature = visual_inputs * channel_mask # (batch_size, visual_channels, visual_flat)
+            spatial_f = self.spatial_f(feature) # (batch_size, hidden_size, visual_flat)
+            spatial_g = self.spatial_g(feature) # (batch_size, hidden_size, visual_flat)
+            spatial_sim = spatial_f.transpose(2, 1).contiguous().matmul(spatial_g) # (batch_size, visual_flat, visual_flat)
+            spatial_sim_comp = spatial_sim.sum(dim=1, keepdim=True) # (batch_size, 1, visual_flat)
+            spatial_mask = F.softmax(spatial_sim_comp, dim=2) # (batch_size, 1, visual_flat)
+            
+            outputs = feature * spatial_mask # (batch_size, visual_channels, visual_flat)
+            mask = (channel_mask, spatial_mask)
+        else:
+            '''
+                separate attention to similarity based channel-wise and spatial attention
+            '''
+            feature = visual_inputs # (batch_size, visual_channels, visual_flat)
+            channel_f = self.channel_f(feature) # (batch_size, visual_channels, hidden_size)
+            channel_g = self.channel_g(feature) # (batch_size, visual_channels, hidden_size)
+            channel_sim = channel_f.matmul(channel_g.transpose(2, 1).contiguous()) # (batch_size, visual_channels, visual_channels)
+            channel_mask = F.softmax(channel_sim, dim=1).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_channels)
+            feature = channel_mask.matmul(feature) # (batch_size, visual_channels, visual_flat)
+            spatial_f = self.spatial_f(feature) # (batch_size, hidden_size, visual_flat)
+            spatial_g = self.spatial_g(feature) # (batch_size, hidden_size, visual_flat)
+            spatial_sim = spatial_f.transpose(2, 1).contiguous().matmul(spatial_g) # (batch_size, visual_flat, visual_flat)
+            spatial_mask = F.softmax(spatial_sim, dim=1) # (batch_size, visual_flat, visual_flat)
+            feature = feature.matmul(spatial_mask) # (batch_size, visual_channels, visual_flat)
+            
+            outputs = feature
+            mask = (channel_mask, spatial_mask)
+            # '''
+            #     replace the matrix multiplication with point-wise multiplication,
+            #     and poisition-wise similarities over all positions for computing attention mask
+            # '''
+            # feature = visual_inputs.permute(0, 2, 1).contiguous() # (batch_size, visual_flat, visual_channels)
+            # f = self.comp_f(feature) # (batch_size, visual_flat, hidden_size)
+            # g = self.comp_g(feature) # (batch_size, visual_flat, hidden_size)
+            # h = self.comp_h(feature).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_flat)
+            # s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
+            # s_comp = torch.sum(s, dim=1, keepdim=True) # (batch_size, 1, visual_flat)
+            # mask = F.softmax(s_comp, dim=2) # (batch_size, 1, visual_flat)
+            # outputs = h * mask # (batch_size, visual_channels, visual_flat)
+
+            # '''
+            #     vanilla self-attention module, use poisition-wise similarities for computing attention mask,
+            #     see https://arxiv.org/pdf/1805.08318.pdf
+            # '''
+            # feature = visual_inputs.permute(0, 2, 1).contiguous() # (batch_size, visual_flat, visual_channels)
+            # f = self.comp_f(feature) # (batch_size, visual_flat, hidden_size)
+            # g = self.comp_g(feature) # (batch_size, visual_flat, hidden_size)
+            # h = self.comp_h(feature).transpose(2, 1).contiguous() # (batch_size, visual_channels, visual_flat)
+            # s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
+            # mask = F.softmax(s, dim=1) # (batch_size, visual_flat, visual_flat)
+            # outputs = h.matmul(mask) # (batch_size, visual_channels, visual_flat)
 
         return outputs, mask
 
@@ -240,6 +303,6 @@ class TemporalSelfAttention(nn.Module):
 
     def forward(self, h):
         h_comp = self.comp_h(h) # (batch_size, seq_size, hidden_size)
-        outputs = self.output_layer(h_comp) # (batch_size, seq_size, 1)
+        outputs = F.softmax(self.output_layer(h_comp), dim=1) # (batch_size, seq_size, 1)
 
         return outputs

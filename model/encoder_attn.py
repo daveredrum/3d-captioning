@@ -264,8 +264,7 @@ class SelfAttnShapeEncoder(nn.Module):
 
     def attend(self, shape_feat):
         spatial_contexts, spatial_weights = self.attention_spatial(shape_feat)
-        spatial_attended = shape_feat + self.gamma * spatial_contexts # (batch_size, visual_channels, , visual_flat)
-        spatial_attended = spatial_attended.mean(2)
+        spatial_attended = shape_feat + self.gamma * spatial_contexts # (batch_size, visual_channels, visual_flat)
 
         return spatial_attended, spatial_weights
 
@@ -274,7 +273,7 @@ class SelfAttnShapeEncoder(nn.Module):
         shape_feat = self._get_shape_feat(shape_inputs) # (batch_size, 256, 512)
         spatial_attended, spatial_weights = self.attend(shape_feat)
         # outputs
-        shape_outputs = self.shape_outputs(spatial_attended)
+        shape_outputs = self.shape_outputs(spatial_attended.mean(2)) # (batch_size, 128)
 
         return shape_outputs, spatial_weights
 
@@ -282,7 +281,7 @@ class SelfAttnShapeEncoder(nn.Module):
 class SelfAttnTextEncoder(nn.Module):
     def __init__(self, dict_size):
         super(SelfAttnTextEncoder, self).__init__()
-        self.text_embedding = nn.Embedding(dict_size, 128)
+        self.text_embedding = nn.Embedding(dict_size, 128, padding_idx=0)
         self.text_conv_128 = nn.Sequential(
             nn.Conv1d(128, 128, 3, padding=1),
             nn.ReLU(),

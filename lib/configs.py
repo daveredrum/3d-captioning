@@ -50,7 +50,9 @@ CONF.TRAIN.EVAL_FREQ = 2500
 CONF.TRAIN.EVAL_MODE = 't2s'
 CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
-CONF.TRAIN.MAX_LENGTH = 18
+CONF.TRAIN.MAX_LENGTH = 28
+# self attention
+CONF.TRAIN.IS_NEW_SELF = True
 
 
 '''

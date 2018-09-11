@@ -99,67 +99,28 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
 
     return dataloader
 
-
-def main(args):
-    # parse args
-    voxel = args.voxel
-    train_size = args.train_size
-    val_size = args.val_size
-    learning_rate = args.learning_rate
-    weight_decay = args.weight_decay
-    epoch = args.epoch
-    unique_batch_size = args.batch_size
-    verbose = args.verbose
-    gpu = args.gpu
-    ver = args.ver
+def get_attention(args):
     if args.attention == 'adaptive':
         attention = True
         attention_type = 'adaptive'
+        ver = args.ver
     if args.attention == 'self':
         attention = True
         attention_type = 'self'
-        ver = ''
+        if CONF.TRAIN.IS_NEW_SELF:
+            ver = 'new'
+        else:
+            ver = ''
     elif args.attention == 'false':
         attention = False
         attention_type = 'noattention'
         ver = ''
     else:
         raise ValueError("invalid attention setting, terminating...")
-    
-    # setting
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
-    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    mp.set_start_method('spawn', force=True)
 
-    # prepare data
-    print("\npreparing data...\n")
-    shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel)
-    dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
-    train_per_worker = len(dataloader['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
-    val_per_worker = len(dataloader['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
-    
-    # report settings
-    print("[settings]")
-    print("voxel:", voxel)
-    print("train_size: {} samples -> {} pairs in total".format(
-        shapenet.train_size, 
-        train_per_worker
-    ))
-    print("val_size: {} samples -> {} pairs in total".format(
-        shapenet.val_size, 
-        val_per_worker
-    ))
-    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.TRAIN.EVAL_DATASET))
-    print("learning_rate:", learning_rate)
-    print("weight_decay:", weight_decay)
-    print("epoch:", epoch)
-    print("batch_size: {} shapes per batch, {} texts per batch".format(unique_batch_size, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL))
-    print("verbose:", verbose)
-    print("gpu:", gpu)
-    print("attention:", attention_type)
-    print("version:", ver)
+    return attention, attention_type, ver
 
-    # initialize models
+def get_models(attention_type, ver, shapenet):
     if attention_type == "adaptive":
         if ver != '3':
             print("\ninitializing {} models...\n".format(attention_type))
@@ -178,51 +139,38 @@ def main(args):
         shape_encoder = ShapenetShapeEncoder().cuda()
         text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
 
-    # initialize optimizer
-    print("initializing optimizer...\n")
-    criterion = {
-        'walker': RoundTripLoss(weight=CONF.LBA.WALKER_WEIGHT),
-        'visit': AssociationLoss(weight=CONF.LBA.VISIT_WEIGHT),
-        'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
-    }
+    return shape_encoder, text_encoder
+
+def get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, weight_decay):
     if attention_type == "adaptive":
         optimizer = torch.optim.Adam(shape_encoder.parameters(), lr=learning_rate, weight_decay=weight_decay)
     else:
         optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
-    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type + ver)
+
+    return optimizer
+
+def get_settings(voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type, ver):
+    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type + ver)
     if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
+    
+    return settings
+
+def get_solver(shapenet, criterion, optimizer, settings, unique_batch_size, ver):
     if ver == '3':
         solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, True)
     else:
         solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
-    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings)):
-        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
-
-    # training
-    print("start training...\n")
-    best = {
-        'epoch': 0,
-        'total_score': 0,
-        'recall_1_t2s': 0,
-        'recall_5_t2s': 0,
-        'ndcg_5_t2s': 0,
-        'recall_1_s2t': 0,
-        'recall_5_s2t': 0,
-        'ndcg_5_s2t': 0,
-        'total_loss': float("inf"),
-        'walker_loss_tst': float("inf"),
-        'walker_loss_sts': float("inf"),
-        'visit_loss_ts': float("inf"),
-        'visit_loss_st': float("inf"),
-        'metric_loss_st': float("inf"),
-        'metric_loss_tt': float("inf"),
-        'shape_norm_penalty': float("inf"),
-        'text_norm_penalty': float("inf"),
-    }
-    best, return_log = solver.train(shape_encoder, text_encoder, best, dataloader, epoch, verbose) 
     
-    # report best
+    return solver
+
+def save_logs(log, best, settings):
+    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs")):
+        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs"))
+    pickle.dump(best, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "best.p"), 'wb'))
+    pickle.dump(log, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "log.p"), 'wb'))
+
+def report_best(best):
     print("------------------------best------------------------")
     print("[Score] epoch: %d" % (
         best['epoch']
@@ -262,14 +210,99 @@ def main(args):
         best['text_norm_penalty']
     ))
 
+def main(args):
+    # parse args
+    voxel = args.voxel
+    train_size = args.train_size
+    val_size = args.val_size
+    learning_rate = args.learning_rate
+    weight_decay = args.weight_decay
+    epoch = args.epoch
+    unique_batch_size = args.batch_size
+    verbose = args.verbose
+    gpu = args.gpu
+    attention, attention_type, ver = get_attention(args)
+    
+    # setting
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
+    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+    mp.set_start_method('spawn', force=True)
+
+    # prepare data
+    print("\npreparing data...\n")
+    shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel)
+    dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
+    train_per_worker = len(dataloader['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
+    val_per_worker = len(dataloader['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
+    
+    # report settings
+    print("[settings]")
+    print("voxel:", voxel)
+    print("train_size: {} samples -> {} pairs in total".format(
+        shapenet.train_size, 
+        train_per_worker
+    ))
+    print("val_size: {} samples -> {} pairs in total".format(
+        shapenet.val_size, 
+        val_per_worker
+    ))
+    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.TRAIN.EVAL_DATASET))
+    print("learning_rate:", learning_rate)
+    print("weight_decay:", weight_decay)
+    print("epoch:", epoch)
+    print("batch_size: {} shapes per batch, {} texts per batch".format(unique_batch_size, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL))
+    print("verbose:", verbose)
+    print("gpu:", gpu)
+    print("attention:", attention_type)
+    print("version:", ver)
+
+    # initialize models
+    shape_encoder, text_encoder = get_models(attention_type, ver, shapenet)
+
+    # initialize optimizer
+    print("initializing optimizer...\n")
+    criterion = {
+        'walker': RoundTripLoss(weight=CONF.LBA.WALKER_WEIGHT),
+        'visit': AssociationLoss(weight=CONF.LBA.VISIT_WEIGHT),
+        'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
+    }
+    optimizer = get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, weight_decay)
+    settings = get_settings(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type, ver)
+    solver = get_solver(shapenet, criterion, optimizer, settings, unique_batch_size, ver)
+    
+    # training
+    print("start training...\n")
+    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings)):
+        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
+    best = {
+        'epoch': 0,
+        'total_score': 0,
+        'recall_1_t2s': 0,
+        'recall_5_t2s': 0,
+        'ndcg_5_t2s': 0,
+        'recall_1_s2t': 0,
+        'recall_5_s2t': 0,
+        'ndcg_5_s2t': 0,
+        'total_loss': float("inf"),
+        'walker_loss_tst': float("inf"),
+        'walker_loss_sts': float("inf"),
+        'visit_loss_ts': float("inf"),
+        'visit_loss_st': float("inf"),
+        'metric_loss_st': float("inf"),
+        'metric_loss_tt': float("inf"),
+        'shape_norm_penalty': float("inf"),
+        'text_norm_penalty': float("inf"),
+    }
+    best, log = solver.train(shape_encoder, text_encoder, best, dataloader, epoch, verbose) 
+    
+    # report best
+    report_best(best)
+
     # save logs
-    if not os.path.exists(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs")):
-        os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs"))
-    pickle.dump(best, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "best.p"), 'wb'))
-    pickle.dump(return_log, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "log.p"), 'wb'))
+    save_logs(log, best, settings)
 
     # draw curves
-    train_log, val_log, eval_log = decode_log_embedding(return_log) 
+    train_log, val_log, eval_log = decode_log_embedding(log) 
     draw_curves_embedding(train_log, val_log, eval_log, os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings))
 
 
@@ -284,7 +317,7 @@ if __name__ == '__main__':
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty oepochimizer")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
-    parser.add_argument("--attention", type=str, default='false', help="apply the attention: adaptive/false")
+    parser.add_argument("--attention", type=str, default='false', help="apply the attention: adaptive/false/self")
     parser.add_argument("--ver", type=str, default='2.1-d', help="1/2/2.1-a/2.1-b/2.1-c/2.1-d/3")
     args = parser.parse_args()
     main(args)
