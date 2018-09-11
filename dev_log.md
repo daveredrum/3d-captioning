@@ -4,7 +4,7 @@
 
 __progress:__
 - performance of cross-modality retrieval on __ShapeNetCore__:
-> comparison of models trained for 10 epochs: Text2Shape-64/ours-64
+> comparison of models trained for 10 epochs: Text2Shape-32/self-64/selfnew-64
 
 <table>
   <tr>
@@ -33,13 +33,13 @@ __progress:__
   </tr>
   <tr>
     <td>Full-MM</td>
-    <td align="center">0.61/<b>0.94</b></td>
-    <td align="center">2.89/<b>7.67</b></td>
-    <td align="center">0.63/<b>1.56</b></td>
-    <td align="center">0.35/<b>1.20</b></td>
-    <td align="center">1.75/<b>4.91</b></td>
-    <td align="center">1.01/<b>2.98</b></td>
-    <td align="center">7.24/<b>19.27</b></td>
+    <td align="center">0.83/<b>0.61</b>/-</td>
+    <td align="center">3.37/<b>3.50</b>/-</td>
+    <td align="center"><b>0.73</b>/0.71/-</td>
+    <td align="center">0.40/<b>0.67</b>/-</td>
+    <td align="center">2.37/<b>3.11</b>/-</td>
+    <td align="center">1.35/<b>1.89</b>/-</td>
+    <td align="center">9.05/<b>10.49</b>/-</td>
   </tr>
 </table>
 
