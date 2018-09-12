@@ -15,7 +15,7 @@ __progress:__
 
 <table>
   <tr>
-    <td rowspan=2 align="center">Method</td>
+    <td rowspan=2 align="center">Arch</td>
     <td colspan=3 align="center">Shape-Text</td>
     <td colspan=3 align="center">Text-Shape</td>
     <td rowspan=2 align="center">Total</td>
@@ -39,14 +39,54 @@ __progress:__
     <td align="center">1.16</td>
   </tr>
   <tr>
-    <td>Full-MM</td>
-    <td align="center">0.83/0.54/0.61/0.54/<b>1.01</b></td>
-    <td align="center">3.37/2.69/3.50/1.48/<b>4.78</b></td>
-    <td align="center">0.73/0.52/0.71/0.38/<b>1.10</b></td>
-    <td align="center">0.40/0.34/<b>0.67</b>/0.22/0.46</td>
-    <td align="center">2.37/1.86/<b>3.11</b>/0.91/2.76</td>
-    <td align="center">1.35/1.05/<b>1.89</b>/0.55/1.56</td>
-    <td align="center">9.05/7.0/10.49/4.08/<b>11.76</b></td>
+    <td>Text2Shape-32</td>
+    <td align="center">0.83</td>
+    <td align="center">3.37</td>
+    <td align="center">0.73</td>
+    <td align="center">0.40</td>
+    <td align="center">2.37</td>
+    <td align="center">1.35</td>
+    <td align="center">9.05</td>
+  </tr>
+  <tr>
+    <td>self_nosep-64</td>
+    <td align="center">0.54</td>
+    <td align="center">2.69</td>
+    <td align="center">0.52</td>
+    <td align="center">0.34</td>
+    <td align="center">1.86</td>
+    <td align="center">1.05</td>
+    <td align="center">7.0</td>
+  </tr>
+  <tr>
+    <td>selfnew_nosep-64</td>
+    <td align="center">0.61</td>
+    <td align="center">3.50</td>
+    <td align="center">0.71</td>
+    <td align="center"><b>0.67</b></td>
+    <td align="center"><b>3.11</b></td>
+    <td align="center"><b>1.89</b></td>
+    <td align="center">10.49</td>
+  </tr>
+  <tr>
+    <td>self_sep-64</td>
+    <td align="center">0.54</td>
+    <td align="center">1.48</td>
+    <td align="center">0.38</td>
+    <td align="center">0.22</td>
+    <td align="center">0.91</td>
+    <td align="center">0.55</td>
+    <td align="center">4.08</td>
+  </tr>
+  <tr>
+    <td>selfnew_sep-64</td>
+    <td align="center"><b>1.01</b></td>
+    <td align="center"><b>4.78</b></td>
+    <td align="center"><b>1.10</b></td>
+    <td align="center">0.46</td>
+    <td align="center">2.76</td>
+    <td align="center">1.56</td>
+    <td align="center"><b>11.76</b></td>
   </tr>
 </table>
 
