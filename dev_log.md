@@ -6,12 +6,14 @@ __progress:__
 - performance of cross-modality retrieval on __ShapeNetCore__:
 
 > comparison of models: <br/>
-> __Text2Shape-32/self_nosep-64/selfnew_nosep-64/self_sep-64/selfnew_sep-64__ <br/>
-> Text2Shape-32: original joint-embedding method without attention <br/>
-> self_nosep-64: original self-attention module, spatial and channel attentions are not seperated <br/>
-> selfnew_nosep-64: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
-> self_sep-64: original self-attention module, spatial and channel attentions are seperated <br/>
-> self_sep-64: similarity-based self-attention module, spatial and channel attentions are seperated <br/>
+>  <br/>
+> __Text2Shape-32__: original joint-embedding method without attention <br/>
+> __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
+> __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
+> __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
+> __selfnew_sep-64__: similarity-based self-attention module, spatial and channel attentions are seperated <br/>
+> __selfnew_sep_cf-64__: similarity-based self-attention module, spatial and channel attentions are seperated and stacked <br/>
+> __selfnew_sep_p-64__: similarity-based self-attention module, spatial and channel attentions are seperated and parallel <br/>
 
 <table>
   <tr>
@@ -87,6 +89,26 @@ __progress:__
     <td align="center">2.76</td>
     <td align="center">1.56</td>
     <td align="center"><b>11.76</b></td>
+  </tr>
+  <tr>
+    <td>selfnew_sep_cf-64</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+  </tr>
+  <tr>
+    <td>selfnew_sep_p-64</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
 </table>
 
