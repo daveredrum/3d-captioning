@@ -11,7 +11,7 @@ __progress:__
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
 > __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
 > __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
-> __selfnew_sep_cf-64__: similarity-based self-attention module, spatial and channel attentions are seperated and stacked <br/>
+> __selfnew_sep_cf-64__: similarity-based self-attention module, spatial and channel attentions are seperated and stacked. (channel first) <br/>
 > __selfnew_sep_p-64__: similarity-based self-attention module, spatial and channel attentions are seperated and parallel <br/>
 
 <table>
