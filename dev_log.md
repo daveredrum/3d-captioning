@@ -9,8 +9,8 @@ __progress:__
 >  <br/>
 > __Text2Shape-32__: original joint-embedding method without attention <br/>
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
-> __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
 > __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
+> __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
 > __selfnew_sep-64__: similarity-based self-attention module, spatial and channel attentions are seperated <br/>
 > __selfnew_sep_cf-64__: similarity-based self-attention module, spatial and channel attentions are seperated and stacked <br/>
 > __selfnew_sep_p-64__: similarity-based self-attention module, spatial and channel attentions are seperated and parallel <br/>
@@ -61,16 +61,6 @@ __progress:__
     <td align="center">7.0</td>
   </tr>
   <tr>
-    <td>selfnew_nosep-64</td>
-    <td align="center">0.61</td>
-    <td align="center">3.50</td>
-    <td align="center">0.71</td>
-    <td align="center"><b>0.67</b></td>
-    <td align="center"><b>3.11</b></td>
-    <td align="center"><b>1.89</b></td>
-    <td align="center">10.49</td>
-  </tr>
-  <tr>
     <td>self_sep-64</td>
     <td align="center">0.54</td>
     <td align="center">1.48</td>
@@ -79,6 +69,16 @@ __progress:__
     <td align="center">0.91</td>
     <td align="center">0.55</td>
     <td align="center">4.08</td>
+  </tr>
+  <tr>
+    <td>selfnew_nosep-64</td>
+    <td align="center">0.61</td>
+    <td align="center">3.50</td>
+    <td align="center">0.71</td>
+    <td align="center"><b>0.67</b></td>
+    <td align="center"><b>3.11</b></td>
+    <td align="center"><b>1.89</b></td>
+    <td align="center">10.49</td>
   </tr>
   <tr>
     <td>selfnew_sep-64</td>
