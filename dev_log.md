@@ -81,9 +81,9 @@ __progress:__
   </tr>
   <tr>
     <td>selfnew_sep_cf-64</td>
-    <td align="center">0.87</td>
-    <td align="center">4.04</td>
-    <td align="center">0.83</td>
+    <td align="center"><b>0.87</b></td>
+    <td align="center"><b>4.04</b></td>
+    <td align="center"><b>0.83</b></td>
     <td align="center">0.50</td>
     <td align="center">2.54</td>
     <td align="center">1.48</td>
