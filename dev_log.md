@@ -75,15 +75,15 @@ __progress:__
     <td align="center">3.50</td>
     <td align="center">0.71</td>
     <td align="center"><b>0.67</b></td>
-    <td align="center"><b>3.11</b></td>
+    <td align="center">3.11</td>
     <td align="center"><b>1.89</b></td>
     <td align="center">10.49</td>
   </tr>
   <tr>
     <td>selfnew_sep_cf-64</td>
     <td align="center"><b>0.87</b></td>
-    <td align="center"><b>4.04</b></td>
-    <td align="center"><b>0.83</b></td>
+    <td align="center">4.04</td>
+    <td align="center">0.83</td>
     <td align="center">0.50</td>
     <td align="center">2.54</td>
     <td align="center">1.48</td>
@@ -91,13 +91,13 @@ __progress:__
   </tr>
   <tr>
     <td>selfnew_sep_p-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.61</td>
+    <td align="center"><b>4.44</b></td>
+    <td align="center"><b>0.91</b></td>
+    <td align="center">0.48</td>
+    <td align="center"><b>3.31</b></td>
+    <td align="center">1.86</td>
+    <td align="center"><b>11.61</b></td>
   </tr>
 </table>
 
