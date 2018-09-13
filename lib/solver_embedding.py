@@ -13,16 +13,15 @@ from torch.nn.utils import clip_grad_value_
 from lib.save_embedding import extract
 from lib.eval_embedding import compute_metrics
 from eval_attn import evaluate
-from model.encoder_attn import MultiHeadEncoder, SelfAttnShapeEncoder, SelfAttnTextEncoder
+from model.encoder_attn import SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 class EmbeddingSolver():
-    def __init__(self, shapenet, criterion, optimizer, settings, batch_size, is_multi_head=False):
+    def __init__(self, shapenet, criterion, optimizer, settings, batch_size):
         self.shapenet = shapenet
         self.criterion = criterion
         self.optimizer = optimizer
         self.settings = settings
         self.batch_size = batch_size
-        self.is_multi_head = is_multi_head
 
     def _compute_loss(self, s, t, s_labels, t_labels, text_encoder, batch_size):
         # LBA
@@ -177,24 +176,13 @@ class EmbeddingSolver():
             shape_labels = labels.cuda()
         
         # forward pass
-        if text_encoder:
-            if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
-                s, _ = shape_encoder(shapes)
-                t, _ = text_encoder(texts)
-            else:
-                s = shape_encoder(shapes)
-                t = text_encoder(texts)
-            losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
+        if isinstance(shape_encoder, SelfAttnShapeEncoder) and isinstance(text_encoder, SelfAttnTextEncoder):
+            s, _ = shape_encoder(shapes)
+            t, _ = text_encoder(texts)
         else:
-            if self.is_multi_head:
-                s, t, s_attn, t_attn, _, _ = shape_encoder(shapes, texts)
-                ext_loss = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
-                attn_loss = self._compute_loss(s_attn, t_attn, shape_labels, text_labels, text_encoder, batch_size)
-                losses = self._merge_loss(ext_loss, attn_loss)
-            else:
-                s, t, _, _ = shape_encoder(shapes, texts)
-                losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
-        
+            s = shape_encoder(shapes)
+            t = text_encoder(texts)
+        losses = self._compute_loss(s, t, shape_labels, text_labels, text_encoder, batch_size)
 
         return losses
 

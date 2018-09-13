@@ -25,7 +25,7 @@ from lib.solver_embedding import EmbeddingSolver
 import torch.multiprocessing as mp
 import ctypes
 import sys
-from lib.utils import decode_log_embedding, draw_curves_embedding
+from lib.utils import decode_log_embedding, draw_curves_embedding, report_best
 
 def check_dataset(dataset, batch_size):
     flag = False
@@ -100,67 +100,41 @@ def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_ba
     return dataloader
 
 def get_attention(args):
-    if args.attention == 'adaptive':
-        attention = True
-        attention_type = 'adaptive'
-        ver = args.ver
-    if args.attention == 'self':
-        attention = True
-        attention_type = 'self'
-        if CONF.TRAIN.IS_NEW_SELF:
-            ver = 'new'
-        else:
-            ver = ''
-    elif args.attention == 'false':
+    if CONF.TRAIN.ATTN == 'noattention':
         attention = False
-        attention_type = 'noattention'
-        ver = ''
     else:
-        raise ValueError("invalid attention setting, terminating...")
+        attention = True
+    
+    attention_type = CONF.TRAIN.ATTN
 
-    return attention, attention_type, ver
+    return attention, attention_type
 
-def get_models(attention_type, ver, shapenet):
-    if attention_type == "adaptive":
-        if ver != '3':
-            print("\ninitializing {} models...\n".format(attention_type))
-            shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), ver).cuda()
-            text_encoder = None
-        else:
-            print("\ninitializing {} models...\n".format("multi-head"))
-            shape_encoder = MultiHeadEncoder(shapenet.dict_idx2word.__len__()).cuda()
-            text_encoder = None
-    elif attention_type == "self":
-        print("\ninitializing {} models...\n".format(attention_type))
-        shape_encoder = SelfAttnShapeEncoder().cuda()
-        text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
-    else:
+def get_models(attention_type, shapenet):
+    if attention_type == 'noattention':
         print("\ninitializing naive models...\n")
         shape_encoder = ShapenetShapeEncoder().cuda()
         text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+    else:
+        print("\ninitializing {} models...\n".format(attention_type))
+        shape_encoder = SelfAttnShapeEncoder().cuda()
+        text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
 
     return shape_encoder, text_encoder
 
 def get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, weight_decay):
-    if attention_type == "adaptive":
-        optimizer = torch.optim.Adam(shape_encoder.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    else:
-        optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(list(shape_encoder.parameters()) + list(text_encoder.parameters()), lr=learning_rate, weight_decay=weight_decay)
 
     return optimizer
 
-def get_settings(voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type, ver):
-    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type + ver)
+def get_settings(voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type):
+    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
     if CONF.TRAIN.RANDOM_SAMPLE:
         settings += "_rand"
     
     return settings
 
-def get_solver(shapenet, criterion, optimizer, settings, unique_batch_size, ver):
-    if ver == '3':
-        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, True)
-    else:
-        solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
+def get_solver(shapenet, criterion, optimizer, settings, unique_batch_size):
+    solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
     
     return solver
 
@@ -169,46 +143,6 @@ def save_logs(log, best, settings):
         os.mkdir(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs"))
     pickle.dump(best, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "best.p"), 'wb'))
     pickle.dump(log, open(os.path.join(CONF.PATH.OUTPUT_EMBEDDING, settings, "logs", "log.p"), 'wb'))
-
-def report_best(best):
-    print("------------------------best------------------------")
-    print("[Score] epoch: %d" % (
-        best['epoch']
-    ))
-    print("[Score] total_scores: %f" % (
-        best['total_score']
-    ))
-    print("[Score] recall_1_t2s: %f, recall_1_s2t: %f" % (
-        best['recall_1_t2s'],
-        best['recall_1_s2t']
-    ))
-    print("[Score] recall_5_t2s: %f, recall_5_s2t: %f" % (
-        best['recall_5_t2s'],
-        best['recall_5_s2t']
-    ))
-    print("[Score] ndcg_5_t2s: %f, ndcg_5_s2t: %f" % (
-        best['ndcg_5_t2s'],
-        best['ndcg_5_s2t']
-    ))
-    print("[Loss]  total_loss: %f" % (
-        best['total_loss']
-    ))
-    print("[Loss]  walker_loss_tst: %f, walker_loss_sts: %f" % (
-        best['walker_loss_tst'],
-        best['walker_loss_sts']
-    ))
-    print("[Loss]  visit_loss_ts: %f, visit_loss_st: %f" % (
-        best['visit_loss_ts'],
-        best['visit_loss_st']
-    ))
-    print("[Loss]  metric_loss_st: %f, metric_loss_tt: %f" % (
-        best['metric_loss_st'],
-        best['metric_loss_tt']
-    ))
-    print("[Loss]  shape_norm_penalty: %f, text_norm_penalty: %f\n" % (
-        best['shape_norm_penalty'],
-        best['text_norm_penalty']
-    ))
 
 def main(args):
     # parse args
@@ -221,7 +155,7 @@ def main(args):
     unique_batch_size = args.batch_size
     verbose = args.verbose
     gpu = args.gpu
-    attention, attention_type, ver = get_attention(args)
+    attention, attention_type = get_attention(args)
     
     # setting
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
@@ -254,10 +188,9 @@ def main(args):
     print("verbose:", verbose)
     print("gpu:", gpu)
     print("attention:", attention_type)
-    print("version:", ver)
 
     # initialize models
-    shape_encoder, text_encoder = get_models(attention_type, ver, shapenet)
+    shape_encoder, text_encoder = get_models(attention_type, shapenet)
 
     # initialize optimizer
     print("initializing optimizer...\n")
@@ -267,8 +200,8 @@ def main(args):
         'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
     }
     optimizer = get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, weight_decay)
-    settings = get_settings(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type, ver)
-    solver = get_solver(shapenet, criterion, optimizer, settings, unique_batch_size, ver)
+    settings = get_settings(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
+    solver = get_solver(shapenet, criterion, optimizer, settings, unique_batch_size)
     
     # training
     print("start training...\n")
@@ -317,7 +250,5 @@ if __name__ == '__main__':
     parser.add_argument("--weight_decay", type=float, default=0, help="penalty oepochimizer")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
-    parser.add_argument("--attention", type=str, default='false', help="apply the attention: adaptive/false/self")
-    parser.add_argument("--ver", type=str, default='2.1-d', help="1/2/2.1-a/2.1-b/2.1-c/2.1-d/3")
     args = parser.parse_args()
     main(args)

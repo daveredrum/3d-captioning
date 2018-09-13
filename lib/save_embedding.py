@@ -16,7 +16,7 @@ from lib.configs import CONF
 from lib.data_embedding import *
 from model.encoder_shape import *
 from model.encoder_text import *
-from model.encoder_attn import AdaptiveEncoder, SelfAttnShapeEncoder, SelfAttnTextEncoder
+from model.encoder_attn import SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 
 
