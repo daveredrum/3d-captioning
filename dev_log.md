@@ -51,33 +51,33 @@ __progress:__
   </tr>
   <tr>
     <td>self_nosep-64</td>
-    <td align="center">0.54</td>
-    <td align="center">2.69</td>
-    <td align="center">0.52</td>
-    <td align="center">0.34</td>
-    <td align="center">1.86</td>
-    <td align="center">1.05</td>
-    <td align="center">7.0</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>self_sep-64</td>
-    <td align="center">0.54</td>
-    <td align="center">1.48</td>
-    <td align="center">0.38</td>
-    <td align="center">0.22</td>
-    <td align="center">0.91</td>
-    <td align="center">0.55</td>
-    <td align="center">4.08</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>selfnew_nosep-64</td>
-    <td align="center">0.61</td>
-    <td align="center">3.50</td>
-    <td align="center">0.71</td>
-    <td align="center"><b>0.67</b></td>
-    <td align="center">3.11</td>
-    <td align="center"><b>1.89</b></td>
-    <td align="center">10.49</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center"-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>selfnew_sep_cf-64</td>
