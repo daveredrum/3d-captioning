@@ -51,53 +51,53 @@ __progress:__
   </tr>
   <tr>
     <td>self_nosep-64</td>
-    <td align="center">0.54</td>
-    <td align="center">2.69</td>
-    <td align="center">0.52</td>
-    <td align="center">0.34</td>
-    <td align="center">1.86</td>
-    <td align="center">1.05</td>
-    <td align="center">7.0</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>self_sep-64</td>
-    <td align="center">0.54</td>
-    <td align="center">1.48</td>
-    <td align="center">0.38</td>
-    <td align="center">0.22</td>
-    <td align="center">0.91</td>
-    <td align="center">0.55</td>
-    <td align="center">4.08</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>selfnew_nosep-64</td>
-    <td align="center">0.61</td>
-    <td align="center">3.50</td>
-    <td align="center">0.71</td>
-    <td align="center"><b>0.67</b></td>
-    <td align="center">3.11</td>
-    <td align="center"><b>1.89</b></td>
-    <td align="center">10.49</td>
-  </tr>
-  <tr>
-    <td>selfnew_sep_cf-64</td>
-    <td align="center"><b>0.87</b></td>
-    <td align="center">4.04</td>
-    <td align="center">0.83</td>
-    <td align="center">0.50</td>
-    <td align="center">2.54</td>
-    <td align="center">1.48</td>
-    <td align="center">10.26</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center"-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>selfnew_sep_p-64</td>
-    <td align="center">0.61</td>
-    <td align="center"><b>4.44</b></td>
-    <td align="center"><b>0.91</b></td>
-    <td align="center">0.48</td>
-    <td align="center"><b>3.31</b></td>
-    <td align="center">1.86</td>
-    <td align="center"><b>11.61</b></td>
+    <td align="center">1.10</td>
+    <td align="center">4.64</td>
+    <td align="center">1.02</td>
+    <td align="center">0.73</td>
+    <td align="center">3.75</td>
+    <td align="center">2.21</td>
+    <td align="center">13.42</td>
+  </tr>
+  <tr>
+    <td>selfnew_sep_cf-64</td>
+    <td align="center"><b>1.62</b></td>
+    <td align="center"><b>6.53</b></td>
+    <td align="center"><b>1.49</b></td>
+    <td align="center"><b>1.09</b></td>
+    <td align="center"><b>5.08</b></td>
+    <td align="center"><b>3.03</b></td>
+    <td align="center"><b>18.84</b></td>
   </tr>
 </table>
 
@@ -105,7 +105,7 @@ __progress:__
 >
 > |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
 > |---|---|---|---|---|---|---|---|
-> |-1|-1|2e-4|5e-4|100|20|False|28|
+> |-1|-1|2e-4|5e-4|100|20|False|96|
 
 <s>
 ## Aug. 23
