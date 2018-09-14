@@ -105,7 +105,7 @@ __progress:__
 >
 > |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
 > |---|---|---|---|---|---|---|---|
-> |-1|-1|2e-4|5e-4|100|20|False|28|
+> |-1|-1|2e-4|5e-4|100|20|False|96|
 
 <s>
 ## Aug. 23
