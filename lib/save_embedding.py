@@ -18,8 +18,6 @@ from model.encoder_shape import *
 from model.encoder_text import *
 from model.encoder_attn import SelfAttnShapeEncoder, SelfAttnTextEncoder
 
-
-
 def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=False):
     data = {}
     offset = 0
@@ -75,10 +73,6 @@ def extract(shape_encoder, text_encoder, dataloader, shapenet, phase, verbose=Fa
             eta_s = math.floor(eta_s % 60)
             print("extracted: {}/{}, ETA: {}m {}s".format(offset, len(getattr(shapenet, "{}_data".format(phase))), eta_m, int(eta_s)))
 
-    # # aggregate shape embeddings
-    # for key in data.keys():
-    #     data[key]['shape_embedding'] = np.mean(data[key]['shape_embedding'], axis=0)
-
     return data
 
 def main(args):
@@ -89,12 +83,9 @@ def main(args):
     if attention_type == "noattention":
         shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
         text_encoder_path = os.path.join(root, "models/text_encoder.pth")
-    elif attention_type == "self":
+    else:
         shape_encoder_path = os.path.join(root, "models/shape_encoder.pth")
         text_encoder_path = os.path.join(root, "models/text_encoder.pth")
-    else:
-        shape_encoder_path = os.path.join(root, "models/encoder.pth")
-        text_encoder_path = None
     
     phase = args.phase
     size = args.size
@@ -145,18 +136,13 @@ def main(args):
         text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
-    elif attention_type == "self":
+    else:
         shape_encoder = SelfAttnShapeEncoder().cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
-    else:
-        shape_encoder = AdaptiveEncoder(shapenet.dict_idx2word.__len__(), attention_type[8:]).cuda()
-        shape_encoder.load_state_dict(torch.load(shape_encoder_path))
-        shape_encoder.eval()
-        text_encoder = None
 
     # extract
     if not os.path.exists(os.path.join(root, "embeddings")):

@@ -13,7 +13,10 @@ class ShapenetShapeEncoder(nn.Module):
             nn.BatchNorm3d(128),
             nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
-            nn.BatchNorm3d(256)
+            nn.BatchNorm3d(256),
+            nn.Conv3d(256, 512, 3, stride=2, padding=1, bias=False),
+            nn.ReLU(),
+            nn.BatchNorm3d(512)
         )
         self.outputs = nn.Linear(256, 128)
 
@@ -23,21 +26,3 @@ class ShapenetShapeEncoder(nn.Module):
         outputs = self.outputs(conved.view(conved.size(0), -1))
 
         return outputs
-
-# class ShapenetEmbeddingEncoder(nn.Module):
-#     def __init__(self, encoder_path):
-#         super(ShapenetEmbeddingEncoder, self).__init__()
-#         encoder = torch.load(encoder_path)
-#         self.conv = nn.Sequential(*list(encoder.conv.children())[:-2])
-#         self.pool = nn.AvgPool3d(2)
-#         self.bn = encoder.conv[-1]
-#         self.outputs = encoder.outputs
-
-#     def forward(self, inputs):
-#         area_feat = self.conv(inputs)
-#         global_feat = self.pool(area_feat)
-#         global_feat = self.bn(global_feat)
-#         global_feat = self.outputs(global_feat.view(global_feat.size(0), -1))
-
-#         return area_feat, global_feat
-        

@@ -52,7 +52,7 @@ CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
 CONF.TRAIN.MAX_LENGTH = 96
 # self attention
-CONF.TRAIN.ATTN = "selfnew_sep_cf"
+CONF.TRAIN.ATTN = "selfnew_nosep"
 
 
 '''
