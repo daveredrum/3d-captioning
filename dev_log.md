@@ -81,23 +81,23 @@ __progress:__
   </tr>
   <tr>
     <td>selfnew_sep_cf-64</td>
-    <td align="center"><b>0.87</b></td>
-    <td align="center">4.04</td>
-    <td align="center">0.83</td>
-    <td align="center">0.50</td>
-    <td align="center">2.54</td>
-    <td align="center">1.48</td>
-    <td align="center">10.26</td>
+    <td align="center"><b>1.62</b></td>
+    <td align="center"><b>6.53</b></td>
+    <td align="center"><b>1.49</b></td>
+    <td align="center"><b>1.09</b></td>
+    <td align="center"><b>5.08</b></td>
+    <td align="center"><b>3.03</b></td>
+    <td align="center"><b>18.84</b></td>
   </tr>
   <tr>
     <td>selfnew_sep_p-64</td>
     <td align="center">0.61</td>
-    <td align="center"><b>4.44</b></td>
-    <td align="center"><b>0.91</b></td>
+    <td align="center">4.44</td>
+    <td align="center">0.91</td>
     <td align="center">0.48</td>
-    <td align="center"><b>3.31</b></td>
+    <td align="center">3.31</td>
     <td align="center">1.86</td>
-    <td align="center"><b>11.61</b></td>
+    <td align="center">11.61</td>
   </tr>
 </table>
 
