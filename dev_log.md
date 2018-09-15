@@ -61,23 +61,23 @@ __progress:__
   </tr>
   <tr>
     <td>self_sep-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.74</td>
+    <td align="center">3.30</td>
+    <td align="center">0.74</td>
+    <td align="center">0.52</td>
+    <td align="center">2.80</td>
+    <td align="center">1.64</td>
+    <td align="center">0.74</td>
   </tr>
   <tr>
     <td>selfnew_nosep-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center"-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.40</td>
+    <td align="center">2.89</td>
+    <td align="center">0.55</td>
+    <td align="center">0.42</td>
+    <td align="center">2.31</td>
+    <td align="center">1.38</td>
+    <td align="center">7.96</td>
   </tr>
   <tr>
     <td>selfnew_sep_p-64</td>
