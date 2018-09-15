@@ -102,6 +102,26 @@ class SelfAttention3D(nn.Module):
             
             outputs = visual_inputs * channel_mask * spatial_mask # (batch_size, visual_channels, visual_flat)
             mask = (channel_mask, spatial_mask)
+        elif CONF.TRAIN.ATTN == 'selfnew_sep_sf':
+            '''
+                replace the matrix multiplication with point-wise multiplication,
+                separate attention to similarity based channel-wise and spatial attention
+            '''
+            spatial_f = self.spatial_f(visual_inputs) # (batch_size, hidden_size, visual_flat)
+            spatial_g = self.spatial_g(visual_inputs) # (batch_size, hidden_size, visual_flat)
+            spatial_sim = spatial_f.transpose(2, 1).contiguous().matmul(spatial_g) # (batch_size, visual_flat, visual_flat)
+            spatial_sim_comp = spatial_sim.sum(dim=1, keepdim=True) # (batch_size, 1, visual_flat)
+            spatial_mask = F.softmax(spatial_sim_comp, dim=2) # (batch_size, 1, visual_flat)
+            feature = visual_inputs * channel_mask # (batch_size, visual_channels, visual_flat)
+
+            channel_f = self.channel_f(feature) # (batch_size, visual_channels, hidden_size)
+            channel_g = self.channel_g(feature) # (batch_size, visual_channels, hidden_size)
+            channel_sim = channel_f.matmul(channel_g.transpose(2, 1).contiguous()) # (batch_size, visual_channels, visual_channels)
+            channel_sim_comp = channel_sim.sum(dim=1, keepdim=True) # (batch_size, 1, visual_channels)
+            channel_mask = F.softmax(channel_sim_comp, dim=2).transpose(2, 1).contiguous() # (batch_size, visual_channels, 1)
+            
+            outputs = feature * channel_mask # (batch_size, visual_channels, visual_flat)
+            mask = (channel_mask, spatial_mask)
         elif CONF.TRAIN.ATTN == 'selfnew_sep_cf':
             '''
                 replace the matrix multiplication with point-wise multiplication,
