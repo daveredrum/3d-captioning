@@ -90,6 +90,16 @@ __progress:__
     <td align="center">13.42</td>
   </tr>
   <tr>
+    <td>selfnew_sep_sf-64</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+  </tr>
+  <tr>
     <td>selfnew_sep_cf-64</td>
     <td align="center"><b>1.62</b></td>
     <td align="center"><b>6.53</b></td>
