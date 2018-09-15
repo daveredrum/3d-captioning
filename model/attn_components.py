@@ -112,7 +112,7 @@ class SelfAttention3D(nn.Module):
             spatial_sim = spatial_f.transpose(2, 1).contiguous().matmul(spatial_g) # (batch_size, visual_flat, visual_flat)
             spatial_sim_comp = spatial_sim.sum(dim=1, keepdim=True) # (batch_size, 1, visual_flat)
             spatial_mask = F.softmax(spatial_sim_comp, dim=2) # (batch_size, 1, visual_flat)
-            feature = visual_inputs * channel_mask # (batch_size, visual_channels, visual_flat)
+            feature = visual_inputs * spatial_mask # (batch_size, visual_channels, visual_flat)
 
             channel_f = self.channel_f(feature) # (batch_size, visual_channels, hidden_size)
             channel_g = self.channel_g(feature) # (batch_size, visual_channels, hidden_size)
