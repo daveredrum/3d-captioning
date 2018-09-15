@@ -67,7 +67,7 @@ __progress:__
     <td align="center">0.52</td>
     <td align="center">2.80</td>
     <td align="center">1.64</td>
-    <td align="center">0.74</td>
+    <td align="center">9.74</td>
   </tr>
   <tr>
     <td>selfnew_nosep-64</td>
