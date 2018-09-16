@@ -133,10 +133,16 @@ class Shapenet():
                 transformed.append((model_id, label, indices))
 
                 # group by key
-                if model_id in data_group.keys():
-                    data_group[model_id].append((model_id, label, indices))
-                else:
-                    data_group[model_id] = [(model_id, label, indices)]
+                if CONF.TRAIN.DATASET == 'primitives':
+                    if label in data_group.keys():
+                        data_group[label].append((model_id, label, indices))
+                    else:
+                        data_group[label] = [(model_id, label, indices)]
+                elif CONF.TRAIN.DATASET == 'shapenet':
+                    if model_id in data_group.keys():
+                        data_group[model_id].append((model_id, label, indices))
+                    else:
+                        data_group[model_id] = [(model_id, label, indices)]
 
             setattr(self, "{}_data".format(phase), transformed)
             setattr(self, "{}_data_group".format(phase), data_group)
