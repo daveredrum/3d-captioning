@@ -44,7 +44,6 @@ class Shapenet():
 
         # objectives
         self.dict_idx2word, self.dict_word2idx = {}, {}
-        self.cat2label = {}
         self.train_data, self.val_data, self.test_data = [], [], []
         self.train_data_group, self.val_data_group, self.test_data_group = {}, {}, {}
         self.train_data_agg, self.val_data_agg, self.test_data_agg = {}, {}, {}
@@ -62,7 +61,6 @@ class Shapenet():
         '''
         create mapping between model_ids and labels
         '''
-        setattr(self, "cat2label", {'table': -1, 'chair': 1})
         for phase in ["train", "val", "test"]:
             idx2label = {idx: label for idx, label in getattr(self, "{}_modelid2idx".format(phase)).items()}
             label2idx = {label: idx for idx, label in getattr(self, "{}_modelid2idx".format(phase)).items()}
@@ -117,7 +115,7 @@ class Shapenet():
                 if model_id in self.bad_ids:
                     continue
                 # get label
-                label = self.cat2label[item[1]]
+                label = item[1]
                 # truncate long captions
                 words = item[2]
                 if len(words) > CONF.TRAIN.MAX_LENGTH:
