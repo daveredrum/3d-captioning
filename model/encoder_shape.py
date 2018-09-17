@@ -13,10 +13,7 @@ class ShapenetShapeEncoder(nn.Module):
             nn.BatchNorm3d(128),
             nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
-            nn.BatchNorm3d(256),
-            nn.Conv3d(256, 512, 3, stride=2, padding=1, bias=False),
-            nn.ReLU(),
-            nn.BatchNorm3d(512)
+            nn.BatchNorm3d(256)
         )
         self.outputs = nn.Linear(256, 128)
 

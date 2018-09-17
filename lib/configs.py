@@ -14,10 +14,12 @@ CONF.PATH.DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
 CONF.PATH.SHAPENET_ROOT = "data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 CONF.PATH.SHAPENET_SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
 CONF.PATH.SHAPENET_DATABASE = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid.hdf5" # TODO modify this
-CONF.PATH.PRIMITIVE_ROOT = "/mnt/raid/davech2y/text2shape_primitives"
 CONF.PATH.SHAPENET_IMG = "{}/{}.png" # model_id
 CONF.PATH.SHAPENET_NRRD = "{}/{}.nrrd" # model_id
 CONF.PATH.SHAPENET_PROBLEMATIC = "data/shapenet_problematic.p"
+CONF.PATH.PRIMITIVES_ROOT = "data/primitives_{}" # resolution
+CONF.PATH.PRIMITIVES_IMG = "{}/{}.png" # cat_id, model_id
+CONF.PATH.PRIMITIVES_NRRD = "{}/{}.nrrd" # cat_id, model_id
 # path to split
 CONF.PATH.SPLIT_NAME = "processed_captions_{}.p"
 # output path
@@ -39,7 +41,8 @@ CONF.TRAIN = EasyDict()
 # parameters of training
 CONF.TRAIN.SETTINGS = "{}_v{}_trs{}_lr{}_wd{}_e{}_bs{}_{}" 
 # mode, voxel, train_size, learning_rate, weight_decay, batch_size, num_process, attention_type 
-CONF.TRAIN.DATASET = 'primitives'
+CONF.TRAIN.DATASET = 'shapenet'
+CONF.TRAIN.PRIMITIVES_NUM_PER_MODEL = 10
 CONF.TRAIN.N_CAPTION_PER_MODEL = 2
 CONF.TRAIN.RANDOM_SAMPLE = False
 CONF.TRAIN.REDUCE_STEP = 10
@@ -47,13 +50,27 @@ CONF.TRAIN.REDUCE_FACTOR = 0.95
 CONF.TRAIN.CLIP_VALUE = 5.
 CONF.TRAIN.N_NEIGHBOR = 10
 CONF.TRAIN.EVAL_DATASET = 'val'
-CONF.TRAIN.EVAL_FREQ = 2500
 CONF.TRAIN.EVAL_MODE = 't2s'
 CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
-CONF.TRAIN.MAX_LENGTH = 96
+CONF.TRAIN.MAX_LENGTH = 28
 # self attention
-CONF.TRAIN.ATTN = "selfnew_sep_sf"
+CONF.TRAIN.ATTN = "noattention"
+# hyperparamters
+CONF.TRAIN.RESOLUTION = 64
+CONF.TRAIN.TRAIN_SIZE = -1
+CONF.TRAIN.VAL_SIZE = -1
+CONF.TRAIN.LEARNING_RATE = 2e-4
+CONF.TRAIN.WEIGHT_DECAY = 5e-4
+CONF.TRAIN.VERBOSE = 10
+# fixed batch size
+if CONF.TRAIN.DATASET == 'shapenet':
+    CONF.TRAIN.BATCH_SIZE = 100
+elif CONF.TRAIN.DATASET == 'primitives':
+    CONF.TRAIN.BATCH_SIZE = 75
+else:
+    raise ValueError("invalid dataset, terminating...")
+
 
 
 '''

@@ -34,13 +34,13 @@ def check_dataset(dataset, batch_size):
     
     return flag
 
-def get_dataset(split_size, unique_batch_size, voxel):
+def get_dataset(split_size, unique_batch_size, resolution):
     # for training
-    shapenet = Shapenet(
+    embedding = Embedding(
         [
-            pickle.load(open("data/shapenet_split_train.p", 'rb')),
-            pickle.load(open("data/shapenet_split_val.p", 'rb')),
-            pickle.load(open("data/shapenet_split_test.p", 'rb'))
+            pickle.load(open("data/{}_split_train.p".format(CONF.TRAIN.DATASET), 'rb')),
+            pickle.load(open("data/{}_split_val.p".format(CONF.TRAIN.DATASET), 'rb')),
+            pickle.load(open("data/{}_split_test.p".format(CONF.TRAIN.DATASET), 'rb'))
         ],
         [
             split_size[0],
@@ -50,50 +50,71 @@ def get_dataset(split_size, unique_batch_size, voxel):
         unique_batch_size,
         True
     )
-    train_dataset = ShapenetDataset(
-        shapenet.train_data_agg, 
-        shapenet.train_idx2label, 
-        shapenet.train_label2idx, 
-        voxel, 
-        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-    )
-    val_dataset = ShapenetDataset(
-        shapenet.val_data_agg, 
-        shapenet.val_idx2label, 
-        shapenet.val_label2idx,
-        voxel,
-        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-    )
-    # for evaluation
-    eval_dataset = ShapenetDataset(
-        getattr(shapenet, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-        getattr(shapenet, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-        getattr(shapenet, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
-        voxel,
-        h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
-    )
+    if CONF.TRAIN.DATASET == 'shapenet':
+        train_dataset = EmbeddingDataset(
+            embedding.train_data_agg, 
+            embedding.train_idx2label, 
+            embedding.train_label2idx, 
+            resolution, 
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(resolution), "r")
+        )
+        val_dataset = EmbeddingDataset(
+            embedding.val_data_agg, 
+            embedding.val_idx2label, 
+            embedding.val_label2idx,
+            resolution,
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(resolution), "r")
+        )
+        # for evaluation
+        eval_dataset = EmbeddingDataset(
+            getattr(embedding, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+            getattr(embedding, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(embedding, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            resolution,
+            h5py.File(CONF.PATH.SHAPENET_DATABASE.format(resolution), "r")
+        )
+    elif CONF.TRAIN.DATASET == 'primitives':
+        train_dataset = EmbeddingDataset(
+            embedding.train_data_agg, 
+            embedding.train_idx2label, 
+            embedding.train_label2idx, 
+            resolution
+        )
+        val_dataset = EmbeddingDataset(
+            embedding.val_data_agg, 
+            embedding.val_idx2label, 
+            embedding.val_label2idx,
+            resolution
+        )
+        # for evaluation
+        eval_dataset = EmbeddingDataset(
+            getattr(embedding, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
+            getattr(embedding, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(embedding, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            resolution
+        )
 
-    return shapenet, train_dataset, val_dataset, eval_dataset
+    return embedding, train_dataset, val_dataset, eval_dataset
 
 
-def get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel):
+def get_dataloader(embedding, train_dataset, val_dataset, eval_dataset, unique_batch_size, resolution):
     dataloader = {
         'train': DataLoader(
             train_dataset, 
             batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL,  
-            collate_fn=collate_shapenet, 
+            collate_fn=collate_embedding, 
             drop_last=check_dataset(train_dataset, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
         ),
         'val': DataLoader(
             val_dataset, 
             batch_size=unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL, 
-            collate_fn=collate_shapenet, 
+            collate_fn=collate_embedding, 
             drop_last=check_dataset(val_dataset, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
         ),
         'eval': DataLoader(
             eval_dataset, 
             batch_size=unique_batch_size, 
-            collate_fn=collate_shapenet
+            collate_fn=collate_embedding
         )
     }
 
@@ -109,15 +130,15 @@ def get_attention(args):
 
     return attention, attention_type
 
-def get_models(attention_type, shapenet):
+def get_models(attention_type, embedding):
     if attention_type == 'noattention':
         print("\ninitializing naive models...\n")
         shape_encoder = ShapenetShapeEncoder().cuda()
-        text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        text_encoder = ShapenetTextEncoder(embedding.dict_idx2word.__len__()).cuda()
     else:
         print("\ninitializing {} models...\n".format(attention_type))
         shape_encoder = SelfAttnShapeEncoder().cuda()
-        text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        text_encoder = SelfAttnTextEncoder(embedding.dict_idx2word.__len__()).cuda()
 
     return shape_encoder, text_encoder
 
@@ -126,15 +147,13 @@ def get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, we
 
     return optimizer
 
-def get_settings(voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type):
-    settings = CONF.TRAIN.SETTINGS.format("shapenet", voxel, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
-    if CONF.TRAIN.RANDOM_SAMPLE:
-        settings += "_rand"
+def get_settings(resolution, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type):
+    settings = CONF.TRAIN.SETTINGS.format(CONF.TRAIN.DATASET, resolution, train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
     
     return settings
 
-def get_solver(shapenet, criterion, optimizer, settings, unique_batch_size):
-    solver = EmbeddingSolver(shapenet, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
+def get_solver(embedding, criterion, optimizer, settings, unique_batch_size):
+    solver = EmbeddingSolver(embedding, criterion, optimizer, settings, unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL)
     
     return solver
 
@@ -146,14 +165,14 @@ def save_logs(log, best, settings):
 
 def main(args):
     # parse args
-    voxel = args.voxel
-    train_size = args.train_size
-    val_size = args.val_size
-    learning_rate = args.learning_rate
-    weight_decay = args.weight_decay
+    resolution = CONF.TRAIN.RESOLUTION
+    train_size = CONF.TRAIN.TRAIN_SIZE
+    val_size = CONF.TRAIN.VAL_SIZE
+    learning_rate = CONF.TRAIN.LEARNING_RATE
+    weight_decay = CONF.TRAIN.WEIGHT_DECAY
+    unique_batch_size = CONF.TRAIN.BATCH_SIZE
+    verbose = CONF.TRAIN.VERBOSE
     epoch = args.epoch
-    unique_batch_size = args.batch_size
-    verbose = args.verbose
     gpu = args.gpu
     attention, attention_type = get_attention(args)
     
@@ -164,20 +183,20 @@ def main(args):
 
     # prepare data
     print("\npreparing data...\n")
-    shapenet, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, voxel)
-    dataloader = get_dataloader(shapenet, train_dataset, val_dataset, eval_dataset, unique_batch_size, voxel)
+    embedding, train_dataset, val_dataset, eval_dataset = get_dataset([train_size, val_size], unique_batch_size, resolution)
+    dataloader = get_dataloader(embedding, train_dataset, val_dataset, eval_dataset, unique_batch_size, resolution)
     train_per_worker = len(dataloader['train']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     val_per_worker = len(dataloader['val']) * unique_batch_size * CONF.TRAIN.N_CAPTION_PER_MODEL
     
     # report settings
     print("[settings]")
-    print("voxel:", voxel)
+    print("resolution:", resolution)
     print("train_size: {} samples -> {} pairs in total".format(
-        shapenet.train_size, 
+        embedding.train_size, 
         train_per_worker
     ))
     print("val_size: {} samples -> {} pairs in total".format(
-        shapenet.val_size, 
+        embedding.val_size, 
         val_per_worker
     ))
     print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.TRAIN.EVAL_DATASET))
@@ -190,7 +209,7 @@ def main(args):
     print("attention:", attention_type)
 
     # initialize models
-    shape_encoder, text_encoder = get_models(attention_type, shapenet)
+    shape_encoder, text_encoder = get_models(attention_type, embedding)
 
     # initialize optimizer
     print("initializing optimizer...\n")
@@ -200,8 +219,8 @@ def main(args):
         'metric': InstanceMetricLoss(margin=CONF.ML.METRIC_MARGIN)
     }
     optimizer = get_optimizer(attention_type, shape_encoder, text_encoder, learning_rate, weight_decay)
-    settings = get_settings(voxel, shapenet.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
-    solver = get_solver(shapenet, criterion, optimizer, settings, unique_batch_size)
+    settings = get_settings(resolution, embedding.train_size, learning_rate, weight_decay, epoch, unique_batch_size, attention_type)
+    solver = get_solver(embedding, criterion, optimizer, settings, unique_batch_size)
     
     # training
     print("start training...\n")
@@ -241,14 +260,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--voxel", type=int, default=64, help="voxel resolution")
-    parser.add_argument("--train_size", type=int, default=100, help="train size")
-    parser.add_argument("--val_size", type=int, default=100, help="val size")
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
-    parser.add_argument("--verbose", type=int, default=1, help="show report")
-    parser.add_argument("--learning_rate", type=float, default=0.001, help="learepoch for optimizer")
-    parser.add_argument("--weight_decay", type=float, default=0, help="penalty oepochimizer")
-    parser.add_argument("--batch_size", type=int, default=10, help="batch size")
     parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
     args = parser.parse_args()
     main(args)

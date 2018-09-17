@@ -9,6 +9,8 @@ import random
 import h5py
 import time
 import copy
+import random
+from collections import deque
 
 # HACK
 import sys
@@ -16,31 +18,31 @@ sys.path.append(".")
 from lib.configs import CONF
 
 
-class Shapenet():
-    def __init__(self, shapenet_split, size_split, batch_size, is_training):
+class Embedding():
+    def __init__(self, data_split, size_split, batch_size, is_training):
         '''
         param: 
-            shapenet_split: [shapenet_split_train, shapenet_split_val, shapenet_split_test]
+            data_split: [data_split_train, data_split_val, data_split_test]
             size_split: [size_split_train, size_split_val, size_split_test]
             batch_size: unique_batch_size
             is_training: boolean, distinguishing between train/val and eval
         '''
         
         # general settings
-        self.shapenet_split_train, self.train_modelid2idx = shapenet_split[0]['data'], shapenet_split[0]['modelid2idx']
-        self.shapenet_split_val, self.val_modelid2idx = shapenet_split[1]['data'], shapenet_split[1]['modelid2idx']
-        self.shapenet_split_test, self.test_modelid2idx = shapenet_split[2]['data'], shapenet_split[2]['modelid2idx']
+        self.data_split_train, self.train_modelid2idx = data_split[0]['data'], data_split[0]['modelid2idx']
+        self.data_split_val, self.val_modelid2idx = data_split[1]['data'], data_split[1]['modelid2idx']
+        self.data_split_test, self.test_modelid2idx = data_split[2]['data'], data_split[2]['modelid2idx']
         self.train_size, self.val_size, self.test_size = size_split
         self.batch_size = batch_size
         self.bad_ids = pickle.load(open(CONF.PATH.SHAPENET_PROBLEMATIC, 'rb'))
 
         # select sets
         if self.train_size != -1:
-            self.shapenet_split_train = self.shapenet_split_train[:self.train_size]
+            self.data_split_train = self.data_split_train[:self.train_size]
         if self.val_size != -1:
-            self.shapenet_split_val = self.shapenet_split_val[:self.val_size]
+            self.data_split_val = self.data_split_val[:self.val_size]
         if self.test_size != -1:
-            self.shapenet_split_test = self.shapenet_split_test[:self.test_size]
+            self.data_split_test = self.data_split_test[:self.test_size]
 
         # objectives
         self.dict_idx2word, self.dict_word2idx = {}, {}
@@ -71,7 +73,7 @@ class Shapenet():
         '''
         create dictionaries
         '''
-        split_data = self.shapenet_split_train
+        split_data = self.data_split_train
         word_count = {}
         for item in split_data:
             for word in item[2]:
@@ -106,7 +108,7 @@ class Shapenet():
         tokenize captions
         '''
         for phase in ["train", "val", "test"]:
-            split_data = getattr(self, "shapenet_split_{}".format(phase))
+            split_data = getattr(self, "data_split_{}".format(phase))
             transformed = []
             data_group = {}
             for item in split_data:
@@ -133,16 +135,18 @@ class Shapenet():
                 transformed.append((model_id, label, indices))
 
                 # group by key
-                if CONF.TRAIN.DATASET == 'primitives':
-                    if label in data_group.keys():
-                        data_group[label].append((model_id, label, indices))
-                    else:
-                        data_group[label] = [(model_id, label, indices)]
-                elif CONF.TRAIN.DATASET == 'shapenet':
+                if CONF.TRAIN.DATASET == 'shapenet':
                     if model_id in data_group.keys():
                         data_group[model_id].append((model_id, label, indices))
                     else:
                         data_group[model_id] = [(model_id, label, indices)]
+                elif CONF.TRAIN.DATASET == 'primitives':
+                    if label in data_group.keys():
+                        data_group[label].append((model_id, label, indices))
+                    else:
+                        data_group[label] = [(model_id, label, indices)]
+                else:
+                    raise ValueError("invalid dataset, terminating...")
 
             setattr(self, "{}_data".format(phase), transformed)
             setattr(self, "{}_data_group".format(phase), data_group)
@@ -159,22 +163,15 @@ class Shapenet():
         '''
         for phase in ["train", "val", "test"]:
             group_data = getattr(self, "{}_data_group".format(phase))
-
-            # get all combinations
-            data_comb = []
-            for key in group_data.keys():
-                if len(group_data[key]) >= 4:
-                    comb = list(combinations(group_data[key], CONF.TRAIN.N_CAPTION_PER_MODEL))
-                    if CONF.TRAIN.RANDOM_SAMPLE:
-                        # only randomly choose one data pair
-                        random.seed(42)
-                        data_comb.extend(random.choice(comb))
-                    else:
+            if CONF.TRAIN.DATASET == 'shapenet':
+                # get all combinations
+                data_comb = []
+                for key in group_data.keys():
+                    if len(group_data[key]) >= 4:
+                        comb = list(combinations(group_data[key], CONF.TRAIN.N_CAPTION_PER_MODEL))
+                        random.shuffle(comb)
                         data_comb.extend(comb)
 
-            if CONF.TRAIN.RANDOM_SAMPLE:
-                setattr(self, "{}_data_agg".format(phase), data_comb)
-            else:
                 # aggregate batch
                 data = []
                 idx2label = {i: data_comb[i][0][0] for i in range(len(data_comb))}
@@ -190,18 +187,52 @@ class Shapenet():
                         chosen_label.append(idx2label[idx])
                 
                 setattr(self, "{}_data_agg".format(phase), data)
+            elif CONF.TRAIN.DATASET == 'primitives':
+                # group by label within modelid
+                new_group_data = {}
+                for model_id in group_data.keys():
+                    grouped_label = {}
+                    for item in group_data[model_id]:
+                        if item[0] in grouped_label.keys():
+                            grouped_label[item[0]].append(item)
+                        else:
+                            grouped_label[item[0]] = [item]
+                    new_group_data[model_id] = grouped_label
+                group_data = new_group_data
+                # get all combinations
+                for model_id in group_data.keys():
+                    for label in group_data[model_id].keys():
+                        comb = list(combinations(group_data[model_id][label], CONF.TRAIN.N_CAPTION_PER_MODEL))
+                        random.shuffle(comb)
+                        group_data[model_id][label] = comb
+
+                all_model_ids = list(group_data.keys())
+                # aggregate batch
+                data = []
+                for label_id in range(CONF.TRAIN.PRIMITIVES_NUM_PER_MODEL):
+                    num_pairs = int((CONF.TRAIN.PRIMITIVES_NUM_PER_MODEL // 2) * (CONF.TRAIN.PRIMITIVES_NUM_PER_MODEL - 1))
+                    for pair_id in range(num_pairs):
+                        num_rand = len(all_model_ids) // self.batch_size
+                        if num_rand < 1:
+                            num_rand = 1
+                        for _ in range(num_rand):
+                            chosen_model_ids = random.sample(all_model_ids, k=self.batch_size)
+                            for model_id in chosen_model_ids:
+                                data.extend([group_data[model_id]["{}_{}".format(model_id, label_id)][pair_id][i] for i in range(CONF.TRAIN.N_CAPTION_PER_MODEL)])
+                
+                setattr(self, "{}_data_agg".format(phase), data)
 
 
 
-class ShapenetDataset(Dataset):
-    def __init__(self, shapenet_data, idx2label, label2idx, resolution, database=None, aggr_shape=False):
+class EmbeddingDataset(Dataset):
+    def __init__(self, embedding_data, idx2label, label2idx, resolution, database=None, aggr_shape=False):
         '''
         param: 
-            shapenet_data: instance property of Shapenet class, e.g. shapenet.train_data
+            embedding_data: instance property of Shapenet class, e.g. embedding.train_data
         '''
-        self.shapenet_data = copy.deepcopy(shapenet_data)
+        self.embedding_data = copy.deepcopy(embedding_data)
         if aggr_shape:
-            self.shapenet_data = self._aggr_data()
+            self.embedding_data = self._aggr_data()
         self.idx2label = idx2label
         self.label2idx = label2idx
         self.resolution = resolution
@@ -210,7 +241,7 @@ class ShapenetDataset(Dataset):
     def _aggr_data(self):
         aggr_data = []
         reached_model = []
-        for item in self.shapenet_data:
+        for item in self.embedding_data:
             if item[0] not in reached_model:
                 aggr_data.append(item)
                 reached_model.append(item[0])
@@ -218,30 +249,39 @@ class ShapenetDataset(Dataset):
         return aggr_data
 
     def __len__(self):
-        return len(self.shapenet_data)
+        return len(self.embedding_data)
 
     def __getitem__(self, idx):
         start = time.time()
-        model_id = self.shapenet_data[idx][0]
-        if self.database:
-            db_idx = self.idx2label[model_id]
-            voxel = self.database['volume'][db_idx].reshape((4, self.resolution, self.resolution, self.resolution))
-            voxel = torch.FloatTensor(voxel)
-        else:
-            model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
+        model_id = self.embedding_data[idx][0]
+        label = self.embedding_data[idx][1]
+        caption = self.embedding_data[idx][2]
+        length = len(caption)
+        if CONF.TRAIN.DATASET == 'shapenet':
+            if self.database:
+                db_idx = self.idx2label[model_id]
+                voxel = self.database['volume'][db_idx].reshape((4, self.resolution, self.resolution, self.resolution))
+                voxel = torch.FloatTensor(voxel)
+            else:
+                model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(self.resolution), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
+                voxel = torch.FloatTensor(nrrd.read(model_path)[0])
+                voxel /= 255.
+
+            label = int(self.idx2label[model_id])
+        elif CONF.TRAIN.DATASET == 'primitives':
+            model_path = os.path.join(CONF.PATH.PRIMITIVES_ROOT.format(self.resolution), CONF.PATH.PRIMITIVES_NRRD.format(label, model_id))
             voxel = torch.FloatTensor(nrrd.read(model_path)[0])
             voxel /= 255.
+
+            label = int(self.idx2label[label])
        
-        caption = self.shapenet_data[idx][2]
-        length = len(caption)
-        label = int(self.idx2label[self.shapenet_data[idx][0]])
         exe_time = time.time() - start
 
         return model_id, voxel, caption, length, label, exe_time
 
-def collate_shapenet(data):
+def collate_embedding(data):
     '''
-    for DataLoader: collate_fn=collate_shapenet
+    for DataLoader: collate_fn=collate_embedding
 
     return: 
         model_ids
