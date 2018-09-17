@@ -8,6 +8,8 @@ __progress:__
 > comparison of models: <br/>
 >  <br/>
 > __Text2Shape-32__: original joint-embedding method without attention <br/>
+> __noattention-32__: replicated text2shape without attention on 32 <br/>
+> __noattention-64__: replicated text2shape without attention on 64 <br/>
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
 > __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
 > __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
@@ -48,6 +50,26 @@ __progress:__
     <td align="center">2.37</td>
     <td align="center">1.35</td>
     <td align="center">9.05</td>
+  </tr>
+  <tr>
+    <td>noattention-32</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+  </tr>
+  <tr>
+    <td>noattention-64</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
