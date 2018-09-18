@@ -135,9 +135,10 @@ __progress:__
 
 > __best models:__
 >
-> |train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
-> |---|---|---|---|---|---|---|---|
-> |-1|-1|2e-4|5e-4|100|20|False|96|
+> |arch|train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
+> |---|---|---|---|---|---|---|---|---|
+> |noattn|-1|-1|2e-4|5e-4|100|20|False|-|
+> |attn|-1|-1|2e-4|5e-4|100|20|False|96|
 
 <s>
 ## Aug. 23
