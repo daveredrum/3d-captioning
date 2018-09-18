@@ -53,7 +53,7 @@ CONF.TRAIN.EVAL_DATASET = 'val'
 CONF.TRAIN.EVAL_MODE = 't2s'
 CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
-CONF.TRAIN.MAX_LENGTH = 22
+CONF.TRAIN.MAX_LENGTH = 24
 # self attention
 CONF.TRAIN.ATTN = "noattention"
 # hyperparamters
