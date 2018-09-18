@@ -13,9 +13,25 @@ class ShapenetShapeEncoder(nn.Module):
             nn.BatchNorm3d(128),
             nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
-            nn.BatchNorm3d(256)
+            nn.BatchNorm3d(256),
+            nn.Conv3d(256, 512, 3, stride=2, padding=1, bias=False),
+            nn.ReLU(),
+            nn.BatchNorm3d(512)
         )
-        self.outputs = nn.Linear(256, 128)
+        self.outputs = nn.Linear(512, 128)
+
+        # self.conv = nn.Sequential(
+        #     nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False),
+        #     nn.ReLU(),
+        #     nn.BatchNorm3d(64),
+        #     nn.Conv3d(64, 128, 3, stride=2, padding=1, bias=False),
+        #     nn.ReLU(),
+        #     nn.BatchNorm3d(128),
+        #     nn.Conv3d(128, 256, 3, stride=2, padding=1, bias=False),
+        #     nn.ReLU(),
+        #     nn.BatchNorm3d(256)
+        # )
+        # self.outputs = nn.Linear(256, 128)
 
     def forward(self, inputs):
         conved = self.conv(inputs)
