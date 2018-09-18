@@ -63,13 +63,13 @@ __progress:__
   </tr>
   <tr>
     <td>noattention-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">1.08</td>
+    <td align="center">4.64</td>
+    <td align="center">1.02</td>
+    <td align="center">0.55</td>
+    <td align="center">2.95</td>
+    <td align="center">1.73</td>
+    <td align="center">11.97</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
