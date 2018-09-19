@@ -58,7 +58,7 @@ def get_models(attention, batch_size, dict_size, embeddings):
         decoder = Decoder(dict_size, CONF.CAP.HIDDEN_SIZE).cuda()
     elif attention:
         print('initializing models with attention {}...\n'.format(attention))
-        encoder = AttentionEncoder().cuda()
+        encoder = AttentionEncoder(embeddings.visual_channel).cuda()
         decoder = AttentionDecoder3D(
             attention, 
             batch_size, 

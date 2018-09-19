@@ -26,17 +26,18 @@ class EmbeddingEncoder(nn.Module):
 
 # for attention
 class AttentionEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, visual_channels):
         super(AttentionEncoder, self).__init__()
-        self.avg_pool = nn.AvgPool3d(kernel_size=4, stride=4)
+        # self.avg_pool = nn.AvgPool3d(kernel_size=4, stride=4)
+        self.visual_channels = visual_channels
         self.global_mapping = nn.Sequential(
-            nn.Linear(256, 512, bias=False),
+            nn.Linear(visual_channels, 512, bias=False),
             nn.ReLU(),
             # nn.Dropout(p=0.5),
         )
         self.global_bn = nn.BatchNorm1d(512, momentum=0.01)
         self.area_mapping = nn.Sequential(
-            nn.Linear(256, 512, bias=False),
+            nn.Linear(visual_channels, 512, bias=False),
             nn.ReLU(),
             # nn.Dropout(p=0.5),
         )
@@ -55,7 +56,7 @@ class AttentionEncoder(nn.Module):
         area_features = self.area_mapping(area_features).permute(0, 4, 1, 2, 3).contiguous()
         area_features = self.area_bn(area_features).view(batch_size, 512, -1)
         # (batch_size, 512)
-        global_features = self.avg_pool(original_features).view(-1, 256)
+        global_features = original_features.view(batch_size, self.visual_channels, -1).mean(2)
         global_features = self.global_mapping(global_features)
         global_features = self.global_bn(global_features)
 
