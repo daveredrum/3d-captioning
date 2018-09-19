@@ -115,7 +115,7 @@ def evaluate(encoder, decoder, dataloader, dict_idx2word, references, output_roo
         print("evaluating with beam search...")
         print()
         for _, (model_ids, captions, embeddings, embeddings_interm, lengths) in enumerate(dataloader[CONF.CAP.EVAL_DATASET]):
-            if CONF.CAP.ATTN == 'noattention':
+            if CONF.CAP.ATTN == 'fc':
                 visual_inputs = embeddings.cuda()
             else:
                 visual_inputs = embeddings_interm.cuda()
@@ -124,7 +124,7 @@ def evaluate(encoder, decoder, dataloader, dict_idx2word, references, output_roo
             visual_contexts = encoder(visual_inputs)
             max_length = int(cap_lengths[0].item()) + 10
             for bs in beam_size:
-                if CONF.CAP.ATTN == 'noattention':
+                if CONF.CAP.ATTN == 'fc':
                     outputs[bs] = decoder.beam_search(visual_contexts, int(bs), max_length)
                     outputs[bs] = decode_outputs(outputs[bs], None, dict_idx2word, "val")
                 else:
