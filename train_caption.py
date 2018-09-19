@@ -26,7 +26,8 @@ def get_dataset(path):
     embeddings = PretrainedEmbeddings(pickle.load(open(path, 'rb')))
     dataset = {
         'train': CaptionDataset(embeddings.train_text, embeddings.train_shape),
-        'val': CaptionDataset(embeddings.val_text, embeddings.val_shape)
+        'val': CaptionDataset(embeddings.val_text, embeddings.val_shape),
+        'test': CaptionDataset(embeddings.test_text, embeddings.test_shape)
     }
 
     return dataset, embeddings
@@ -34,7 +35,8 @@ def get_dataset(path):
 def get_dataloader(dataset, batch_size):
     dataloader = {
         'train': DataLoader(dataset['train'], batch_size=batch_size, shuffle=True, collate_fn=collate_ec),
-        'val': DataLoader(dataset['val'], batch_size=batch_size, shuffle=True, collate_fn=collate_ec)
+        'val': DataLoader(dataset['val'], batch_size=batch_size, shuffle=True, collate_fn=collate_ec),
+        'test': DataLoader(dataset['test'], batch_size=batch_size, shuffle=True, collate_fn=collate_ec)
     }
     
     return dataloader
@@ -42,7 +44,8 @@ def get_dataloader(dataset, batch_size):
 def get_reference(embeddings):
     references = {
         'train': embeddings.train_ref,
-        'val': embeddings.val_ref
+        'val': embeddings.val_ref,
+        'test': embeddings.test_ref
     }
     # load vocabulary
     dict_idx2word = embeddings.dict_idx2word
@@ -100,8 +103,7 @@ def get_settings(train_size, val_size, epoch, dict_size, embedding_settings):
 def evaluate(encoder, decoder, dataloader, dict_idx2word, references, output_root):
     encoder.eval()
     decoder.eval()
-    # beam_size = ['1', '3', '5', '7']
-    beam_size = ['3']
+    beam_size = ['1', '3', '5', '7']
     candidates = {i:{} for i in beam_size}
     outputs = {i:{} for i in beam_size}
     bleu = {i:{} for i in beam_size}
