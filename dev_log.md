@@ -169,10 +169,13 @@ __progress:__
 
 > __best models:__
 >
-> |arch|train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
-> |---|---|---|---|---|---|---|---|---|
-> |noattn|-1|-1|2e-4|5e-4|100|20|False|18|
-> |attn|-1|-1|2e-4|5e-4|100|20|False|96|
+> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
+> |---|---|---|---|---|---|---|---|
+> |__FC__|-1|-1|-|-|-|-|-|
+> |__att2in__|-1|-1|-|-|-|-|-|
+> |__att2all__|-1|-1|-|-|-|-|-|
+> |__spatial__|-1|-1|-|-|-|-|-|
+> |__adaptive__|-1|-1|-|-|-|-|-|
 
 <s>
 ## Aug. 23
