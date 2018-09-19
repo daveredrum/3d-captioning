@@ -225,7 +225,7 @@ def main(args):
     )
 
     draw_curves_caption(encoder_decoder_solver, output_root)
-    pickle.dump(encoder_decoder_solver.log, open(os.path.join(output_root, "log.p", 'w')))
+    pickle.dump(encoder_decoder_solver.log, open(os.path.join(output_root, "log.p"), 'w'))
 
     if CONF.CAP.IS_EVAL:
         evaluate(encoder, decoder, dataloaders, dict_idx2word, references, output_root)
