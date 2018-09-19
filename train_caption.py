@@ -100,7 +100,8 @@ def get_settings(train_size, val_size, epoch, dict_size, embedding_settings):
 def evaluate(encoder, decoder, dataloader, dict_idx2word, references, output_root):
     encoder.eval()
     decoder.eval()
-    beam_size = ['1', '3', '5', '7']
+    # beam_size = ['1', '3', '5', '7']
+    beam_size = ['3']
     candidates = {i:{} for i in beam_size}
     outputs = {i:{} for i in beam_size}
     bleu = {i:{} for i in beam_size}
