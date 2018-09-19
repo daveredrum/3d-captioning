@@ -75,13 +75,13 @@ __progress:__
   </tr>
     <tr>
     <td>noattention-32</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.47</td>
+    <td align="center">2.15</td>
+    <td align="center">0.48</td>
+    <td align="center">0.32</td>
+    <td align="center">1.86</td>
+    <td align="center">1.08</td>
+    <td align="center">6.36</td>
   </tr>
   <tr>
     <td>noattention-64</td>
