@@ -10,7 +10,7 @@ __progress:__
 > __Text2Shape__: original joint-embedding method without attention <br/>
 > __Text2Shape-32__: replicated text2shape without attention on 32 <br/>
 > __Text2Shape-64__: replicated text2shape without attention on 64 <br/>
-> __noattention-64__: replicated text2shape without attention on 64 <br/>
+> __noattention-64__: new model without attention on 64 <br/>
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
 > __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
 > __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
