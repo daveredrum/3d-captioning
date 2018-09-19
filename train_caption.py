@@ -210,26 +210,26 @@ def main(args):
     output_root = os.path.join(CONF.PATH.OUTPUT_CAPTION, settings)
     if not os.path.exists(output_root):
         os.mkdir(output_root)
-    # encoder_decoder_solver = EncoderDecoderSolver(
-    #     optimizer,
-    #     criterion,
-    #     output_root
-    # )
-    # encoder, decoder = encoder_decoder_solver.train(
-    #     encoder,
-    #     decoder,
-    #     dataloaders,
-    #     references,
-    #     dict_word2idx,
-    #     dict_idx2word,
-    #     epoch,
-    #     verbose,
-    #     attention,
-    #     beam_size
-    # )
+    encoder_decoder_solver = EncoderDecoderSolver(
+        optimizer,
+        criterion,
+        output_root
+    )
+    encoder, decoder = encoder_decoder_solver.train(
+        encoder,
+        decoder,
+        dataloaders,
+        references,
+        dict_word2idx,
+        dict_idx2word,
+        epoch,
+        verbose,
+        attention,
+        beam_size
+    )
 
-    # draw_curves_caption(encoder_decoder_solver, output_root)
-    # pickle.dump(encoder_decoder_solver.log, open(os.path.join(output_root, "log.p"), 'wb'))
+    draw_curves_caption(encoder_decoder_solver, output_root)
+    pickle.dump(encoder_decoder_solver.log, open(os.path.join(output_root, "log.p"), 'wb'))
 
     if CONF.CAP.IS_EVAL:
         evaluate(encoder, decoder, dataloaders, dict_idx2word, references, output_root)
