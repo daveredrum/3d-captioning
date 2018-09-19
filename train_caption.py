@@ -199,6 +199,7 @@ def main(args):
     print("weight_decay:", weight_decay)
     print("dict_size:", dict_size)
     print("attention:", attention)
+    print("embedding:", embedding_settings['attention_type'])
     print("evaluation:", CONF.CAP.IS_EVAL)
     print()
     
