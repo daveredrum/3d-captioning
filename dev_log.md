@@ -8,6 +8,8 @@ __progress:__
 > comparison of models: <br/>
 >  <br/>
 > __Text2Shape-32__: original joint-embedding method without attention <br/>
+> __Text2Shape-32__: replicated text2shape without attention on 32 <br/>
+> __Text2Shape-64__: replicated text2shape without attention on 64 <br/>
 > __noattention-32__: replicated text2shape without attention on 32 <br/>
 > __noattention-64__: replicated text2shape without attention on 64 <br/>
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
@@ -42,7 +44,7 @@ __progress:__
     <td align="center">1.16</td>
   </tr>
   <tr>
-    <td>Text2Shape-32</td>
+    <td>Text2Shape</td>
     <td align="center">0.83</td>
     <td align="center">3.37</td>
     <td align="center">0.73</td>
@@ -52,6 +54,26 @@ __progress:__
     <td align="center">9.05</td>
   </tr>
   <tr>
+    <td>Text2Shape-32</td>
+    <td align="center">0.67</td>
+    <td align="center">4.31</td>
+    <td align="center">0.89</td>
+    <td align="center">0.65</td>
+    <td align="center">2.60</td>
+    <td align="center">1.63</td>
+    <td align="center">10.74</td>
+  </tr>
+  <tr>
+    <td>Text2Shape-64</td>
+    <td align="center">1.08</td>
+    <td align="center">4.64</td>
+    <td align="center">1.02</td>
+    <td align="center">0.55</td>
+    <td align="center">2.95</td>
+    <td align="center">1.73</td>
+    <td align="center">11.97</td>
+  </tr>
+    <tr>
     <td>noattention-32</td>
     <td align="center">-</td>
     <td align="center">-</td>
@@ -63,13 +85,13 @@ __progress:__
   </tr>
   <tr>
     <td>noattention-64</td>
-    <td align="center">1.08</td>
-    <td align="center">4.64</td>
-    <td align="center">1.02</td>
-    <td align="center">0.55</td>
-    <td align="center">2.95</td>
-    <td align="center">1.73</td>
-    <td align="center">11.97</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
