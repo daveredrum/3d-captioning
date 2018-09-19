@@ -68,10 +68,12 @@ class Decoder(nn.Module):
             states = self.init_hidden(feature)
             start, states = self.sample(feature, states)
             start = F.log_softmax(start, dim=2)
+            if beam_size == 3:
+                print(start.topk(beam_size, dim=2)[0].size())
             start_scores, start_words = start.topk(beam_size, dim=2)[0].squeeze(1), start.topk(beam_size, dim=2)[1].squeeze(1)
             # print(start_words.size())
             # a queue containing all searched words and their log_prob
-            searched = deque([([start_words[i].view(-1)], start_scores[i].view(-1), states) for i in range(beam_size)])
+            searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
             while True:
                 candidate = searched.popleft()
@@ -83,8 +85,8 @@ class Decoder(nn.Module):
                     top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(1), preds.topk(beam_size, dim=2)[1].squeeze(1)
                     for i in range(beam_size):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
-                        next_word.append(top_words[i].view(-1))
-                        next_prob += top_scores[i].view(-1)
+                        next_word.append(top_words[i].view(1))
+                        next_prob += top_scores[i].view(1)
                         searched.append((next_word, next_prob, new_states))
                     searched = deque(sorted(searched, reverse=True, key=lambda s: s[1])[:beam_size])    
                 else:
