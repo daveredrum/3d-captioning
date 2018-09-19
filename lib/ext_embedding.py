@@ -17,7 +17,6 @@ from model.encoder_attn import SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 def parse_path(path):
     setting_list = path.split("_")
-    print(setting_list)
     settings = {
         'dataset': setting_list[0].split("]")[1],
         'resolution': setting_list[1][1:],
