@@ -203,10 +203,10 @@ def main(args):
     print("evaluation:", CONF.CAP.IS_EVAL)
     print()
     
-    # settings = get_settings(embeddings.train_size, embeddings.val_size, epoch, dict_size, embedding_settings)
-    # output_root = os.path.join(CONF.PATH.OUTPUT_CAPTION, settings)
-    # if not os.path.exists(output_root):
-    #     os.mkdir(output_root)
+    settings = get_settings(embeddings.train_size, embeddings.val_size, epoch, dict_size, embedding_settings)
+    output_root = os.path.join(CONF.PATH.OUTPUT_CAPTION, settings)
+    if not os.path.exists(output_root):
+        os.mkdir(output_root)
     # encoder_decoder_solver = EncoderDecoderSolver(
     #     optimizer,
     #     criterion,
