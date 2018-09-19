@@ -202,7 +202,7 @@ class EncoderDecoderSolver():
                             log['train_perplexity'].append(np.exp(loss.item()))
 
                             # report
-                            if verbose (iter_id+1) % verbose == 0:
+                            if verbose and (iter_id+1) % verbose == 0:
                                 print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
                                     epoch_id+1,
                                     epoch,

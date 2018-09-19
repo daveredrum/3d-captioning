@@ -483,7 +483,7 @@ class AttentionDecoder3D(nn.Module):
             states = self.init_hidden(feats[0])
             start, states, _ = self.sample(feats, caption_inputs[feat_id, 0].view(1), states)
             start = F.log_softmax(start, dim=2)
-            start_scores, start_words = start.topk(beam_size, dim=2)[0].squeeze(1), start.topk(beam_size, dim=2)[1].squeeze(1)
+            start_scores, start_words = start.topk(beam_size, dim=2)[0].view(-1), start.topk(beam_size, dim=2)[1].view(-1)
             # a queue containing all searched words and their log_prob
             searched = deque([([start_words[i].view(1)], start_scores[i].view(1), states) for i in range(beam_size)])
             done = []
@@ -493,7 +493,7 @@ class AttentionDecoder3D(nn.Module):
                 if len(prev_word) <= max_length and int(prev_word[-1].item()) != 3:
                     preds, new_states, _ = self.sample(feats, prev_word[-1], prev_states)
                     preds = F.log_softmax(preds, dim=2)
-                    top_scores, top_words = preds.topk(beam_size, dim=2)[0].squeeze(1), preds.topk(beam_size, dim=2)[1].squeeze(1)
+                    top_scores, top_words = preds.topk(beam_size, dim=2)[0].view(-1), preds.topk(beam_size, dim=2)[1].view(-1)
                     for i in range(beam_size):
                         next_word, next_prob = copy.deepcopy(prev_word), prev_prob.clone()
                         next_word.append(top_words[i].view(1))
