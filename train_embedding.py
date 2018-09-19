@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 from lib.data_embedding import *
 import nrrd
 from lib.configs import CONF
-from model.encoder_shape import ShapenetShapeEncoder
-from model.encoder_text import ShapenetTextEncoder
+from model.encoder_shape import ShapeEncoder
+from model.encoder_text import TextEncoder
 from model.encoder_attn import *
 from lib.losses import *
 from lib.solver_embedding import EmbeddingSolver
@@ -121,7 +121,7 @@ def get_dataloader(embedding, train_dataset, val_dataset, eval_dataset, unique_b
     return dataloader
 
 def get_attention(args):
-    if CONF.TRAIN.ATTN == 'noattention':
+    if CONF.TRAIN.ATTN == 'noattention' or CONF.TRAIN.ATTN == 'text2shape':
         attention = False
     else:
         attention = True
@@ -131,13 +131,13 @@ def get_attention(args):
     return attention, attention_type
 
 def get_models(attention_type, embedding):
-    if attention_type == 'noattention':
+    if attention_type == 'noattention' or attention_type == 'text2shape':
         print("\ninitializing naive models...\n")
-        shape_encoder = ShapenetShapeEncoder().cuda()
-        text_encoder = ShapenetTextEncoder(embedding.dict_idx2word.__len__()).cuda()
+        shape_encoder = ShapeEncoder().cuda()
+        text_encoder = TextEncoder(embedding.dict_idx2word.__len__()).cuda()
     else:
         print("\ninitializing {} models...\n".format(attention_type))
-        shape_encoder = SelfAttnShapeEncoder().cuda()
+        shape_encoder = SelfAttnShapeEncoder(attention_type).cuda()
         text_encoder = SelfAttnTextEncoder(embedding.dict_idx2word.__len__()).cuda()
 
     return shape_encoder, text_encoder
@@ -179,7 +179,6 @@ def main(args):
     # setting
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    mp.set_start_method('spawn', force=True)
 
     # prepare data
     print("\npreparing data...\n")

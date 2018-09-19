@@ -53,9 +53,9 @@ CONF.TRAIN.EVAL_DATASET = 'val'
 CONF.TRAIN.EVAL_MODE = 't2s'
 CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
-CONF.TRAIN.MAX_LENGTH = 18
+CONF.TRAIN.MAX_LENGTH = 96
 # self attention
-CONF.TRAIN.ATTN = "noattention"
+CONF.TRAIN.ATTN = "text2shape" # text2shape/self_nosep/self_sep/selfnew_nosep/selfnew_sep_p/selfnew_sep_sf/selfnew_sep_cf
 # hyperparamters
 CONF.TRAIN.RESOLUTION = 32
 CONF.TRAIN.TRAIN_SIZE = -1
@@ -119,7 +119,19 @@ CONF.NORM.SHAPE_NORM_MULTIPLIER = 2.
 
 
 '''
-global configurations for multi-head training
+global configurations for captioning model
 '''
-CONF.MH = EasyDict()
-CONF.MH.ATTN_MULTIPLIER = 0.5
+CONF.CAP = EasyDict()
+CONF.CAP.MAX_LENGTH = 18
+CONF.CAP.DATASET = 'shapenet'
+CONF.CAP.BEAM_SIZE = 1
+CONF.CAP.VERBOSE = False
+CONF.CAP.LEARNING_RATE = 2e-4
+CONF.CAP.WEIGHT_DECAY = 1e-4
+CONF.CAP.BATCH_SIZE = 256
+CONF.CAP.ATTN = 'fc' # fc/att2all/att2in/spatial/adaptive
+CONF.CAP.IS_EVAL = True
+CONF.CAP.HIDDEN_SIZE = 512
+CONF.CAP.EVAL_DATASET = 'val'  
+CONF.CAP.SCHEDULE_THRESHOLD = 2.5
+CONF.CAP.SAVE_THRESHOLD = 2.5

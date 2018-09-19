@@ -5,7 +5,7 @@ from model.net_components import AdaptiveLSTMCell
 from model.attn_components import *
 
 class SelfAttnShapeEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, attention_type, is_final=False):
         super(SelfAttnShapeEncoder, self).__init__()
         self.shape_conv_1 = nn.Sequential(
             nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False),
@@ -18,16 +18,17 @@ class SelfAttnShapeEncoder(nn.Module):
             nn.ReLU(),
             nn.BatchNorm3d(256)
         )
-        self.attention_spatial_1 = SelfAttention3D(256, 256, 512)
+        self.attention_spatial_1 = SelfAttention3D(256, 256, 512, attention_type)
         self.shape_conv_2 = nn.Sequential(
             nn.Conv3d(256, 512, 3, stride=2, padding=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm3d(512)
         )
-        self.attention_spatial_2 = SelfAttention3D(512, 256, 64)
+        self.attention_spatial_2 = SelfAttention3D(512, 256, 64, attention_type)
         self.shape_outputs = nn.Linear(512, 128)
         # self.gamma = nn.Parameter(torch.zeros(1))
         # self.gamma = nn.Parameter(torch.ones(1))
+        self.is_final = is_final
     
     def _get_shape_feat(self, inputs, conv_layer, flat=True):
         conved = conv_layer(inputs)
@@ -52,8 +53,14 @@ class SelfAttnShapeEncoder(nn.Module):
         shape_feat_2 = self._get_shape_feat(spatial_attended_1, self.shape_conv_2) # (batch_size, 512, 64)
         spatial_attended_2, spatial_weights_2 = self.attend(shape_feat_2, self.attention_spatial_2)
         # outputs
-        shape_outputs = self.shape_outputs(spatial_attended_2.mean(2)) # (batch_size, 128)
         spatial_weights = (spatial_weights_1, spatial_weights_2)
+        if self.is_final:
+            shape_outputs = (
+                self.shape_outputs(spatial_attended_2.mean(2)), # (batch_size, 128)
+                spatial_attended_2.view(shape_inputs.size(0), 512, 4, 4, 4) # (batch_size, 512, 4, 4, 4)
+            )
+        else:
+            shape_outputs = self.shape_outputs(spatial_attended_2.mean(2)), # (batch_size, 128)
 
         return shape_outputs, spatial_weights
 

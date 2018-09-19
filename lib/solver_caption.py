@@ -16,16 +16,20 @@ import lib.capeval.cider.cider as capcider
 import lib.capeval.meteor.meteor as capmeteor
 import lib.capeval.rouge.rouge as caprouge
 from lib.utils import *
+from lib.configs import CONF
 
 class EncoderDecoderSolver():
-    def __init__(self, optimizer, criterion, settings):
+    def __init__(self, optimizer, criterion, output_root):
         self.optimizer = optimizer
         self.criterion = criterion
-        self.settings = settings
-        self.threshold = {'schedule': 2.5, 'save': 2.5}
+        self.output_root = output_root
+        self.threshold = {
+            'schedule': CONF.CAP.SCHEDULE_THRESHOLD, 
+            'save': CONF.CAP.SAVE_THRESHOLD
+        }
         self.log = {}
 
-    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, attention, beam_size=3):
+    def train(self, encoder, decoder, dataloader, references, dict_word2idx, dict_idx2word, epoch, verbose, attention, beam_size=1):
         scheduler = ReduceLROnPlateau(self.optimizer, factor=0.8, patience=5, threshold=0.001)
         # scheduler = StepLR(self.optimizer, gamma=0.8, step_size=3)
         best_info = {
@@ -45,7 +49,7 @@ class EncoderDecoderSolver():
             'decoder': None,
         }
         for epoch_id in range(epoch):
-            print("---------------------epoch %d/%d----------------------" % (epoch_id + 1, epoch))
+            print("epoch [{}/{}] starting...\n".format(epoch_id + 1, epoch))
             # scheduler.step()
             log = {
                 'train_loss': [],
@@ -78,13 +82,13 @@ class EncoderDecoderSolver():
             start = time.time()
             for phase in ["train", "val"]:
                 total_iter = len(dataloader[phase])
-                for iter_id, (model_ids, _, captions, embeddings, embeddings_interm, lengths) in enumerate(dataloader[phase]):
+                for iter_id, (model_ids, captions, embeddings, embeddings_interm, lengths) in enumerate(dataloader[phase]):
                     # decoder without attention
-                    if not attention:
-                        visual_inputs = Variable(embeddings).cuda()
-                        caption_inputs = Variable(captions[:, :-1]).cuda()
-                        caption_targets = Variable(captions).cuda()
-                        cap_lengths = Variable(lengths).cuda()
+                    if attention == "fc":
+                        visual_inputs = embeddings.cuda()
+                        caption_inputs = captions[:, :-1].cuda()
+                        caption_targets = captions.cuda()
+                        cap_lengths = lengths.cuda()
                         
                         if phase == "train":
                             encoder.train()
@@ -124,7 +128,7 @@ class EncoderDecoderSolver():
                             log['train_perplexity'].append(np.exp(loss.item()))
 
                             # report
-                            if (iter_id+1) % verbose == 0:
+                            if verbose and (iter_id+1) % verbose == 0:
                                 print("Epoch: [{}/{}] Iter: [{}/{}] train_loss: {:.4f} perplexity: {:.4f}".format(
                                     epoch_id+1,
                                     epoch,
@@ -155,10 +159,10 @@ class EncoderDecoderSolver():
                             log['val_time'].append(time.time() - val_since)
 
                     else:
-                        visual_inputs = Variable(embeddings_interm).cuda()
-                        caption_inputs = Variable(captions[:, :-1]).cuda()
-                        caption_targets = Variable(captions[:, 1:]).cuda() 
-                        cap_lengths = Variable(lengths).cuda()
+                        visual_inputs = embeddings_interm.cuda()
+                        caption_inputs = captions[:, :-1].cuda()
+                        caption_targets = captions[:, 1:].cuda() 
+                        cap_lengths = lengths.cuda()
                         
                         if phase == "train":
                             encoder.train()
@@ -273,28 +277,28 @@ class EncoderDecoderSolver():
             exetime_s = np.sum(log['epoch_time'])
             eta_s = exetime_s * (epoch - (epoch_id + 1))
             eta_m = math.floor(eta_s / 60)
-            print("----------------------summary-----------------------")
-            print("[Loss] train_loss: %f, perplexity: %f" % (
+            print("----------------------summary [{}/{}]-----------------------".format(epoch_id+1, epoch))
+            print("[Loss]    train_loss: %f, perplexity: %f" % (
                 log['train_loss'], 
                 log['train_perplexity'])
             )
-            print("[BLEU-1] train_bleu: %f, val_bleu: %f" % (
+            print("[BLEU-1]  train_bleu: %f, val_bleu: %f" % (
                 log['train_bleu_1'],
                 log['val_bleu_1'])
             )
-            print("[BLEU-2] train_bleu: %f, val_bleu: %f" % (
+            print("[BLEU-2]  train_bleu: %f, val_bleu: %f" % (
                 log['train_bleu_2'],
                 log['val_bleu_2'])
             )
-            print("[BLEU-3] train_bleu: %f, val_bleu: %f" % (
+            print("[BLEU-3]  train_bleu: %f, val_bleu: %f" % (
                 log['train_bleu_3'],
                 log['val_bleu_3'])
             )
-            print("[BLEU-4] train_bleu: %f, val_bleu: %f" % (
+            print("[BLEU-4]  train_bleu: %f, val_bleu: %f" % (
                 log['train_bleu_4'],
                 log['val_bleu_4'])
             )
-            print("[CIDEr] train_cider: %f, val_cider: %f" % (
+            print("[CIDEr]   train_cider: %f, val_cider: %f" % (
                 log['train_cider'],
                 log['val_cider'])
             )
@@ -306,15 +310,15 @@ class EncoderDecoderSolver():
                 log['train_rouge'],
                 log['val_rouge'])
             )
-            print("[Info]  forward_per_epoch: %fs\n[Info]  backward_per_epoch: %fs\n[Info]  val_per_epoch: %fs" % (
+            print("[Info]    forward_per_epoch: %fs\n[Info]    backward_per_epoch: %fs\n[Info]    val_per_epoch: %fs" % (
                 np.sum(log['forward']), 
                 np.sum(log['backward']),
                 np.sum(log['val_time']))
             )
-            print("[Info]  eval_time: %fs" % ( 
+            print("[Info]    eval_time: %fs" % ( 
                 np.mean(log['eval_time']))
             )
-            print("[Info]  time_per_epoch: %fs\n[Info]  ETA: %dm %ds\n\n" % ( 
+            print("[Info]    time_per_epoch: %fs\n[Info]    ETA: %dm %ds\n\n" % ( 
                 np.mean(log['epoch_time']),
                 eta_m,
                 eta_s - eta_m * 60)
@@ -335,6 +339,8 @@ class EncoderDecoderSolver():
             
             # best
             if log['train_loss'] <= self.threshold['save'] and log['val_cider'] > best_scores["cider"]:
+                print("best cider achieved:", log['val_cider'])
+                print("current loss:", log['train_loss'])
                 best_info['epoch_id'] = epoch_id + 1
                 best_info['loss'] = log['train_loss']
                 best_scores['bleu_1'] = log['val_bleu_1']
@@ -345,6 +351,13 @@ class EncoderDecoderSolver():
                 best_scores['rouge'] = log['val_rouge']
                 best_models['encoder'] = encoder
                 best_models['decoder'] = decoder
+
+                print("saving the best models...\n")
+                model_root = os.path.join(self.output_root, "models")
+                if not os.path.exists(model_root):
+                    os.mkdir(model_root)
+                torch.save(best_models['encoder'], os.path.join(model_root, "encoder.pth"))
+                torch.save(best_models['decoder'], os.path.join(model_root, "decoder.pth"))
 
         # show the best
         print("---------------------best----------------------")
@@ -359,13 +372,9 @@ class EncoderDecoderSolver():
         print()
 
         # save the best model
-        print("saving the best models...\n")
-        if not best_models['encoder'] or  not best_models['decoder']:
+        if not best_models['encoder'] or not best_models['decoder']:
             best_models['encoder'] = encoder
             best_models['decoder'] = decoder
-        
-        torch.save(best_models['encoder'], "outputs/models/encoder_{}.pth".format(self.settings))
-        torch.save(best_models['decoder'], "outputs/models/decoder_{}.pth".format(self.settings))
 
         return best_models['encoder'], best_models['decoder']
                 

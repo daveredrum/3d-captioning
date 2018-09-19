@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-class ShapenetTextEncoder(nn.Module):
+class TextEncoder(nn.Module):
     def __init__(self, dict_size):
-        super(ShapenetTextEncoder, self).__init__()
+        super(TextEncoder, self).__init__()
         # embedding
         self.embedding = nn.Embedding(dict_size, 128)
         self.conv_128 = nn.Sequential(

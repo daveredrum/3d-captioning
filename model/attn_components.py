@@ -54,14 +54,15 @@ class Attention3D(nn.Module):
 
 # self-attention module
 class SelfAttention3D(nn.Module):
-    def __init__(self, visual_channels, hidden_size, visual_flat):
+    def __init__(self, visual_channels, hidden_size, visual_flat, attention_type):
         super(SelfAttention3D, self).__init__()
         # basic settings
         self.visual_channels = visual_channels
         self.hidden_size = hidden_size
         self.visual_flat = visual_flat
+        self.attention_type = attention_type
         # MLP
-        if CONF.TRAIN.ATTN == 'self_sep' or CONF.TRAIN.ATTN == 'self_nosep':
+        if self.attention_type == 'self-sep' or self.attention_type == 'self-nosep':
             self.comp_f = nn.Linear(visual_channels, hidden_size, bias=False)
             self.comp_g = nn.Linear(visual_channels, hidden_size, bias=False)
             self.comp_h = nn.Linear(visual_channels, visual_channels, bias=False)
@@ -81,7 +82,7 @@ class SelfAttention3D(nn.Module):
             weight.data.uniform_(-stdv, stdv)
 
     def forward(self, visual_inputs):
-        if CONF.TRAIN.ATTN == 'selfnew_sep_p':
+        if self.attention_type == 'selfnew-sep-p':
             '''
                 replace the matrix multiplication with point-wise multiplication,
                 separate attention to similarity based channel-wise and spatial attention,
@@ -102,7 +103,7 @@ class SelfAttention3D(nn.Module):
             
             outputs = visual_inputs * channel_mask * spatial_mask # (batch_size, visual_channels, visual_flat)
             mask = (channel_mask, spatial_mask)
-        elif CONF.TRAIN.ATTN == 'selfnew_sep_sf':
+        elif self.attention_type == 'selfnew-sep-sf':
             '''
                 replace the matrix multiplication with point-wise multiplication,
                 separate attention to similarity based channel-wise and spatial attention
@@ -122,7 +123,7 @@ class SelfAttention3D(nn.Module):
             
             outputs = feature * channel_mask # (batch_size, visual_channels, visual_flat)
             mask = (channel_mask, spatial_mask)
-        elif CONF.TRAIN.ATTN == 'selfnew_sep_cf':
+        elif self.attention_type == 'selfnew-sep-cf':
             '''
                 replace the matrix multiplication with point-wise multiplication,
                 separate attention to similarity based channel-wise and spatial attention
@@ -141,7 +142,7 @@ class SelfAttention3D(nn.Module):
             
             outputs = feature * spatial_mask # (batch_size, visual_channels, visual_flat)
             mask = (channel_mask, spatial_mask)
-        elif CONF.TRAIN.ATTN == 'selfnew_nosep':
+        elif self.attention_type == 'selfnew-nosep':
             '''
                 separate attention to similarity based channel-wise and spatial attention
             '''
@@ -159,7 +160,7 @@ class SelfAttention3D(nn.Module):
             
             outputs = feature
             mask = (channel_mask, spatial_mask)
-        elif CONF.TRAIN.ATTN == 'self_sep':
+        elif self.attention_type == 'self-sep':
             '''
                 self_sep
                 replace the matrix multiplication with point-wise multiplication,
@@ -173,7 +174,7 @@ class SelfAttention3D(nn.Module):
             s_comp = torch.sum(s, dim=1, keepdim=True) # (batch_size, 1, visual_flat)
             mask = F.softmax(s_comp, dim=2) # (batch_size, 1, visual_flat)
             outputs = h * mask # (batch_size, visual_channels, visual_flat)
-        elif CONF.TRAIN.ATTN == 'self_nosep':
+        elif self.attention_type == 'self-nosep':
             '''
                 self_nosep
                 vanilla self-attention module, use poisition-wise similarities for computing attention mask,
@@ -186,6 +187,8 @@ class SelfAttention3D(nn.Module):
             s = f.matmul(g.transpose(2, 1).contiguous()) # (batch_size, visual_flat, visual_flat)
             mask = F.softmax(s, dim=1) # (batch_size, visual_flat, visual_flat)
             outputs = h.matmul(mask) # (batch_size, visual_channels, visual_flat)
+        else:
+            raise ValueError("invalid attention type, terminating...")
 
         return outputs, mask
 

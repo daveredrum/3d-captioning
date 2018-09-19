@@ -1,5 +1,6 @@
 import os
 import torch
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -244,3 +245,102 @@ def report_best(best):
         best['shape_norm_penalty'],
         best['text_norm_penalty']
     ))
+
+def draw_curves_caption(encoder_decoder_solver, output_root):
+    # plot the result
+    epochs = len(encoder_decoder_solver.log.keys())
+    train_losses = [encoder_decoder_solver.log[i]["train_loss"] for i in range(epochs)]
+    # val_losses = [encoder_decoder_solver.log[i]["val_loss"] for i in range(epochs)]train_perplexity
+    train_blues_1 = [encoder_decoder_solver.log[i]["train_bleu_1"] for i in range(epochs)]
+    train_blues_2 = [encoder_decoder_solver.log[i]["train_bleu_2"] for i in range(epochs)]
+    train_blues_3 = [encoder_decoder_solver.log[i]["train_bleu_3"] for i in range(epochs)]
+    train_blues_4 = [encoder_decoder_solver.log[i]["train_bleu_4"] for i in range(epochs)]
+    val_blues_1 = [encoder_decoder_solver.log[i]["val_bleu_1"] for i in range(epochs)]
+    val_blues_2 = [encoder_decoder_solver.log[i]["val_bleu_2"] for i in range(epochs)]
+    val_blues_3 = [encoder_decoder_solver.log[i]["val_bleu_3"] for i in range(epochs)]
+    val_blues_4 = [encoder_decoder_solver.log[i]["val_bleu_4"] for i in range(epochs)]
+    train_cider = [encoder_decoder_solver.log[i]["train_cider"] for i in range(epochs)]
+    val_cider = [encoder_decoder_solver.log[i]["val_cider"] for i in range(epochs)]
+    # train_meteor = [encoder_decoder_solver.log[i]["train_meteor"] for i in range(epochs)]
+    # val_meteor = [encoder_decoder_solver.log[i]["val_meteor"] for i in range(epochs)]
+    train_rouge = [encoder_decoder_solver.log[i]["train_rouge"] for i in range(epochs)]
+    val_rouge = [encoder_decoder_solver.log[i]["val_rouge"] for i in range(epochs)]
+
+    # plot training curve
+    print("plotting training curves...\n")
+    plot_root = os.path.join(output_root, "curves")
+    if not os.path.exists(plot_root):
+        os.mkdir(plot_root)
+    plt.switch_backend("agg")
+    fig = plt.gcf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_losses, label="train_loss")
+    # plt.plot(range(epochs), val_losses, label="val_loss")
+    # plt.plot(range(epochs), train_perplexity, label="train_perplexity")
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.savefig(os.path.join(plot_root, "loss.png"), bbox_inches="tight")
+    # plot the bleu scores
+    fig.clf()
+    fig.set_size_inches(16,32)
+    plt.subplot(4, 1, 1)
+    plt.plot(range(epochs), train_blues_1, "C3", label="train_bleu")
+    plt.plot(range(epochs), val_blues_1, "C4", label="val_bleu")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-1')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.subplot(4, 1, 2)
+    plt.plot(range(epochs), train_blues_2, "C3", label="train_bleu")
+    plt.plot(range(epochs), val_blues_2, "C4", label="val_bleu")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-2')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.subplot(4, 1, 3)
+    plt.plot(range(epochs), train_blues_3, "C3", label="train_bleu")
+    plt.plot(range(epochs), val_blues_3, "C4", label="val_bleu")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-3')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.subplot(4, 1, 4)
+    plt.plot(range(epochs), train_blues_4, "C3", label="train_bleu")
+    plt.plot(range(epochs), val_blues_4, "C4", label="val_bleu")
+    plt.xlabel('epoch')
+    plt.ylabel('BLEU-4')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.savefig(os.path.join(plot_root, "bleu.png"), bbox_inches="tight")
+    # plot the cider scores
+    fig.clf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_cider, label="train_cider")
+    plt.plot(range(epochs), val_cider, label="val_cider")
+    plt.xlabel('epoch')
+    plt.ylabel('CIDEr')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.savefig(os.path.join(plot_root, "cider.png"), bbox_inches="tight")
+    # # plot the meteor scores
+    # fig.clf()
+    # fig.set_size_inches(16,8)
+    # plt.plot(range(epochs), train_meteor, label="train_meteor")
+    # plt.plot(range(epochs), val_meteor, label="val_meteor")
+    # plt.xlabel('epoch')
+    # plt.ylabel('METEOR')
+    # plt.xticks(range(0, epochs + 1,  math.floor(epoch / 10)))
+    # plt.legend()
+    # plt.savefig("outputs/curves/meteor_curve_%s_ts%d_e%d_lr%f_bs%d_vocal%d.png" % (model_type, train_size, epoch, lr, batch_size, input_size), bbox_inches="tight")
+    # plot the rouge scores
+    fig.clf()
+    fig.set_size_inches(16,8)
+    plt.plot(range(epochs), train_rouge, label="train_rouge")
+    plt.plot(range(epochs), val_rouge, label="val_rouge")
+    plt.xlabel('epoch')
+    plt.ylabel('ROUGE_L')
+    plt.xticks(range(1, epochs + 1,  math.floor(epochs / 10)))
+    plt.legend()
+    plt.savefig(os.path.join(plot_root, "rouge.png"), bbox_inches="tight")

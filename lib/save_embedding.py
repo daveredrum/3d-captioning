@@ -101,7 +101,7 @@ def main(args):
     phase2idx = {'train': 0, 'val': 1, 'test': 2}
     size_split = [-1] * 3
     size_split[phase2idx[phase]] = size
-    shapenet = Shapenet(
+    shapenet = Embedding(
         [
             pickle.load(open("data/shapenet_split_train.p", 'rb')),
             pickle.load(open("data/shapenet_split_val.p", 'rb')),
@@ -111,14 +111,14 @@ def main(args):
         batch_size,
         False
     )
-    dataset = ShapenetDataset(
+    dataset = EmbeddingDataset(
         getattr(shapenet, "{}_data".format(phase)), 
         getattr(shapenet, "{}_idx2label".format(phase)), 
         getattr(shapenet, "{}_label2idx".format(phase)), 
         voxel,
         h5py.File(CONF.PATH.SHAPENET_DATABASE.format(voxel), "r")
     )
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_shapenet)
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_embedding)
 
     # report settings
     print("[settings]")
@@ -130,10 +130,10 @@ def main(args):
     # initialize models
     print("\ninitializing models...\n")
     if attention_type == "noattention":
-        shape_encoder = ShapenetShapeEncoder().cuda()
+        shape_encoder = ShapeEncoder().cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
-        text_encoder = ShapenetTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
+        text_encoder = TextEncoder(shapenet.dict_idx2word.__len__()).cuda()
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
     else:
