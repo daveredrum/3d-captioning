@@ -7,9 +7,10 @@ __progress:__
 
 > comparison of models: <br/>
 >  <br/>
-> __Text2Shape-32__: original joint-embedding method without attention <br/>
-> __noattention-32__: replicated text2shape without attention on 32 <br/>
-> __noattention-64__: replicated text2shape without attention on 64 <br/>
+> __Text2Shape__: original joint-embedding method without attention <br/>
+> __Text2Shape-32__: replicated text2shape without attention on 32 <br/>
+> __Text2Shape-64__: replicated text2shape without attention on 64 <br/>
+> __noattention-64__: new model without attention on 64 <br/>
 > __self_nosep-64__: original self-attention module, spatial and channel attentions are not seperated <br/>
 > __self_sep-64__: original self-attention module, spatial and channel attentions are seperated <br/>
 > __selfnew_nosep-64__: similarity-based self-attention module, spatial and channel attentions are not seperated <br/>
@@ -42,7 +43,7 @@ __progress:__
     <td align="center">1.16</td>
   </tr>
   <tr>
-    <td>Text2Shape-32</td>
+    <td>Text2Shape</td>
     <td align="center">0.83</td>
     <td align="center">3.37</td>
     <td align="center">0.73</td>
@@ -52,17 +53,17 @@ __progress:__
     <td align="center">9.05</td>
   </tr>
   <tr>
-    <td>noattention-32</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td>Text2Shape-32</td>
+    <td align="center">0.67</td>
+    <td align="center">4.31</td>
+    <td align="center">0.89</td>
+    <td align="center">0.65</td>
+    <td align="center">2.60</td>
+    <td align="center">1.63</td>
+    <td align="center">10.74</td>
   </tr>
   <tr>
-    <td>noattention-64</td>
+    <td>Text2Shape-64</td>
     <td align="center">1.08</td>
     <td align="center">4.64</td>
     <td align="center">1.02</td>
@@ -70,6 +71,16 @@ __progress:__
     <td align="center">2.95</td>
     <td align="center">1.73</td>
     <td align="center">11.97</td>
+  </tr>
+  <tr>
+    <td>noattention-64</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
+    <td align="center">-</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
@@ -137,8 +148,34 @@ __progress:__
 >
 > |arch|train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
 > |---|---|---|---|---|---|---|---|---|
-> |noattn|-1|-1|2e-4|5e-4|100|20|False|-|
+> |noattn|-1|-1|2e-4|5e-4|100|20|False|18|
 > |attn|-1|-1|2e-4|5e-4|100|20|False|96|
+
+- performance of shape captioning on __ShapeNetCore__:
+
+> comparison of models: __Text2Shape/SSAM__<br/>
+>  <br/>
+> __Text2Shape__: using Text2Shape embeddings for training <br/>
+> __SSAM__: using selfnew_sep_cf embeddings for training <br/>
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline|0.573|0.314|0.151|0.075|0.117|
+|__FC__|-/-|-/-|-/-|-/-|-/-|
+|__att2in__|-/-|-/-|-/-|-/-|-/-|
+|__att2all__|-/-|-/-|-/-|-/-|-/-|
+|__spatial__|-/-|-/-|-/-|-/-|-/-|
+|__adaptive__|-/-|-/-|-/-|-/-|-/-|
+
+> __best models:__
+>
+> |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
+> |---|---|---|---|---|---|---|---|
+> |__FC__|-1|-1|-|-|-|-|-|
+> |__att2in__|-1|-1|-|-|-|-|-|
+> |__att2all__|-1|-1|-|-|-|-|-|
+> |__spatial__|-1|-1|-|-|-|-|-|
+> |__adaptive__|-1|-1|-|-|-|-|-|
 
 <s>
 ## Aug. 23
