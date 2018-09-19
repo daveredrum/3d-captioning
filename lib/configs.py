@@ -55,7 +55,7 @@ CONF.TRAIN.EVAL_METRIC = 'cosine'
 # max length of captions
 CONF.TRAIN.MAX_LENGTH = 96
 # self attention
-CONF.TRAIN.ATTN = "text2shape" # text2shape/self_nosep/self_sep/selfnew_nosep/selfnew_sep_p/selfnew_sep_sf/selfnew_sep_cf
+CONF.TRAIN.ATTN = "text2shape" # text2shape/self-nosep/self-sep/selfnew-nosep/selfnew-sep-p/selfnew-sep-sf/selfnew-sep-cf
 # hyperparamters
 CONF.TRAIN.RESOLUTION = 32
 CONF.TRAIN.TRAIN_SIZE = -1
