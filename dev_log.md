@@ -148,7 +148,30 @@ __progress:__
 >
 > |arch|train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
 > |---|---|---|---|---|---|---|---|---|
-> |noattn|-1|-1|2e-4|5e-4|100|20|False|-|
+> |noattn|-1|-1|2e-4|5e-4|100|20|False|18|
+> |attn|-1|-1|2e-4|5e-4|100|20|False|96|
+
+- performance of shape captioning on __ShapeNetCore__:
+
+> comparison of models: __Text2Shape/SSAM__<br/>
+>  <br/>
+> __Text2Shape__: using Text2Shape embeddings for training <br/>
+> __SSAM__: using selfnew_sep_cf embeddings for training <br/>
+
+|Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
+|---|---|---|---|---|---|
+|Baseline|0.573|0.314|0.151|0.075|0.117|
+|__FC__|-/-|-/-|-/-|-/-|-/-|
+|__att2in__|-/-|-/-|-/-|-/-|-/-|
+|__att2all__|-/-|-/-|-/-|-/-|-/-|
+|__spatial__|-/-|-/-|-/-|-/-|-/-|
+|__adaptive__|-/-|-/-|-/-|-/-|-/-|
+
+> __best models:__
+>
+> |arch|train_size|val_size|learning_rate|weight_decay|batch_size|epoch|random|length|
+> |---|---|---|---|---|---|---|---|---|
+> |noattn|-1|-1|2e-4|5e-4|100|20|False|18|
 > |attn|-1|-1|2e-4|5e-4|100|20|False|96|
 
 <s>
