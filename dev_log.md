@@ -54,33 +54,33 @@ __progress:__
   </tr>
   <tr>
     <td>Text2Shape-32</td>
-    <td align="center">0.67</td>
-    <td align="center">4.31</td>
-    <td align="center">0.89</td>
-    <td align="center">0.65</td>
-    <td align="center">2.60</td>
-    <td align="center">1.63</td>
-    <td align="center">10.74</td>
+    <td align="center">0.27</td>
+    <td align="center">2.96</td>
+    <td align="center">0.54</td>
+    <td align="center">0.55</td>
+    <td align="center">3.13</td>
+    <td align="center">1.85</td>
+    <td align="center">9.31</td>
   </tr>
   <tr>
     <td>Text2Shape-64</td>
-    <td align="center">1.08</td>
-    <td align="center">4.64</td>
-    <td align="center">1.02</td>
-    <td align="center">0.55</td>
-    <td align="center">2.95</td>
-    <td align="center">1.73</td>
-    <td align="center">11.97</td>
+    <td align="center">0.61</td>
+    <td align="center">3.43/td>
+    <td align="center">0.69</td>
+    <td align="center">0.70</td>
+    <td align="center">2.77</td>
+    <td align="center">1.69</td>
+    <td align="center">9.88</td>
   </tr>
   <tr>
     <td>noattention-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.47</td>
+    <td align="center">3.50</td>
+    <td align="center">0.65</td>
+    <td align="center">0.77</td>
+    <td align="center">3.24</td>
+    <td align="center">1.97</td>
+    <td align="center">10.59</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
