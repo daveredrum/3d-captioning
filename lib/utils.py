@@ -267,7 +267,7 @@ def draw_curves_caption(encoder_decoder_solver, output_root):
     val_rouge = [encoder_decoder_solver.log[i]["val_rouge"] for i in range(epochs)]
 
     # plot training curve
-    print("plotting training curves...\n")
+    print("plotting training curves...")
     plot_root = os.path.join(output_root, "curves")
     if not os.path.exists(plot_root):
         os.mkdir(plot_root)
