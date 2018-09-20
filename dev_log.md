@@ -54,33 +54,33 @@ __progress:__
   </tr>
   <tr>
     <td>Text2Shape-32</td>
-    <td align="center">0.67</td>
-    <td align="center">4.31</td>
-    <td align="center">0.89</td>
-    <td align="center">0.65</td>
-    <td align="center">2.60</td>
-    <td align="center">1.63</td>
-    <td align="center">10.74</td>
+    <td align="center">0.27</td>
+    <td align="center">2.96</td>
+    <td align="center">0.54</td>
+    <td align="center">0.55</td>
+    <td align="center">3.13</td>
+    <td align="center">1.85</td>
+    <td align="center">9.31</td>
   </tr>
   <tr>
     <td>Text2Shape-64</td>
-    <td align="center">1.08</td>
-    <td align="center">4.64</td>
-    <td align="center">1.02</td>
-    <td align="center">0.55</td>
-    <td align="center">2.95</td>
-    <td align="center">1.73</td>
-    <td align="center">11.97</td>
+    <td align="center">0.61</td>
+    <td align="center">3.43</td>
+    <td align="center">0.69</td>
+    <td align="center">0.70</td>
+    <td align="center">2.77</td>
+    <td align="center">1.69</td>
+    <td align="center">9.88</td>
   </tr>
   <tr>
     <td>noattention-64</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
-    <td align="center">-</td>
+    <td align="center">0.47</td>
+    <td align="center">3.50</td>
+    <td align="center">0.65</td>
+    <td align="center">0.77</td>
+    <td align="center">3.24</td>
+    <td align="center">1.97</td>
+    <td align="center">10.59</td>
   </tr>
   <tr>
     <td>self_nosep-64</td>
@@ -161,21 +161,21 @@ __progress:__
 |Model|BLEU-1|BLEU-2|BLEU-3|BLEU-4|CIDEr|
 |---|---|---|---|---|---|
 |Baseline|0.573|0.314|0.151|0.075|0.117|
-|__FC__|-/-|-/-|-/-|-/-|-/-|
-|__att2in__|-/-|-/-|-/-|-/-|-/-|
-|__att2all__|-/-|-/-|-/-|-/-|-/-|
-|__spatial__|-/-|-/-|-/-|-/-|-/-|
+|__FC__|74.82/75.44|52.19/52.76|34.74/35.35|23.52/23.90|39.41/40.26|
+|__att2in__|74.21/75.80|52.04/53.58|35.01/36.31|23.97/25.26|41.38/43.42|
+|__att2all__|74.21/-|52.10/-|35.39/-|24.72/-|43.18/-|
+|__spatial__|74.21/-|52.20/-|35.28/-|24.45/-|43.04/-|
 |__adaptive__|-/-|-/-|-/-|-/-|-/-|
 
 > __best models:__
 >
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
-> |__FC__|-1|-1|-|-|-|-|-|
-> |__att2in__|-1|-1|-|-|-|-|-|
-> |__att2all__|-1|-1|-|-|-|-|-|
-> |__spatial__|-1|-1|-|-|-|-|-|
-> |__adaptive__|-1|-1|-|-|-|-|-|
+> |__FC__|-1|-1|1e-4|1e-5|256|1|0|
+> |__att2in__|-1|-1|1e-4|1e-5|256|1|0|
+> |__att2all__|-1|-1|1e-4|1e-5|256|1|0|
+> |__spatial__|-1|-1|1e-4|1e-5|256|1|0|
+> |__adaptive__|-1|-1|1e-4|1e-5|256|1|0|
 
 <s>
 ## Aug. 23
