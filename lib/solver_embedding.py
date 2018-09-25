@@ -216,27 +216,8 @@ class EmbeddingSolver():
         print("extracting...\n")
         # eval mode
         shape_encoder.eval()
-        if text_encoder:
-            text_encoder.eval()
+        text_encoder.eval()
         embedding = extract(shape_encoder, text_encoder, dataloader['eval'], None, None)
-
-        # # evaluate
-        # if iter_time_list:
-        #     mean_exe_s = np.mean(iter_time_list)
-        #     eta_s = mean_exe_s * len(eval_dataloader['shape']) * len(eval_dataloader['text']) * 2
-        #     eta_m = math.floor(eta_s / 60)
-        #     print("evaluating, ETA: {}m {}s\n".format(int(eta_m), int(eta_s - eta_m * 60)))
-        # else:
-        #     print("evaluating...")
-        # metrics_t2s, metrics_s2t = evaluate(
-        #     shape_encoder, 
-        #     text_encoder, 
-        #     eval_dataloader['shape'], 
-        #     eval_dataloader['text'], 
-        #     self.batch_size,
-        #     0, 
-        #     self.is_multi_head
-        # )
 
         print("evaluating...")
         metrics_t2s = compute_metrics("shapenet", embedding, mode='t2s', metric='cosine')

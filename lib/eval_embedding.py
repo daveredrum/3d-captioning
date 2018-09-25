@@ -42,7 +42,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     num_sample = len(embedding)
     num_shape = num_sample
     num_text = np.sum([1 for key in embedding.keys() for _ in embedding[key]['text_embedding']])
-    embedding_dim = embedding[list(embedding.keys())[0]]['shape_embedding'].shape[0]
+    embedding_dim = embedding[list(embedding.keys())[0]]['shape_embedding'][0].shape[0]
 
     # Print info about embeddings
     print('\nNumber of embedding:', num_sample)
@@ -52,7 +52,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     print()
 
     # extract embedding
-    shape_embedding = [(key, embedding[key]['shape_embedding']) for key in embedding.keys()]
+    shape_embedding = [(key, embedding[key]['shape_embedding'][0]) for key in embedding.keys()]
     text_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['text_embedding']]
 
     # process shape embedding
@@ -362,12 +362,13 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
 def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
-    fig = plt.gcf()
-    fig.set_size_inches(16, 4 * num)
+    if not os.path.exists(os.path.join(root, 'retrieval', 'shape-to-text')):
+        os.mkdir(os.path.join(root, 'retrieval', 'shape-to-text'))
 
     # plot
     for i in range(num):
-        plt.subplot(num, 1, i + 1)
+        fig = plt.gcf()
+        fig.set_size_inches(16, 4)
         img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[chosen[i]], keys[chosen[i]])))
         plt.imshow(img.resize((224, 224)))
         plt.text(240, 60, text_raw[results[chosen[i]][0].item()], fontsize=14)
@@ -376,21 +377,24 @@ def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
         plt.text(240, 150, text_raw[results[chosen[i]][3].item()], fontsize=14)
         plt.text(240, 180, text_raw[results[chosen[i]][4].item()], fontsize=14)
         plt.axis('off')
-    
-    plt.savefig(os.path.join(root, 'retrieval', 'shape-to-text.png'), bbox_inches="tight")
+        plt.savefig(os.path.join(root, 'retrieval', 'shape-to-text', '{}.png'.format(i)), bbox_inches="tight")
+        plt.clf()
 
 def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
-    fig = plt.gcf()
-    fig.set_size_inches(15, 3 * num)
-    outer = gridspec.GridSpec(num, 1, wspace=0.2, hspace=0.5)
+    if not os.path.exists(os.path.join(root, 'retrieval', 'text-to-shape')):
+        os.mkdir(os.path.join(root, 'retrieval', 'text-to-shape'))
 
     # plot
     for i in range(num):
-        inner = gridspec.GridSpecFromSubplotSpec(1, 5,subplot_spec=outer[i], wspace=0.1, hspace=0.1)
-        ax = plt.Subplot(fig, outer[i])
-        ax.set_title(text_raw[chosen[i]], fontsize=14)
+        fig = plt.gcf()
+        fig.set_size_inches(15, 3)
+        outer = gridspec.GridSpec(1, 1, wspace=0.2, hspace=0.5)
+        inner = gridspec.GridSpecFromSubplotSpec(1, 5,subplot_spec=outer[0], wspace=0.1, hspace=0.1)
+        ax = plt.Subplot(fig, outer[0])
+        # ax.set_title(text_raw[chosen[i]], fontsize=14)
+        plt.figtext(0.5, 0, text_raw[chosen[i]], ha="center", fontsize=14)
         ax.axis('off')
         fig.add_subplot(ax)
 
@@ -401,9 +405,10 @@ def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
             ax.axis('off')
             fig.add_subplot(ax)
 
-    plt.savefig(os.path.join(root, 'retrieval', 'text-to-shape.png'), bbox_inches="tight")
+        plt.savefig(os.path.join(root, 'retrieval', 'text-to-shape', '{}.png'.format(i)), bbox_inches="tight")
+        plt.clf()
 
-def show_retrieval(embedding, root, voxel, num=5):
+def show_retrieval(embedding, root, voxel, num=100):
     # decode embeddings
     keys = list(embedding.keys())
     shape_embedding = []
@@ -413,7 +418,7 @@ def show_retrieval(embedding, root, voxel, num=5):
     text_raw = []
     for idx, key in enumerate(keys):
         emb = embedding[key]
-        shape_embedding.append(emb['shape_embedding'].reshape(1, -1))
+        shape_embedding.append(emb['shape_embedding'][0].reshape(1, -1))
         shape_label.append(idx)
         text_embedding.extend([emb['text_embedding'][i][1].reshape(1, -1) for i in range(len(emb['text_embedding']))])
         text_raw.extend([emb['text_embedding'][i][0] for i in range(len(emb['text_embedding']))])
@@ -456,22 +461,22 @@ def show_retrieval(embedding, root, voxel, num=5):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--dataset', help='shapenet/primitives', default='shapenet')
-    parser.add_argument('--embedding', help='path to the root folder containing embeddings')
+    parser.add_argument('--path', help='path to the root folder containing embeddings')
     parser.add_argument('--phase', help='train/val/test', default='val', type=str)
-    parser.add_argument('--mode', help='t2t/t2s/s2t', type=str, default='s2t')
+    parser.add_argument('--mode', help='t2t/t2s/s2t', type=str, default='t2s')
     parser.add_argument('--plot', help='true/false', type=str, default='false')
     args = parser.parse_args()
 
-    root = "outputs/embedding/{}/".format(args.embedding)
-    with open(os.path.join(root, "embeddings/{}.p".format(args.phase)), 'rb') as f:
+    root = "outputs/embedding/{}/".format(args.path)
+    dataset = args.path.split("_")[0].split("]")[1]
+    with open(os.path.join(root, "embedding/embedding.p"), 'rb') as f:
         embedding = pickle.load(f)
 
     np.random.seed(1234)
-    compute_metrics(args.dataset, embedding, mode=args.mode, metric='cosine')
+    compute_metrics(dataset, embedding[args.phase], mode=args.mode, metric='cosine')
 
     if args.plot == 'true':
-        show_retrieval(embedding, root, int(args.embedding.split("_")[1][1:]))
+        show_retrieval(embedding[args.phase], root, int(args.path.split("_")[1][1:]))
 
 
 if __name__ == '__main__':

@@ -137,7 +137,7 @@ def main(args):
         text_encoder.load_state_dict(torch.load(text_encoder_path))
         text_encoder.eval()
     else:
-        shape_encoder = SelfAttnShapeEncoder().cuda()
+        shape_encoder = SelfAttnShapeEncoder(attention_type).cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = SelfAttnTextEncoder(shapenet.dict_idx2word.__len__()).cuda()
