@@ -130,7 +130,7 @@ def main(args):
     # initialize models
     print("\ninitializing models...\n")
     if attention_type == "noattention":
-        shape_encoder = ShapeEncoder().cuda()
+        shape_encoder = ShapeEncoder(attention_type).cuda()
         shape_encoder.load_state_dict(torch.load(shape_encoder_path))
         shape_encoder.eval()
         text_encoder = TextEncoder(shapenet.dict_idx2word.__len__()).cuda()

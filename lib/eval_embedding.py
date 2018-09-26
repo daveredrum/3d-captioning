@@ -16,6 +16,7 @@ from PIL import Image
 import random
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from numpy.linalg import norm
 
 # HACK
 import sys
@@ -331,6 +332,13 @@ def print_nearest_info(query_model_ids, nearest_model_ids, query_sentences, near
     """
     pass
 
+def compute_mean_rec_rank(query_embeddings_matrix, target_embeddings_matrix, labels):
+    sim = query_embeddings_matrix.dot(target_embeddings_matrix.T)
+    sim /= norm(query_embeddings_matrix, ord=2, axis=1, keepdims=True).dot(norm(target_embeddings_matrix, ord=2, axis=1, keepdims=True).T)
+    _, indices = torch.FloatTensor(sim).sort(dim=1, descending=True)
+    rec_rank = [1 / ((indices[j] == labels[j]).nonzero()[0][0].item() + 1) for j in range(indices.size(0))]
+    mean_rec_rank = np.mean(rec_rank)
+    print("mean reciprocal rank: {}\n".format(mean_rec_rank))
 
 def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
     """Compute all the metrics for the text encoder evaluation.
@@ -341,6 +349,8 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
         mode
     )
     # print_model_id_info(model_id_to_label)
+    if mode == 't2s':
+        compute_mean_rec_rank(query_embeddings_matrix, target_embeddings_matrix, labels.tolist())
 
     n_neighbors = 20
 
@@ -359,11 +369,47 @@ def compute_metrics(dataset, embeddings_dict, mode, metric='minkowski'):
 
     return pr_at_k
 
-def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
+def plot_t2s(i, packed, keys, voxel, root, is_reversed):
+    fig = plt.gcf()
+    fig.set_size_inches(15, 3)
+    outer = gridspec.GridSpec(1, 1, wspace=0.2, hspace=0.5)
+    inner = gridspec.GridSpecFromSubplotSpec(1, 6,subplot_spec=outer[0], wspace=0.1, hspace=0.1)
+    ax = plt.Subplot(fig, outer[0])
+    # ax.set_title(text_raw[chosen[i]], fontsize=14)
+    plt.figtext(0.5, 0, packed[i][4], ha="center", fontsize=14)
+    ax.axis('off')
+    fig.add_subplot(ax)
+
+    for j in range(CONF.EVAL.NUM_TOP_K):
+        ax = plt.Subplot(fig, inner[j])
+        img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[packed[i][1][j]], keys[packed[i][1][j]])))
+        ax.imshow(img.resize((224, 224)))
+        ax.text(80, 230, str(packed[i][2][j])[:6], fontsize=12)
+        ax.axis('off')
+        fig.add_subplot(ax)
+    
+    ax = plt.Subplot(fig, inner[5])
+    img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(packed[i][0], packed[i][0])))
+    ax.imshow(img.resize((224, 224)))
+    if is_reversed:
+        ax.text(60, 230, "1/{}".format(packed[i][3] + 1), fontsize=12)
+    else:
+        ax.text(100, 230, "1/{}".format(packed[i][3] + 1), fontsize=12)
+    ax.axis('off')
+    fig.add_subplot(ax)
+
+    plt.savefig(os.path.join(root, '{}_{}.png'.format(str(packed[i][2][0])[2:8], packed[i][3] + 1)), bbox_inches="tight")
+    plt.clf()
+
+
+def show_s2t(results, indices, keys, chosen, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
     if not os.path.exists(os.path.join(root, 'retrieval', 'shape-to-text')):
         os.mkdir(os.path.join(root, 'retrieval', 'shape-to-text'))
+    else:
+        for f in os.listdir(os.path.join(root, 'retrieval', 'shape-to-text')):
+            os.remove(os.path.join(root, 'retrieval', 'shape-to-text', f))
 
     # plot
     for i in range(num):
@@ -371,44 +417,58 @@ def show_s2t(results, keys, chosen, text_raw, num, root, voxel):
         fig.set_size_inches(16, 4)
         img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[chosen[i]], keys[chosen[i]])))
         plt.imshow(img.resize((224, 224)))
-        plt.text(240, 60, text_raw[results[chosen[i]][0].item()], fontsize=14)
-        plt.text(240, 90, text_raw[results[chosen[i]][1].item()], fontsize=14)
-        plt.text(240, 120, text_raw[results[chosen[i]][2].item()], fontsize=14)
-        plt.text(240, 150, text_raw[results[chosen[i]][3].item()], fontsize=14)
-        plt.text(240, 180, text_raw[results[chosen[i]][4].item()], fontsize=14)
+        plt.text(240, 60, text_raw[indices[chosen[i]][0].item()], fontsize=14)
+        plt.text(240, 90, text_raw[indices[chosen[i]][1].item()], fontsize=14)
+        plt.text(240, 120, text_raw[indices[chosen[i]][2].item()], fontsize=14)
+        plt.text(240, 150, text_raw[indices[chosen[i]][3].item()], fontsize=14)
+        plt.text(240, 180, text_raw[indices[chosen[i]][4].item()], fontsize=14)
         plt.axis('off')
         plt.savefig(os.path.join(root, 'retrieval', 'shape-to-text', '{}.png'.format(i)), bbox_inches="tight")
         plt.clf()
 
-def show_t2s(results, keys, chosen, text_raw, num, root, voxel):
+def show_t2s(results, indices, text_label, keys, gt_in_results, text_raw, num, root, voxel):
     # settings
     plt.switch_backend("agg")
-    if not os.path.exists(os.path.join(root, 'retrieval', 'text-to-shape')):
-        os.mkdir(os.path.join(root, 'retrieval', 'text-to-shape'))
+    t2s_root = os.path.join(root, 'retrieval', 'text-to-shape')
+    if not os.path.exists(t2s_root):
+        os.mkdir(t2s_root)
 
-    # plot
+    # pack
+    packed = [(keys[text_label[i]], indices[i], results[i].data.numpy(), gt_in_results[i], text_raw[i]) for i in range(results.size(0))]
+    packed.sort(key=lambda x: x[3], reverse=False)
+
+    # plot best
+    best_root = os.path.join(t2s_root, 'best_{}'.format(num))
+    if not os.path.exists(best_root):
+        os.mkdir(best_root)
+    else:
+        for f in os.listdir(best_root):
+            os.remove(os.path.join(best_root, f))
     for i in range(num):
-        fig = plt.gcf()
-        fig.set_size_inches(15, 3)
-        outer = gridspec.GridSpec(1, 1, wspace=0.2, hspace=0.5)
-        inner = gridspec.GridSpecFromSubplotSpec(1, 5,subplot_spec=outer[0], wspace=0.1, hspace=0.1)
-        ax = plt.Subplot(fig, outer[0])
-        # ax.set_title(text_raw[chosen[i]], fontsize=14)
-        plt.figtext(0.5, 0, text_raw[chosen[i]], ha="center", fontsize=14)
-        ax.axis('off')
-        fig.add_subplot(ax)
+        plot_t2s(i, packed, keys, voxel, best_root, False)
 
-        for j in range(5):
-            ax = plt.Subplot(fig, inner[j])
-            img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[results[chosen[i]][j]], keys[results[chosen[i]][j]])))
-            ax.imshow(img.resize((224, 224)))
-            ax.axis('off')
-            fig.add_subplot(ax)
+    # plot worst
+    worst_root = os.path.join(t2s_root, 'worst_{}'.format(num))
+    if not os.path.exists(worst_root):
+        os.mkdir(worst_root)
+    else:
+        for f in os.listdir(worst_root):
+            os.remove(os.path.join(worst_root, f))
+    for i in range(results.size(0) - 1, results.size(0) - CONF.EVAL.NUM_CHOSEN - 1, -1):
+        plot_t2s(i, packed, keys, voxel, worst_root, True)
 
-        plt.savefig(os.path.join(root, 'retrieval', 'text-to-shape', '{}.png'.format(i)), bbox_inches="tight")
-        plt.clf()
+    # plot random
+    random_root = os.path.join(t2s_root, 'random_{}'.format(num))
+    random_packed = random.choices(packed, k=CONF.EVAL.NUM_CHOSEN)
+    if not os.path.exists(random_root):
+        os.mkdir(random_root)
+    else:
+        for f in os.listdir(random_root):
+            os.remove(os.path.join(random_root, f))
+    for i in range(num):
+        plot_t2s(i, random_packed, keys, voxel, random_root, False)
 
-def show_retrieval(embedding, root, voxel, num=100):
+def show_retrieval(embedding, mode, root, voxel, num=CONF.EVAL.NUM_CHOSEN):
     # decode embeddings
     keys = list(embedding.keys())
     shape_embedding = []
@@ -427,44 +487,161 @@ def show_retrieval(embedding, root, voxel, num=100):
     shape_embedding = np.concatenate(shape_embedding)
     text_embedding = np.concatenate(text_embedding)
 
-    shape_gt = torch.LongTensor(shape_label)
-    text_gt = torch.LongTensor(text_label)
+    # show shape2text
+    re_root = os.path.join(root, 'retrieval')
+    if not os.path.exists(re_root):
+        os.mkdir(re_root)
+    
+    if mode == 's2t':
+        # retrieval
+        s2t = shape_embedding.dot(text_embedding.T) 
+        s2t /= norm(shape_embedding, ord=2, axis=1, keepdims=True).dot(norm(text_embedding, ord=2, axis=1, keepdims=True).T)
+        # s2t = nn.Softmax(dim=1)(torch.FloatTensor(s2t))
+        print("plotting shape-to-text retrieval results...")
+        # results = torch.abs(s2t_gt - s2t).topk(5)[1]
+        results, indices = torch.FloatTensor(s2t).topk(CONF.EVAL.NUM_TOP_K, dim=1)
+        chosen = random.choices(np.arange(results.size(0)), k=num)
+        show_s2t(results, indices, keys, chosen, text_raw, num, root, voxel)
+    elif mode == 't2s':
+        # retrieval
+        t2s = text_embedding.dot(shape_embedding.T)
+        t2s /= norm(text_embedding, ord=2, axis=1, keepdims=True).dot(norm(shape_embedding, ord=2, axis=1, keepdims=True).T)
+        # t2s = nn.Softmax(dim=1)(torch.FloatTensor(t2s))
+        # show text2shape
+        # results = torch.abs(t2s_gt - t2s).topk(5)[1]
+        results, indices = torch.FloatTensor(t2s).sort(dim=1, descending=True)
+        gt_in_results = [(indices[i] == text_label[i]).nonzero()[0][0].item() for i in range(indices.size(0))]
+        print("plotting text-to-shape retrieval results...")
+        show_t2s(results, indices, text_label, keys, gt_in_results, text_raw, num, root, voxel)
 
-    s2t_gt = shape_gt.unsqueeze(1).expand(shape_gt.size(0), text_gt.size(0)).eq(text_gt.unsqueeze(0).expand(shape_gt.size(0), text_gt.size(0))).float()
-    s2t_gt /= s2t_gt.sum(1, keepdim=True)
+def plot_comp(i, packed, keys, voxel, root):
+    fig = plt.gcf()
+    fig.set_size_inches(15, 8)
+    outer = gridspec.GridSpec(3, 1, wspace=0.2, hspace=0.2)
+    for c in range(3):
+        inner = gridspec.GridSpecFromSubplotSpec(1, 6,subplot_spec=outer[c], wspace=0.1, hspace=0.1)
+        ax = plt.Subplot(fig, outer[c])
+        # ax.set_title(text_raw[chosen[i]], fontsize=14)
+        if c == 1:
+            plt.figtext(0.5, 0, packed[i][4], ha="center", fontsize=14)
+        ax.axis('off')
+        fig.add_subplot(ax)
 
-    t2s_gt = text_gt.unsqueeze(1).expand(text_gt.size(0), shape_gt.size(0)).eq(shape_gt.unsqueeze(0).expand(text_gt.size(0), shape_gt.size(0))).float()
-    t2s_gt /= t2s_gt.sum(1, keepdim=True)
+        for j in range(CONF.EVAL.NUM_TOP_K):
+            ax = plt.Subplot(fig, inner[j])
+            img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(keys[packed[i][1][c][j]], keys[packed[i][1][c][j]])))
+            ax.imshow(img.resize((224, 224)))
+            ax.text(80, 230, str(packed[i][2][c][j])[:6], fontsize=12)
+            ax.axis('off')
+            fig.add_subplot(ax)
+        
+        ax = plt.Subplot(fig, inner[5])
+        img = Image.open(os.path.join(CONF.PATH.SHAPENET_ROOT.format(voxel), CONF.PATH.SHAPENET_IMG.format(packed[i][0], packed[i][0])))
+        ax.imshow(img.resize((224, 224)))
+        ax.text(80, 230, "1/{}".format(packed[i][3][c] + 1), fontsize=12)
+        ax.axis('off')
+        fig.add_subplot(ax)
 
-    # retrieval
-    s2t = shape_embedding.dot(text_embedding.T)
-    s2t = nn.Softmax(dim=1)(torch.FloatTensor(s2t))
-    t2s = text_embedding.dot(shape_embedding.T)
-    t2s = nn.Softmax(dim=1)(torch.FloatTensor(t2s))
+    plt.savefig(os.path.join(root, '{}_{}_{}.png'.format(packed[i][3][0] + 1, packed[i][3][1] + 1, packed[i][3][2] + 1)), bbox_inches="tight")
+    plt.clf()
+
+def compare_t2s(results, indices, text_label, keys, gt_in_results, text_raw, num, root, voxel):
+    results_a, results_b, results_c = results
+    indices_a, indices_b, indices_c = indices
+    gt_in_results_a, gt_in_results_b, gt_in_results_c = gt_in_results
+    packed = [
+        (
+            keys[text_label[i]], 
+            (
+                indices_a[i],
+                indices_b[i],
+                indices_c[i]  
+            ),
+            (
+                results_a[i].data.numpy(),
+                results_b[i].data.numpy(),
+                results_c[i].data.numpy()
+            ),
+            (
+                gt_in_results_a[i],
+                gt_in_results_b[i],
+                gt_in_results_c[i] 
+            ),
+            text_raw[i]
+        ) for i in range(results_a.size(0))]
+
+    # settings
+    plt.switch_backend("agg")
+    
+    # plot best
+    num2alp = {0: 'A', 1: 'B', 2: 'C'}
+    for i in range(3):
+        packed.sort(key=lambda x: x[3][i], reverse=False)
+        best_root = os.path.join(root, '{}_{}'.format(num2alp[i], num))
+        if not os.path.exists(best_root):
+            os.mkdir(best_root)
+        else:
+            for f in os.listdir(best_root):
+                os.remove(os.path.join(best_root, f))
+        for i in range(num):
+            plot_comp(i, packed, keys, voxel, best_root)
+
+def show_comp(embedding, root, voxel, num=CONF.EVAL.NUM_CHOSEN):
+    # decode embeddings
+    keys = list(embedding[0].keys())
+    shape_embedding = [[], [], []]
+    text_embedding = [[], [], []]
+    text_label = []
+    text_raw = []
+    for idx, key in enumerate(keys):
+        for i in range(3):
+            emb = embedding[i][key]
+            shape_embedding[i].append(emb['shape_embedding'][0].reshape(1, -1))
+            text_embedding[i].extend([emb['text_embedding'][i][1].reshape(1, -1) for i in range(len(emb['text_embedding']))])
+        
+        text_raw.extend([emb['text_embedding'][i][0] for i in range(len(emb['text_embedding']))])
+        text_label.extend([idx for _ in range(len(emb['text_embedding']))])
+
+
+    for i in range(3):
+        shape_embedding[i] = np.concatenate(shape_embedding[i])
+        text_embedding[i] = np.concatenate(text_embedding[i])
 
     # show shape2text
-    if not os.path.exists(os.path.join(root, 'retrieval')):
-        os.mkdir(os.path.join(root, 'retrieval'))
-        
-    print("plotting shape-to-text retrieval results...")
-    results = torch.abs(s2t_gt - s2t).topk(5)[1]
-    chosen = random.choices(np.arange(results.size(0)), k=num)
-    show_s2t(results, keys, chosen, text_raw, num, root, voxel)
-
-    # show text2shape
-    print("plotting text-to-shape retrieval results...")
-    results = torch.abs(t2s_gt - t2s).topk(5)[1]
-    chosen = random.choices(np.arange(results.size(0)), k=num)
-    show_t2s(results, keys, chosen, text_raw, num, root, voxel)
+    comp_root = os.path.join(root, 'retrieval_comp')
+    if not os.path.exists(comp_root):
+        os.mkdir(comp_root)
+    
+    results = [None, None, None]
+    indices = [None, None, None]
+    gt_in_results = [None, None, None]
+    for i in range(3):
+        sim = text_embedding[i].dot(shape_embedding[i].T)
+        sim /= norm(text_embedding[i], ord=2, axis=1, keepdims=True).dot(norm(shape_embedding[i], ord=2, axis=1, keepdims=True).T)
+        results[i], indices[i] = torch.FloatTensor(sim).sort(dim=1, descending=True)
+        gt_in_results[i] = [(indices[i][j] == text_label[j]).nonzero()[0][0].item() for j in range(indices[i].size(0))]
+    
+    print("plotting comparison of text-to-shape retrieval results...")
+    compare_t2s(
+        results, 
+        indices,
+        text_label, 
+        keys, 
+        gt_in_results, 
+        text_raw,
+        num, 
+        comp_root, 
+        voxel
+    )
 
 
 def main():
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--path', help='path to the root folder containing embeddings')
     parser.add_argument('--phase', help='train/val/test', default='val', type=str)
     parser.add_argument('--mode', help='t2t/t2s/s2t', type=str, default='t2s')
     parser.add_argument('--plot', help='true/false', type=str, default='false')
+    parser.add_argument('--is_comp', help='true/false', type=str, default='false')
     args = parser.parse_args()
 
     root = "outputs/embedding/{}/".format(args.path)
@@ -473,10 +650,18 @@ def main():
         embedding = pickle.load(f)
 
     np.random.seed(1234)
-    compute_metrics(dataset, embedding[args.phase], mode=args.mode, metric='cosine')
+    compute_metrics(dataset, embedding[args.phase], mode=args.mode, metric=CONF.EVAL.EVAL_METRIC)
 
     if args.plot == 'true':
-        show_retrieval(embedding[args.phase], root, int(args.path.split("_")[1][1:]))
+        show_retrieval(embedding[args.phase], args.mode, root, int(args.path.split("_")[1][1:]))
+    
+    if args.is_comp == 'true':
+        embedding = (
+            embedding[args.phase],
+            pickle.load(open("outputs/embedding/{}/embedding/embedding.p".format(CONF.EVAL.COMP_METHOD_A), 'rb'))[args.phase],
+            pickle.load(open("outputs/embedding/{}/embedding/embedding.p".format(CONF.EVAL.COMP_METHOD_B), 'rb'))[args.phase]
+        )
+        show_comp(embedding, root, int(args.path.split("_")[1][1:]))
 
 
 if __name__ == '__main__':

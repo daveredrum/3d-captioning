@@ -92,7 +92,7 @@ def get_dataloader(dataset, settings):
 def get_model(settings, data, root):
     if settings['attention_type'] == 'noattention' or settings['attention_type'] == 'text2shape':
         print("initializing naive models...")
-        shape_encoder = ShapeEncoder(is_final=True).cuda()
+        shape_encoder = ShapeEncoder(settings['attention_type'], is_final=True).cuda()
         text_encoder = TextEncoder(data.dict_idx2word.__len__()).cuda()
     else:
         print("initializing {} models...".format(settings['attention_type']))

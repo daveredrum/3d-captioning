@@ -3,9 +3,9 @@ import torch.nn as nn
 from lib.configs import CONF
 
 class ShapeEncoder(nn.Module):
-    def __init__(self, is_final=False):
+    def __init__(self, model_type, is_final=False):
         super(ShapeEncoder, self).__init__()
-        if CONF.TRAIN.ATTN == "noattention":
+        if model_type == "noattention":
             self.conv = nn.Sequential(
                 nn.Conv3d(4, 64, 3, stride=2, padding=1, bias=False),
                 nn.ReLU(),

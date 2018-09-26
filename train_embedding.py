@@ -67,9 +67,9 @@ def get_dataset(split_size, unique_batch_size, resolution):
         )
         # for evaluation
         eval_dataset = EmbeddingDataset(
-            getattr(embedding, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-            getattr(embedding, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-            getattr(embedding, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(embedding, "{}_data".format(CONF.EVAL.EVAL_DATASET)),
+            getattr(embedding, "{}_idx2label".format(CONF.EVAL.EVAL_DATASET)), 
+            getattr(embedding, "{}_label2idx".format(CONF.EVAL.EVAL_DATASET)), 
             resolution,
             h5py.File(CONF.PATH.SHAPENET_DATABASE.format(resolution), "r")
         )
@@ -88,9 +88,9 @@ def get_dataset(split_size, unique_batch_size, resolution):
         )
         # for evaluation
         eval_dataset = EmbeddingDataset(
-            getattr(embedding, "{}_data".format(CONF.TRAIN.EVAL_DATASET)),
-            getattr(embedding, "{}_idx2label".format(CONF.TRAIN.EVAL_DATASET)), 
-            getattr(embedding, "{}_label2idx".format(CONF.TRAIN.EVAL_DATASET)), 
+            getattr(embedding, "{}_data".format(CONF.EVAL.EVAL_DATASET)),
+            getattr(embedding, "{}_idx2label".format(CONF.EVAL.EVAL_DATASET)), 
+            getattr(embedding, "{}_label2idx".format(CONF.EVAL.EVAL_DATASET)), 
             resolution
         )
 
@@ -133,7 +133,7 @@ def get_attention(args):
 def get_models(attention_type, embedding):
     if attention_type == 'noattention' or attention_type == 'text2shape':
         print("\ninitializing naive models...\n")
-        shape_encoder = ShapeEncoder().cuda()
+        shape_encoder = ShapeEncoder(attention_type).cuda()
         text_encoder = TextEncoder(embedding.dict_idx2word.__len__()).cuda()
     else:
         print("\ninitializing {} models...\n".format(attention_type))
@@ -198,7 +198,7 @@ def main(args):
         embedding.val_size, 
         val_per_worker
     ))
-    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.TRAIN.EVAL_DATASET))
+    print("eval_size: {} samples -> evaluate on {} set".format(len(eval_dataset), CONF.EVAL.EVAL_DATASET))
     print("learning_rate:", learning_rate)
     print("weight_decay:", weight_decay)
     print("epoch:", epoch)
