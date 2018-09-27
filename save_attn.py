@@ -27,11 +27,12 @@ def apply_attn(model_id, raw_mask):
     model_path = os.path.join(CONF.PATH.SHAPENET_ROOT.format(64), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id))
     readdata, _ = nrrd.read(model_path)
 
-    applied = np.zeros((4, 64, 64, 64))
-    applied[0][spatial_mask != 0] = readdata[0][spatial_mask != 0]
-    applied[1][spatial_mask != 0] = readdata[1][spatial_mask != 0]
-    applied[2][spatial_mask != 0] = readdata[2][spatial_mask != 0]
-    applied[3][spatial_mask != 0] = readdata[3][spatial_mask != 0]
+    # applied = np.zeros((4, 64, 64, 64))
+    # applied[0][spatial_mask != 0] = readdata[0][spatial_mask != 0]
+    # applied[1][spatial_mask != 0] = readdata[1][spatial_mask != 0]
+    # applied[2][spatial_mask != 0] = readdata[2][spatial_mask != 0]
+    # applied[3][spatial_mask != 0] = readdata[3][spatial_mask != 0]
+    applied = readdata * spatial_mask
     applied = applied.astype(np.uint8)
     applied = np.swapaxes(applied, 1, 2)
     applied = np.swapaxes(applied, 1, 3)

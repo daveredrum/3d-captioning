@@ -81,9 +81,10 @@ class PretrainedEmbeddings():
                     pretrained_embeddings[model_id]['shape_embedding'][1]
                 )
                 for emb_id in range(len(pretrained_embeddings[model_id]['text_embedding'])):
-                    cap = pretrained_embeddings[model_id]['text_embedding'][emb_id][0]
+                    cap = pretrained_embeddings[model_id]['text_embedding'][emb_id][0].split(" ")
                     if len(cap) > CONF.CAP.MAX_LENGTH:
                         cap = cap[:CONF.CAP.MAX_LENGTH]
+                    cap = " ".join(cap)
                     cap = '<START> ' + cap + ' <END>'
                     decoded.append(
                         [
