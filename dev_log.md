@@ -171,7 +171,7 @@ __progress:__
 > |Model|train_size|test_size|learning_rate|weight_decay|batch_size|beam_size|dropout|
 > |---|---|---|---|---|---|---|---|
 > |__FC__|-1|-1|1e-4|1e-5|256|1|0|
-> |__att2in__|-1|-1|1e-4|1e-5|256|1|0|
+> |__att2in__|-1|-1|1e-4|1e-5|100|1|0|
 > |__att2all__|-1|-1|1e-4|2e-4|100|1|0|
 > |__adaptive__|-1|-1|1e-4|2e-4|100|1|0|
 
