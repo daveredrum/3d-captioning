@@ -8,11 +8,14 @@ from datetime import datetime
 import numpy as np
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from tensorboardX import SummaryWriter
-from lib.configs import CONF
 from torch.nn.utils import clip_grad_value_
-from lib.save_embedding import extract
-from lib.eval_embedding import compute_metrics
-from eval_attn import evaluate
+
+# HACK
+import sys
+sys.path.append(".")
+from lib.configs import CONF
+from scripts.save_embedding import extract
+from scripts.eval_embedding import compute_metrics
 from model.encoder_attn import SelfAttnShapeEncoder, SelfAttnTextEncoder
 
 class EmbeddingSolver():

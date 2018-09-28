@@ -1,3 +1,4 @@
+import os
 from easydict import EasyDict
 
 CONF = EasyDict()
@@ -9,6 +10,7 @@ global configurations for path
 
 CONF.PATH = EasyDict()
 # general
+CONF.PATH.ROOT = "/home/davech2y/3d_captioning/" # TODO mofidy this
 CONF.PATH.DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
 # CONF.PATH.SHAPENET_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 CONF.PATH.SHAPENET_ROOT = "data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
@@ -23,14 +25,8 @@ CONF.PATH.PRIMITIVES_NRRD = "{}/{}.nrrd" # cat_id, model_id
 # path to split
 CONF.PATH.SPLIT_NAME = "processed_captions_{}.p"
 # output path
-CONF.PATH.OUTPUT_EMBEDDING = "outputs/embedding/"
-CONF.PATH.OUTPUT_CAPTION = "outputs/caption/"
-# path to pretrained embeddings
-CONF.PATH.SHAPENET_PRETRAINED = "pretrained/shapenet_embeddings_{}.p" # split
-CONF.PATH.PRIMITIVE_PRETRAINED = "pretrained/primitive_embeddings_{}.p" # split
-# path to trained embeddings
-CONF.PATH.SHAPENET_EMBEDDING = "outputs/embedding/shapenet_embeddings_{}.p" # split
-CONF.PATH.PRIMITIVE_EMBEDDING = "outputs/embedding/primitive_embeddings_{}.p" # split
+CONF.PATH.OUTPUT_EMBEDDING = os.path.join(CONF.PATH.ROOT, "outputs/embedding/")
+CONF.PATH.OUTPUT_CAPTION = os.path.join(CONF.PATH.ROOT, "outputs/caption/")
 
 
 '''
@@ -124,9 +120,9 @@ CONF.CAP.DATASET = 'shapenet'
 CONF.CAP.BEAM_SIZE = 1
 CONF.CAP.VERBOSE = False
 CONF.CAP.LEARNING_RATE = 1e-4
-CONF.CAP.WEIGHT_DECAY = 1e-5
+CONF.CAP.WEIGHT_DECAY = 2e-4
 CONF.CAP.BATCH_SIZE = 100
-CONF.CAP.ATTN = 'att2in' # fc/att2in/att2all/adaptive
+CONF.CAP.ATTN = 'att2all' # fc/att2in/att2all/adaptive
 CONF.CAP.IS_EVAL = False
 CONF.CAP.HIDDEN_SIZE = 512
 CONF.CAP.EVAL_DATASET = 'val'  

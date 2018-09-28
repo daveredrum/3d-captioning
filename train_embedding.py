@@ -14,17 +14,21 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from lib.data_embedding import *
 import nrrd
+import torch.multiprocessing as mp
+import ctypes
+import sys
+
+# HACK
+import sys
+sys.path.append(".")
+from lib.data_embedding import *
 from lib.configs import CONF
 from model.encoder_shape import ShapeEncoder
 from model.encoder_text import TextEncoder
 from model.encoder_attn import *
 from lib.losses import *
 from lib.solver_embedding import EmbeddingSolver
-import torch.multiprocessing as mp
-import ctypes
-import sys
 from lib.utils import decode_log_embedding, draw_curves_embedding, report_best
 
 def check_dataset(dataset, batch_size):

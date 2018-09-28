@@ -11,6 +11,10 @@ from torch.autograd import Variable
 from sklearn.metrics import accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
 from tensorboardX import SummaryWriter
+
+# HACK
+import sys
+sys.path.append(".")
 import lib.capeval.bleu.bleu as capbleu
 import lib.capeval.cider.cider as capcider
 import lib.capeval.meteor.meteor as capmeteor

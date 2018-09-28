@@ -9,6 +9,11 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
+
+# HACK
+import sys
+sys.path.append(".")
 from lib.configs import CONF
 import lib.capeval.bleu.bleu as capbleu
 import lib.capeval.cider.cider as capcider
@@ -18,9 +23,8 @@ from lib.data_caption import *
 from model.encoders_caption import *
 from model.decoders_caption import *
 from lib.solver_caption import *
-import matplotlib.pyplot as plt
 from lib.utils import draw_curves_caption
-from lib.ext_embedding import parse_path
+from scripts.ext_embedding import parse_path
 
 def get_dataset(path):
     embeddings = PretrainedEmbeddings(pickle.load(open(path, 'rb')))
@@ -60,7 +64,7 @@ def get_models(attention, batch_size, dict_size, embeddings):
         encoder = EmbeddingEncoder().cuda()
         decoder = Decoder(dict_size, CONF.CAP.HIDDEN_SIZE).cuda()
     elif attention:
-        print('initializing models with attention {}...\n'.format(attention))
+        print('initializing models with {} attention...\n'.format(attention))
         encoder = AttentionEncoder(embeddings.visual_channel).cuda()
         decoder = AttentionDecoder3D(
             attention, 
