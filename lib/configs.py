@@ -133,9 +133,22 @@ CONF.CAP.SAVE_THRESHOLD = 3.0
 global configurations for captioning model
 '''
 CONF.EVAL = EasyDict()
+CONF.EVAL.RESOLUTION = 64
 CONF.EVAL.EVAL_DATASET = 'val'
 CONF.EVAL.EVAL_METRIC = 'cosine'
 CONF.EVAL.NUM_TOP_K = 5
-CONF.EVAL.NUM_CHOSEN = 100
+CONF.EVAL.NUM_CHOSEN = 500
 CONF.EVAL.COMP_METHOD_A = "[FIN]shapenet_v64_trs11921_lr0.0002_wd0.0005_e20_bs100_text2shape"
 CONF.EVAL.COMP_METHOD_B = "[FIN]shapenet_v64_trs11921_lr0.0002_wd0.0005_e20_bs100_self-nosep"
+CONF.EVAL.COMP_CAP_A = {
+    'FC': "[FIN]shapenet_text2shape_fc_trs59777_vs7435_e50_lr0.00010_w0.00001_bs256_vocab3521_beam1",
+    'att2in': "[FIN]shapenet_text2shape_att2in_trs59777_vs7435_e50_lr0.00010_w0.00001_bs100_vocab3521_beam1",
+    'att2all': "[FIN]shapenet_text2shape_att2all_trs59777_vs7435_e50_lr0.00010_w0.00020_bs100_vocab3521_beam1",
+    'adaptive': "[FIN]shapenet_text2shape_adaptive_trs59777_vs7435_e50_lr0.00010_w0.00020_bs100_vocab3521_beam1"
+}
+CONF.EVAL.COMP_CAP_B = {
+    'FC': "[FIN]shapenet_selfnew-sep-cf_fc_trs59777_vs7435_e50_lr0.00010_w0.00001_bs256_vocab3521_beam1",
+    'att2in': "[FIN]shapenet_selfnew-sep-cf_att2in_trs59777_vs7435_e50_lr0.00010_w0.00001_bs100_vocab3521_beam1",
+    'att2all': "[FIN]shapenet_selfnew-sep-cf_att2all_trs59777_vs7435_e50_lr0.00010_w0.00020_bs100_vocab3521_beam1",
+    'adaptive': "[FIN]shapenet_selfnew-sep-cf_adaptive_trs59777_vs7435_e50_lr0.00010_w0.00020_bs100_vocab3521_beam1"
+}
