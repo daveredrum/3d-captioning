@@ -10,6 +10,11 @@ import torchvision.models as torchmodels
 import torch.nn.functional as F
 from torch.nn import Parameter
 
+# HACK
+import sys
+sys.path.append(".")
+from lib.configs import CONF
+
 
 # decoder without attention
 class Decoder(nn.Module):
@@ -526,12 +531,12 @@ class EncoderDecoder():
         self.encoder.eval()
         self.decoder.eval()
 
-    def generate_text(self, image_inputs, dictionary, max_length):
+    def generate_text(self, image_inputs, dictionary):
         inputs = self.encoder.extract(image_inputs).unsqueeze(1)
         states = None
         # sample text indices via greedy search
         sampled = []
-        for _ in range(max_length):
+        for _ in range(CONF.CAP.MAX_LENGTH):
             outputs, states = self.decoder.lstm_layer(inputs, states)
             outputs = self.decoder.output_layer(outputs[0])
             predicted = outputs.max(1)[1]
@@ -564,13 +569,13 @@ class AttentionEncoderDecoder():
         self.encoder.eval()
         self.decoder.eval()
 
-    def generate_text(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+    def generate_text(self, image_inputs, dict_word2idx, dict_idx2word):
         caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(int(dict_word2idx["<START>"])), (1)))).cuda()
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         sampled = []
         states = self.decoder.init_hidden(visual_contexts[0])
-        for _ in range(max_length):
+        for _ in range(CONF.CAP.MAX_LENGTH):
             outputs, states, _ = self.decoder.sample(visual_contexts, caption_inputs, states)
             # outputs = (1, 1, input_size)
             predicted = outputs.max(2)[1]
@@ -592,13 +597,13 @@ class AttentionEncoderDecoder():
 
     # image_inputs = (1, visual_channels, visual_size, visual_size)
     # caption_inputs = (1)
-    def visual_attention(self, image_inputs, dict_word2idx, dict_idx2word, max_length):
+    def visual_attention(self, image_inputs, dict_word2idx, dict_idx2word):
         caption_inputs = Variable(torch.LongTensor(np.reshape(np.array(int(dict_word2idx["<START>"])), (1)))).cuda()
         visual_contexts = self.encoder(image_inputs)
         # sample text indices via greedy search
         pairs = []
         states = self.decoder.init_hidden(visual_contexts[0])
-        for _ in range(max_length):
+        for _ in range(CONF.CAP.MAX_LENGTH):
             outputs, states, attention_weights = self.decoder.sample(visual_contexts, caption_inputs, states)
             # attentions = (visual_size, visual_size)
             predicted = outputs.max(2)[1]

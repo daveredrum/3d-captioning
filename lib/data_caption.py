@@ -37,7 +37,7 @@ def collate_ec(data):
     return model_id, merge_cap, model_emb, model_interm_feat, torch.Tensor(list(lengths))
 
 class PretrainedEmbeddings():
-    def __init__(self, pretrained_embeddings):
+    def __init__(self, pretrained_embeddings, size=[-1, -1, -1]):
         '''
         params:
             pretrained_embeddings: [pretrained_train_pickle, pretrained_val_pickle, pretrained_test_pickle]
@@ -45,7 +45,7 @@ class PretrainedEmbeddings():
             dict_idx2word: original vocabulary
             max_length: max length for truncation
         '''
-        self.pretrained_embeddings = pretrained_embeddings
+        self.pretrained_embeddings = self._select(pretrained_embeddings, size)
         # objectives
         self.train_text, self.val_text, self.test_text = [], [], []
         self.train_ref, self.val_ref, self.test_ref = {}, {}, {}
@@ -60,6 +60,23 @@ class PretrainedEmbeddings():
         self._transform()
         # get visual size
         self._get_visual_info()
+
+    def _select(self, pretrained_embeddings, size):
+        selected_embeddings = {
+            'train': {},
+            'val': {},
+            'test': {}
+        }
+        for i, phase in enumerate(['train', 'val', 'test']):
+            keys = list(pretrained_embeddings[phase].keys())
+            random.shuffle(keys)
+            if size[i] != -1:
+                for key in keys[:size[i]]:
+                    selected_embeddings[phase][key] = pretrained_embeddings[phase][key]
+            else:
+                selected_embeddings[phase] = pretrained_embeddings[phase]
+
+        return selected_embeddings
 
     def _get_visual_info(self):
         data = getattr(self, "train_shape")
@@ -147,16 +164,25 @@ class PretrainedEmbeddings():
     
 
 class CaptionDataset(Dataset):
-    def __init__(self, text_set, shape_set):
+    def __init__(self, text_set, shape_set, aggr_shape=False):
         super(CaptionDataset, self).__init__()
         self.text_set = text_set
         self.shape_set = shape_set
+        self.model_ids = list(shape_set.keys())
+        self.aggr_shape = aggr_shape
 
     def __len__(self):
-        return len(self.text_set)
+        if self.aggr_shape:
+            return len(self.model_ids)
+        else:
+            return len(self.text_set)
     
     def __getitem__(self, idx):
-        model_id = self.text_set[idx][0]
+        if self.aggr_shape:
+            model_id = self.model_ids[idx]
+        else:
+            model_id = self.text_set[idx][0]
+        
         model_cap = torch.LongTensor(self.text_set[idx][1])
         model_emb = torch.FloatTensor(self.shape_set[model_id][0])
         model_interm_feat = torch.FloatTensor(self.shape_set[model_id][1])

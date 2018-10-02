@@ -37,25 +37,28 @@ def apply_attn(model_id, raw_mask):
     # attended = attended.astype(np.uint8)
 
     
-    applied = np.zeros((4, 64, 64, 64))
-    applied[readdata != 0] = 255
-    applied[:3] *= spatial_mask
+    attended = np.zeros((4, 64, 64, 64))
+    attended[readdata != 0] = 255
+    attended[:3] *= spatial_mask
+    attended = attended.astype(np.uint8)
+
+    applied = attended * CONF.EVAL.ALPHA + readdata * (1 - CONF.EVAL.ALPHA)
     applied = applied.astype(np.uint8)
 
     applied = np.swapaxes(applied, 1, 2)
     applied = np.swapaxes(applied, 1, 3)
 
-    return applied
+    return applied, attended
 
 def filter_attn(model_ids, attn_masks):
     filtered = []
     for i in range(len(model_ids)):
         raw_mask_1 = attn_masks[0][1][i].view(8, 8, 8)
         raw_mask_2 = attn_masks[1][1][i].view(4, 4, 4)
-        applied_1 = apply_attn(model_ids[i], raw_mask_1)
-        applied_2 = apply_attn(model_ids[i], raw_mask_2)
+        applied_1, attended_1 = apply_attn(model_ids[i], raw_mask_1)
+        applied_2, attended_2 = apply_attn(model_ids[i], raw_mask_2)
 
-        if applied_1[:3].max() != 0 and applied_2[:3].max() != 0:
+        if attended_1[:3].max() != 0 and attended_2[:3].max() != 0:
             filtered.append(
                 (
                     model_ids[i],

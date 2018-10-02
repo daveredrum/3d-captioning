@@ -134,6 +134,7 @@ global configurations for captioning model
 '''
 CONF.EVAL = EasyDict()
 CONF.EVAL.RESOLUTION = 64
+CONF.EVAL.ALPHA = 0.8
 CONF.EVAL.EVAL_DATASET = 'val'
 CONF.EVAL.EVAL_METRIC = 'cosine'
 CONF.EVAL.NUM_TOP_K = 5
