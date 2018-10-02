@@ -121,7 +121,7 @@ def generate_vis(data_method_a, data_method_b):
     method_list = list(data_method_a.keys())
     all_model_ids = list(data_method_a[method_list[0]][CONF.EVAL.EVAL_DATASET].keys())
     chosen_model_ids = random.choices(all_model_ids, k=CONF.EVAL.NUM_CHOSEN)
-    root = os.path.join(CONF.PATH.ROOT, "outputs/summaries")
+    root = os.path.join(CONF.PATH.ROOT, "outputs/summaries/caption")
     if not os.path.exists(root):
         os.mkdir(root)
     else:
