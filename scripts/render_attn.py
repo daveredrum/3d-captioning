@@ -9,8 +9,9 @@ from lib.configs import CONF
 
 def filter_nrrd(file_list):
     filtered = []
-    for file_name in file_list:
-        if os.path.splitext(file_name)[1] == ".nrrd":
+    for file_full_name in file_list:
+        file_name, file_ext = os.path.splitext(file_full_name)
+        if file_ext == ".nrrd":
             filtered.append(file_name)
     
     return filtered
