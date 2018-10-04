@@ -31,19 +31,26 @@ def apply_attn(model_id, pairs):
         attended[:3] *= upscaled_mask.data.cpu().numpy()
         attended = attended.astype(np.uint8)
 
-        alpha = CONF.EVAL.ALPHA
-        applied = attended * alpha + raw_nrrd * (1 - alpha)
-        applied = applied.astype(np.uint8)
-
-        applied = np.swapaxes(applied, 1, 2)
-        applied = np.swapaxes(applied, 1, 3)
+        attended = np.swapaxes(attended, 1, 2)
+        attended = np.swapaxes(attended, 1, 3)
 
         applied_mask_list.append(
             (
                 pairs[step_id][0],
-                applied
+                attended
             )
         )
+
+        # alpha = CONF.EVAL.ALPHA
+        # applied = attended * alpha + raw_nrrd * (1 - alpha)
+        # applied = applied.astype(np.uint8)
+
+        # applied_mask_list.append(
+        #     (
+        #         pairs[step_id][0],
+        #         applied
+        #     )
+        # )
 
     return applied_mask_list
 
@@ -86,7 +93,7 @@ def main(args):
     print("\npreparing data...\n")
     phase2idx = {'train': 0, 'val': 1, 'test': 2}
     size_split = [-1] * 3
-    size_split[phase2idx[CONF.EVAL.EVAL_DATASET]] = CONF.EVAL.NUM_CHOSEN
+    # size_split[phase2idx[CONF.EVAL.EVAL_DATASET]] = CONF.EVAL.NUM_CHOSEN
     embeddings = PretrainedEmbeddings(pickle.load(open(embedding_path, 'rb')), size_split)
     dataset = CaptionDataset(
         getattr(embeddings, "{}_text".format(CONF.EVAL.EVAL_DATASET)), 
@@ -112,7 +119,7 @@ def main(args):
     applied_mask_list = save_attn(pipeline, dataloader, embeddings, caption_path)
 
     # report
-    print("\nsaved {} attention masks for {} models".format(len(applied_mask_list), CONF.EVAL.NUM_CHOSEN))
+    print("\nsaved {} attention masks for {} models".format(len(applied_mask_list), len(dataset)))
 
 
 if __name__ == "__main__":
