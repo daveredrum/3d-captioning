@@ -1,2 +1,5 @@
 selected/
 summaries/
+selected_vis/
+.DS_Store
+outputs/.DS_Store
