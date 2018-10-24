@@ -377,8 +377,18 @@ class AttentionDecoder3D(nn.Module):
             raise Exception('invalid attention type, terminating...')
 
         # output layer
+        # self.output_layer = nn.Sequential(
+        #     nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
+        #     # nn.Dropout(p=0.2)
+        # )
         self.output_layer = nn.Sequential(
-            nn.Linear(self.hidden_size + self.hidden_size, self.input_size),
+            nn.Linear(self.hidden_size + self.hidden_size, self.hidden_size),
+            nn.ReLU(),
+            nn.BatchNorm1d(self.hidden_size),
+            nn.Linear(self.hidden_size, self.hidden_size),
+            nn.ReLU(),
+            nn.BatchNorm1d(self.hidden_size),
+            nn.Linear(self.hidden_size, self.input_size)
             # nn.Dropout(p=0.2)
         )
 
