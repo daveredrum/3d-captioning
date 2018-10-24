@@ -49,7 +49,7 @@ def summarize(root, data_method_a, data_method_b, method_list, model_id):
     for i, method in enumerate(method_list):
         # first row
         ax = plt.subplot(gs_emb[3 * i, 0])
-        plt.text(0, 0, "[Text2Shape]", fontsize=15)
+        plt.text(0, 0, "[noattn]", fontsize=15)
         plt.axis("off")
 
         ax = plt.subplot(gs_method[3 * i, 0])
@@ -129,8 +129,9 @@ def generate_vis(data_method_a, data_method_b):
             os.remove(os.path.join(root, file))
     
     plt.switch_backend("agg")
-    for model_id in chosen_model_ids:
+    for i, model_id in enumerate(chosen_model_ids):
         summarize(root, data_method_a, data_method_b, method_list, model_id)
+        print("saved summary for {}, {} left".format(model_id, len(chosen_model_ids) - i - 1))
 
 def main():
     data_method_a, data_method_b = get_data()

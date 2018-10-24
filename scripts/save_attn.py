@@ -24,20 +24,28 @@ def apply_attn(model_id, pairs):
     applied_mask_list = []
     raw_nrrd = nrrd.read(os.path.join(CONF.PATH.SHAPENET_ROOT.format(CONF.EVAL.RESOLUTION), CONF.PATH.SHAPENET_NRRD.format(model_id, model_id)))[0]
     for step_id in range(len(pairs)):
-        upscaled_mask = F.upsample(pairs[step_id][2].view(1, 1, 4, 4, 4), scale_factor=16, mode="trilinear", align_corners=True).squeeze()
+        # upscaled_mask = F.upsample(pairs[step_id][2].view(1, 1, 4, 4, 4), scale_factor=16, mode="trilinear", align_corners=True).squeeze()
+        flat_size = int(np.cbrt(pairs[step_id][2].size(1)))
+        up_scalar = CONF.EVAL.RESOLUTION / flat_size
+        raw_mask = pairs[step_id][2].view(flat_size, flat_size, flat_size).data.cpu().numpy()
+        upscaled_mask = zoom(raw_mask, (up_scalar, up_scalar, up_scalar))
 
-        attended = np.zeros((4, 64, 64, 64))
+        attended = np.zeros((4, CONF.EVAL.RESOLUTION, CONF.EVAL.RESOLUTION, CONF.EVAL.RESOLUTION))
         attended[raw_nrrd != 0] = 255
-        attended[:3] *= upscaled_mask.data.cpu().numpy()
+        attended[:3] *= upscaled_mask
         attended = attended.astype(np.uint8)
 
-        attended = np.swapaxes(attended, 1, 2)
-        attended = np.swapaxes(attended, 1, 3)
+        alpha = CONF.EVAL.ALPHA
+        applied = attended * alpha + raw_nrrd * (1 - alpha)
+        applied = applied.astype(np.uint8)
+
+        applied = np.swapaxes(applied, 1, 2)
+        applied = np.swapaxes(applied, 1, 3)
 
         applied_mask_list.append(
             (
                 pairs[step_id][0],
-                attended
+                applied
             )
         )
 
@@ -75,8 +83,10 @@ def save_attn(pipeline, dataloader, embeddings, root):
 
 def main(args):
     # parse args
-    embedding_path = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, "[FIN]shapenet_v64_trs11921_lr0.0002_wd0.0005_e20_bs100_selfnew-sep-cf/embedding/embedding.p")
-    caption_path = os.path.join(CONF.PATH.OUTPUT_CAPTION, "[FIN]shapenet_selfnew-sep-cf_att2in_trs59777_vs7435_e50_lr0.00010_w0.00001_bs100_vocab3521_beam1")
+    # embedding_path = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, "[FIN]shapenet_v64_trs11921_lr0.0002_wd0.0005_e20_bs100_selfnew-sep-cf/embedding/embedding.p")
+    # caption_path = os.path.join(CONF.PATH.OUTPUT_CAPTION, "[FIN]shapenet_selfnew-sep-cf_att2in_trs59777_vs7435_e50_lr0.00010_w0.00001_bs100_vocab3521_beam1")
+    embedding_path = os.path.join(CONF.PATH.OUTPUT_EMBEDDING, "[FIN]shapenet_v64_trs11921_lr0.0002_wd0.0005_e20_bs100_text2shape/embedding/embedding.p")
+    caption_path = os.path.join(CONF.PATH.OUTPUT_CAPTION, "[FIN]shapenet_text2shape_att2in_trs59777_vs7435_e50_lr0.00010_w0.00001_bs100_vocab3521_beam1")
     # attn_type = args.path.split("_")[-1]
     encoder_path = os.path.join(caption_path, "models/encoder.pth")
     decoder_path = os.path.join(caption_path, "models/decoder.pth")

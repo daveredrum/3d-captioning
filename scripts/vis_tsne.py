@@ -3,9 +3,13 @@ import os
 import argparse
 import torch
 import numpy as np
-from lib.configs import CONF
 from tensorboardX import SummaryWriter
 from PIL import Image
+
+# HACK
+import sys
+sys.path.append(".")
+from lib.configs import CONF
 
 def get_path(args):
     print("\nparsing path...\n")
