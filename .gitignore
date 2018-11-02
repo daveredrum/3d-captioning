@@ -5,3 +5,4 @@ __pycache__
 .ipynb*
 .vscode
 .DS_Store
+dev_log.md
