@@ -46,4 +46,4 @@ python scripts/save_caption.py --caption=<path-to-caption-root-folder> --embeddi
 ```
 
 ## Results
-
+![alt text](https://github.com/daveredrum/3d-captioning/blob/master/demo/summ_cap.png)
