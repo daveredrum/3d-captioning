@@ -264,6 +264,6 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--epoch", type=int, default=100, help="epochs for training")
-    parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
+    parser.add_argument("--gpu", type=str, default='0', help="specify the graphic card")
     args = parser.parse_args()
     main(args)

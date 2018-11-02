@@ -166,6 +166,6 @@ if __name__ == '__main__':
     parser.add_argument("--phase", type=str, default='val', help="train/val/test")
     parser.add_argument("--size", type=int, default=-1, help="train size")
     parser.add_argument("--batch_size", type=int, default=10, help="batch size")
-    parser.add_argument("--gpu", type=str, default='2', help="specify the graphic card")
+    parser.add_argument("--gpu", type=str, default='0', help="specify the graphic card")
     args = parser.parse_args()
     main(args)
