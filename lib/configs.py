@@ -51,7 +51,7 @@ CONF.TRAIN.N_NEIGHBOR = 10
 # max length of captions
 CONF.TRAIN.MAX_LENGTH = 20
 # self attention
-CONF.TRAIN.ATTN = "text2shape" # text2shape/self-nosep/self-sep/selfnew-nosep/selfnew-sep-p/selfnew-sep-sf/selfnew-sep-cf
+CONF.TRAIN.ATTN = "selfnew-sep-cf" # text2shape/self-nosep/self-sep/selfnew-nosep/selfnew-sep-p/selfnew-sep-sf/selfnew-sep-cf
 # hyperparamters
 CONF.TRAIN.RESOLUTION = 64
 CONF.TRAIN.TRAIN_SIZE = -1
