@@ -43,7 +43,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     num_sample = len(embedding)
     num_shape = num_sample
     num_text = np.sum([1 for key in embedding.keys() for _ in embedding[key]['text_embedding']])
-    embedding_dim = embedding[list(embedding.keys())[0]]['shape_embedding'][0].shape[0]
+    embedding_dim = embedding[list(embedding.keys())[0]]['shape_embedding'].shape[0]
 
     # Print info about embeddings
     print('\nNumber of embedding:', num_sample)
@@ -53,7 +53,7 @@ def construct_embeddings_matrix(dataset, embedding, mode):
     print()
 
     # extract embedding
-    shape_embedding = [(key, embedding[key]['shape_embedding'][0]) for key in embedding.keys()]
+    shape_embedding = [(key, embedding[key]['shape_embedding']) for key in embedding.keys()]
     text_embedding = [(key, item) for key in embedding.keys() for item in embedding[key]['text_embedding']]
 
     # process shape embedding
