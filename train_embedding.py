@@ -42,9 +42,9 @@ def get_dataset(split_size, unique_batch_size, resolution):
     # for training
     embedding = Embedding(
         [
-            pickle.load(open("data/{}_split_train.p".format(CONF.TRAIN.DATASET), 'rb')),
-            pickle.load(open("data/{}_split_val.p".format(CONF.TRAIN.DATASET), 'rb')),
-            pickle.load(open("data/{}_split_test.p".format(CONF.TRAIN.DATASET), 'rb'))
+            pickle.load(open(os.path.join(CONF.PATH.PROC_DATA_ROOT, CONF.PATH.SPLIT_NAME.format("train")), 'rb')),
+            pickle.load(open(os.path.join(CONF.PATH.PROC_DATA_ROOT, CONF.PATH.SPLIT_NAME.format("val")), 'rb')),
+            pickle.load(open(os.path.join(CONF.PATH.PROC_DATA_ROOT, CONF.PATH.SPLIT_NAME.format("test")), 'rb'))
         ],
         [
             split_size[0],

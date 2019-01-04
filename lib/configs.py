@@ -12,21 +12,24 @@ CONF.PATH = EasyDict()
 # general
 CONF.PATH.ROOT = "/home/davech2y/3d_captioning/" # TODO mofidy this
 CONF.PATH.DATA_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/" # TODO mofidy this
+CONF.PATH.PROC_DATA_ROOT = "/home/davech2y/ShapeNetCore_data" # TODO mofidy this
 # CONF.PATH.SHAPENET_ROOT = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid" # TODO mofidy this
-CONF.PATH.SHAPENET_ROOT = "data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
+CONF.PATH.SHAPENET_ROOT = "/home/davech2y/ShapeNetCore_data/nrrd_256_filter_div_{}_solid" # TODO mofidy this
 CONF.PATH.SHAPENET_SPLIT_ROOT = "/home/davech2y/text2shape/pretrained/shapenet/" # TODO modify this
-CONF.PATH.SHAPENET_DATABASE = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid.hdf5" # TODO modify this
+CONF.PATH.SHAPENET_DATABASE = "/mnt/raid/davech2y/ShapeNetCore_vol/nrrd_256_filter_div_{}_solid_3d.hdf5" # TODO modify this
 CONF.PATH.SHAPENET_IMG = "{}/{}.png" # model_id
 CONF.PATH.SHAPENET_NRRD = "{}/{}.nrrd" # model_id
-CONF.PATH.SHAPENET_PROBLEMATIC = "data/shapenet_problematic.p"
-CONF.PATH.PRIMITIVES_ROOT = "data/primitives_{}" # resolution
-CONF.PATH.PRIMITIVES_IMG = "{}/{}.png" # cat_id, model_id
-CONF.PATH.PRIMITIVES_NRRD = "{}/{}.nrrd" # cat_id, model_id
+CONF.PATH.SHAPENET_PROBLEMATIC = "/home/davech2y/ShapeNetCore_data/shapenet_problematic.p"
+# CONF.PATH.PRIMITIVES_ROOT = "/home/davech2y/ShapeNetCore_data//primitives_{}" # TODO modify this
+# CONF.PATH.PRIMITIVES_IMG = "{}/{}.png" # cat_id, model_id
+# CONF.PATH.PRIMITIVES_NRRD = "{}/{}.nrrd" # cat_id, model_id
 # path to split
-CONF.PATH.SPLIT_NAME = "processed_captions_{}.p"
+CONF.PATH.SPLIT_NAME = "text2shape_split_{}_interm.p" # TODO mofidy this
 # output path
 CONF.PATH.OUTPUT_EMBEDDING = os.path.join(CONF.PATH.ROOT, "outputs/embedding/")
 CONF.PATH.OUTPUT_CAPTION = os.path.join(CONF.PATH.ROOT, "outputs/caption/")
+# for BERT
+CONF.PATH.BERT_EMBEDDING = os.path.join(CONF.PATH.PROC_DATA_ROOT, "bert_embedding.hdf5")
 
 
 '''
@@ -46,9 +49,9 @@ CONF.TRAIN.REDUCE_FACTOR = 0.95
 CONF.TRAIN.CLIP_VALUE = 5.
 CONF.TRAIN.N_NEIGHBOR = 10
 # max length of captions
-CONF.TRAIN.MAX_LENGTH = 96
+CONF.TRAIN.MAX_LENGTH = 20
 # self attention
-CONF.TRAIN.ATTN = "selfnew-sep-cf" # text2shape/self-nosep/self-sep/selfnew-nosep/selfnew-sep-p/selfnew-sep-sf/selfnew-sep-cf
+CONF.TRAIN.ATTN = "text2shape" # text2shape/self-nosep/self-sep/selfnew-nosep/selfnew-sep-p/selfnew-sep-sf/selfnew-sep-cf
 # hyperparamters
 CONF.TRAIN.RESOLUTION = 64
 CONF.TRAIN.TRAIN_SIZE = -1
@@ -64,7 +67,16 @@ elif CONF.TRAIN.DATASET == 'primitives':
 else:
     raise ValueError("invalid dataset, terminating...")
 
+'''
+global configurations for BERT
+'''
 
+CONF.BERT = EasyDict()
+# flags of BERT
+CONF.BERT.IS_BERT = True
+# configs of BERT
+CONF.BERT.MODEL = "bert-large-uncased"
+CONF.BERT.DIM = 1024
 
 '''
 global configurations for LBA

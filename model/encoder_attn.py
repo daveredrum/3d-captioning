@@ -60,7 +60,7 @@ class SelfAttnShapeEncoder(nn.Module):
                 spatial_attended_2.view(shape_inputs.size(0), 512, 4, 4, 4) # (batch_size, 512, 4, 4, 4)
             )
         else:
-            shape_outputs = self.shape_outputs(spatial_attended_2.mean(2)), # (batch_size, 128)
+            shape_outputs = self.shape_outputs(spatial_attended_2.mean(2)) # (batch_size, 128)
 
         return shape_outputs, spatial_weights
 
